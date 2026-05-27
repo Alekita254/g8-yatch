@@ -3,9 +3,13 @@ import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
 import { 
   Anchor,
+  BadgePercent,
+  BookOpenCheck,
   Building2,
+  Calculator,
   ChevronDown,
   CreditCard,
+  Landmark,
   ListTree,
   LogOut,
   MapPin,
@@ -40,7 +44,17 @@ const navItems = [
       { name: 'Purchase Pricelists', path: '/products/purchase-pricelists', icon: Truck },
     ],
   },
-  { name: 'Taxes & Discount', path: '/taxes-discounts', icon: Percent },
+  {
+    name: 'Taxes & Discount',
+    path: '/taxes-discounts',
+    icon: Percent,
+    children: [
+      { name: 'Tax Configurations', path: '/taxes-discounts/configurations', icon: Calculator },
+      { name: 'Tax Categories', path: '/taxes-discounts/categories', icon: BookOpenCheck },
+      { name: 'Tax Offices', path: '/taxes-discounts/offices', icon: Landmark },
+      { name: 'Discount Rules', path: '/taxes-discounts/discounts', icon: BadgePercent },
+    ],
+  },
   { name: 'Payment', path: '/payments', icon: CreditCard },
   { name: 'Organisation Setup', path: '/organisation', icon: Building2 },
 ];

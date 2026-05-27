@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "apps.products",
+    "apps.taxes",
     "apps.users",
 ]
 

@@ -28,6 +28,7 @@ import {
 import AdminTopbar from './components/AdminTopbar';
 import Sidebar from './components/Sidebar';
 import DashboardOverview from './pages/DashboardOverview';
+import DiscountRulesPage from './pages/DiscountRulesPage';
 import MembersTablePage from './pages/MembersTablePage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import ProductCategoriesPage from './pages/ProductCategoriesPage';
@@ -37,6 +38,10 @@ import PurchasePricelistsPage from './pages/PurchasePricelistsPage';
 import RolesSetupPage from './pages/RolesSetupPage';
 import SalesPricelistsPage from './pages/SalesPricelistsPage';
 import ServicePointsSetupPage from './pages/ServicePointsSetupPage';
+import TaxCategoriesPage from './pages/TaxCategoriesPage';
+import TaxConfigurationsPage from './pages/TaxConfigurationsPage';
+import TaxOfficesPage from './pages/TaxOfficesPage';
+import TaxesDiscountsSetupPage from './pages/TaxesDiscountsSetupPage';
 import UserSetupPage from './pages/UserSetupPage';
 import UsersDashboard from './pages/UsersDashboard';
 import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
@@ -370,10 +375,12 @@ export default function App() {
             <Route path="sales-pricelists" element={<SalesPricelistsPage />} />
             <Route path="purchase-pricelists" element={<PurchasePricelistsPage />} />
           </Route>
-          <Route
-            path="/taxes-discounts"
-            element={<PlaceholderPage icon={Percent} title="Taxes & Discount" description="Configure VAT, service charge, discount rules, exemptions, and approval thresholds." />}
-          />
+          <Route path="/taxes-discounts" element={<TaxesDiscountsSetupPage />}>
+            <Route path="configurations" element={<TaxConfigurationsPage />} />
+            <Route path="categories" element={<TaxCategoriesPage />} />
+            <Route path="offices" element={<TaxOfficesPage />} />
+            <Route path="discounts" element={<DiscountRulesPage />} />
+          </Route>
           <Route
             path="/payments"
             element={<PlaceholderPage icon={CreditCard} title="Payment" description="Manage payment methods, settlement accounts, cashier shifts, and reconciliation rules." />}

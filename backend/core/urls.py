@@ -12,5 +12,6 @@ urlpatterns = [
     
     path('api/auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/products/', include('apps.products.urls')),
+    path('api/taxes/', include('apps.taxes.urls')),
     path('api/users/', include('apps.users.urls')),
 ]
