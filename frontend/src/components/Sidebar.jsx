@@ -11,6 +11,7 @@ import {
   CreditCard,
   GitBranch,
   Landmark,
+  LayoutDashboard,
   ListTree,
   LogOut,
   MapPin,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 
 const navItems = [
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   {
     name: 'User Setup',
     path: '/users',

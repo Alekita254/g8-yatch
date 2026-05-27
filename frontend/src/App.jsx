@@ -52,6 +52,9 @@ import UserSetupPage from './pages/UserSetupPage';
 import UsersDashboard from './pages/UsersDashboard';
 import useProfile from './hooks/useProfile';
 import useStats from './hooks/useStats';
+import SalesDashboard from './sales/SalesDashboard';
+import SalesListPage from './sales/SalesListPage';
+import SalesShell from './sales/SalesShell';
 
 const heroImageUrl = 'https://images.unsplash.com/photo-1756680967419-96f0cb629566?auto=format&fit=crop&fm=jpg&q=80&w=2400';
 
@@ -367,6 +370,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/home" element={<AppChooserPage />} />
+        <Route path="/sales" element={<SalesShell />}>
+          <Route index element={<SalesDashboard />} />
+          <Route path="orders" element={<SalesListPage type="orders" />} />
+          <Route path="invoices" element={<SalesListPage type="invoices" />} />
+          <Route path="payments" element={<SalesListPage type="payments" />} />
+          <Route path="payment-runs" element={<SalesListPage type="paymentRuns" />} />
+        </Route>
         <Route element={<DashboardShell />}>
           <Route path="/dashboard" element={<DashboardOverview />} />
           <Route path="/users" element={<UserSetupPage />}>
@@ -398,10 +408,6 @@ export default function App() {
           <Route
             path="/frontdesk"
             element={<PlaceholderPage icon={ConciergeBell} title="Frontdesk" description="Guest arrivals, villa movements, and concierge operations are being connected." />}
-          />
-          <Route
-            path="/sales"
-            element={<PlaceholderPage icon={LayoutDashboard} title="Sales" description="Bookings, offers, corporate accounts, and revenue workflows are being connected." />}
           />
           <Route
             path="/tenders"
