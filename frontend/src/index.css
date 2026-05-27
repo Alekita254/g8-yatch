@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+/* ── Custom Theme ─────────────────────────────────────── */
+@theme {
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1; /* Indigo - More humane/professional than emerald AI green */
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand-950: #1e1b4b;
+
+  /* Semantic colors - Refined Slate Palette */
+  --color-app-bg: #fcfcfd;
+  --color-app-card: #ffffff;
+  --color-app-elevated: #f8fafc;
+  --color-app-border: #e2e8f0;
+  --color-app-text: #1e293b;
+  --color-app-muted: #64748b;
+
+  --color-accent: #6366f1;
+  
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Plus Jakarta Sans', var(--font-sans);
+}
+
+/* ── Dark Mode Overrides ────────────────────────────────── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  --color-app-bg: #0f172a;
+  --color-app-card: #1e293b;
+  --color-app-elevated: #111827;
+  --color-app-border: #334155;
+  --color-app-text: #f8fafc;
+  --color-app-muted: #94a3b8;
+}
+
+/* ── Base Layer ────────────────────────────────────────── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-app-bg text-app-text antialiased font-sans transition-colors duration-300;
+  }
+  h1, h2, h3, h4, .font-display {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    background: rgba(99, 102, 241, 0.2);
+  }
+}
+
+/* ── Utility Classes ──────────────────────────────────── */
+@layer utilities {
+  .glass {
+    @apply bg-app-card/70 backdrop-blur-md border border-app-border shadow-sm;
+  }
+  .soft-shadow {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  }
+  .organic-glow {
+    @apply relative;
+    &::after {
+      content: '';
+      @apply absolute -inset-1 bg-brand-500/10 blur-xl opacity-0 transition-opacity duration-500;
+    }
+    &:hover::after {
+      @apply opacity-100;
+    }
+  }
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-brand-600 to-brand-400;
+  }
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:shadow-brand-500/10 hover:border-brand-500/20;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+}
