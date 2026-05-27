@@ -1,129 +1,217 @@
-import React from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { FileText, Clock, CheckCircle, TrendingUp, Search, Loader2 } from 'lucide-react';
+import { Link, useOutletContext } from 'react-router-dom';
+import {
+  BadgePercent,
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  CreditCard,
+  GitBranch,
+  Landmark,
+  Loader2,
+  Package,
+  Percent,
+  Route,
+  ShieldCheck,
+  Tags,
+  Users,
+  WalletCards,
+} from 'lucide-react';
+
 import StatCard from '../components/StatCard';
 
+function total(stats, key) {
+  return stats?.[key]?.total ?? 0;
+}
+
+function activeCount(stats, key) {
+  return stats?.[key]?.results?.filter((item) => item.is_active !== false).length ?? 0;
+}
+
+function setupScore(checks) {
+  const complete = checks.filter((item) => item.done).length;
+  return Math.round((complete / checks.length) * 100);
+}
+
 export default function DashboardOverview() {
-  const { stats, loadingStats } = useOutletContext();
+  const { stats, loadingStats, djangoUser } = useOutletContext();
 
   if (loadingStats) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-app-border border-t-brand-500 animate-spin" />
-            <Loader2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-brand-500" />
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-app-border border-t-brand-500" />
+            <Loader2 className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-brand-500" />
           </div>
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-app-muted animate-pulse">Loading dashboard metrics...</p>
+          <p className="animate-pulse text-sm font-black uppercase tracking-[0.2em] text-app-muted">Loading admin command center...</p>
         </div>
       </div>
     );
   }
 
-  const activeCount = stats?.active_tenders ?? 0;
-  const pendingCount = stats?.pending_review ?? 0;
-  const wonCount = stats?.won_tenders ?? 0;
-  const winRate = stats?.win_rate ?? '0%';
-  const recentActivity = stats?.recent_activity ?? [];
+  const checks = [
+    { label: 'Users and roles configured', done: total(stats, 'users') > 0 && total(stats, 'roles') > 0, path: '/users' },
+    { label: 'Service points registered', done: total(stats, 'servicePoints') > 0, path: '/users/service-points' },
+    { label: 'Products and categories ready', done: total(stats, 'products') > 0 && total(stats, 'categories') > 0, path: '/products/items' },
+    { label: 'Tax engine configured', done: total(stats, 'taxConfigurations') > 0 && total(stats, 'taxCategories') > 0, path: '/taxes-discounts/configurations' },
+    { label: 'Payment routing mapped', done: total(stats, 'paymentMethods') > 0 && total(stats, 'paymentRoutingRules') > 0, path: '/payments/routing-rules' },
+    { label: 'Branches created', done: total(stats, 'organizations') > 0 && total(stats, 'branches') > 0, path: '/organisation/branches' },
+  ];
+
+  const readiness = setupScore(checks);
+  const activeUsers = activeCount(stats, 'users');
+  const activeProducts = activeCount(stats, 'products');
+  const activeTaxRules = activeCount(stats, 'taxConfigurations');
+  const activePaymentMethods = activeCount(stats, 'paymentMethods');
+
+  const moduleCards = [
+    {
+      title: 'User Setup',
+      icon: Users,
+      path: '/users',
+      detail: `${total(stats, 'roles')} roles, ${total(stats, 'servicePoints')} service points`,
+      status: total(stats, 'users') > 0 ? 'Operational' : 'Needs users',
+    },
+    {
+      title: 'Products',
+      icon: Package,
+      path: '/products/items',
+      detail: `${total(stats, 'products')} products, ${total(stats, 'salesPricelists')} sales pricelists`,
+      status: total(stats, 'products') > 0 ? 'Catalog ready' : 'Needs products',
+    },
+    {
+      title: 'Taxes & Discount',
+      icon: Percent,
+      path: '/taxes-discounts/configurations',
+      detail: `${total(stats, 'taxCategories')} tax categories, ${total(stats, 'discounts')} discounts`,
+      status: total(stats, 'taxOffices') > 0 ? 'Compliance mapped' : 'Needs tax office',
+    },
+    {
+      title: 'Payment',
+      icon: WalletCards,
+      path: '/payments/methods',
+      detail: `${total(stats, 'bankAccounts')} bank details, ${total(stats, 'paymentRoutingRules')} routes`,
+      status: total(stats, 'paymentRoutingRules') > 0 ? 'Routing active' : 'Needs routing',
+    },
+    {
+      title: 'Organisation',
+      icon: Building2,
+      path: '/organisation/organizations',
+      detail: `${total(stats, 'branches')} branches under ${total(stats, 'organizations')} organization`,
+      status: total(stats, 'branches') > 0 ? 'Tenant base ready' : 'Needs branches',
+    },
+  ];
+
+  const quickLinks = [
+    { label: 'Add Product', path: '/products/items', icon: Package },
+    { label: 'Tax Rules', path: '/taxes-discounts/configurations', icon: BadgePercent },
+    { label: 'Payment Routing', path: '/payments/routing-rules', icon: Route },
+    { label: 'Branches', path: '/organisation/branches', icon: GitBranch },
+  ];
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-app-text tracking-tight">Dashboard</h2>
-          <p className="text-app-muted text-sm font-medium mt-1">Overview of your tender pipeline and win rates</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative hidden lg:block">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-app-muted" />
-            <input 
-              type="text" 
-              placeholder="Search tenders..." 
-              className="pl-10 pr-4 py-2 rounded-xl bg-app-card border border-app-border text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all w-64"
-            />
+      <section className="overflow-hidden rounded-lg border border-app-border bg-[#172326] text-white">
+        <div className="grid gap-8 p-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d7b56d]">Admin command center</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">
+              G8 Yacht Villa is {readiness}% configured.
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm font-medium leading-7 text-white/68">
+              Monitor the setup foundation for users, branches, products, taxes, discounts, payment routes, and financial ledgers before live hotel operations begin.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {quickLinks.map((link) => (
+                <Link key={link.path} to={link.path} className="inline-flex items-center gap-2 rounded-md border border-white/12 bg-white/8 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white/78 transition hover:border-[#d7b56d]/50 hover:text-[#d7b56d]">
+                  <link.icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-lg border border-[#d7b56d]/25 bg-white/8 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-white/55">Setup readiness</p>
+              <span className="text-2xl font-black text-[#d7b56d]">{readiness}%</span>
+            </div>
+            <div className="mt-4 h-3 overflow-hidden rounded-full bg-black/25">
+              <div className="h-full rounded-full bg-[#d7b56d]" style={{ width: `${readiness}%` }} />
+            </div>
+            <p className="mt-4 text-sm text-white/68">
+              Signed in as <span className="font-black text-white">{djangoUser?.identity?.email || djangoUser?.identity?.username || 'Manager'}</span>
+            </p>
           </div>
         </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={Users} label="Active Users" value={activeUsers} color="emerald" />
+        <StatCard icon={Package} label="Active Products" value={activeProducts} color="blue" />
+        <StatCard icon={ShieldCheck} label="Active Tax Rules" value={activeTaxRules} color="amber" />
+        <StatCard icon={CreditCard} label="Payment Methods" value={activePaymentMethods} color="purple" />
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard icon={FileText} label="Active Tenders" value={activeCount} color="emerald" />
-        <StatCard icon={Clock} label="Pending Review" value={pendingCount} color="amber" />
-        <StatCard icon={CheckCircle} label="Won Tenders" value={wonCount} color="blue" />
-        <StatCard icon={TrendingUp} label="Win Rate" value={winRate} color="purple" />
-      </div>
-
-      {/* Recent & Charts Placeholder */}
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-xl font-black text-app-text tracking-tight flex items-center gap-2">
-            Recent Activity
-            {recentActivity.length > 0 && <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />}
-          </h3>
-          <div className="glass rounded-2xl divide-y divide-app-border overflow-hidden border-app-border/50">
-            {recentActivity.length === 0 ? (
-              <div className="p-12 text-center text-app-muted">
-                <FileText className="w-8 h-8 mx-auto mb-3 opacity-40" />
-                <p className="text-sm font-bold">No recent activities found</p>
-                <p className="text-xs opacity-75 mt-1">Tenders you register will appear here.</p>
-              </div>
-            ) : (
-              recentActivity.map((item) => {
-                let statusColor = 'text-app-muted';
-                if (item.status === 'Open') statusColor = 'text-blue-500';
-                else if (item.status === 'Evaluating') statusColor = 'text-amber-500';
-                else if (item.status === 'Awarded') statusColor = 'text-brand-500';
-                
-                return (
-                  <div key={item.id} className="flex items-center justify-between p-5 hover:bg-app-elevated/50 transition-colors group cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-app-elevated flex items-center justify-center text-app-muted group-hover:text-brand-500 group-hover:bg-brand-500/10 transition-all border border-app-border group-hover:border-brand-500/20">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-app-text group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{item.title}</p>
-                        <p className="text-xs font-medium text-app-muted mt-0.5">
-                          {item.tender_number} • Updated {new Date(item.updated_at).toLocaleDateString()}
-                        </p>
-                      </div>
+      <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="space-y-4">
+          <h3 className="text-xl font-black text-app-text">Module Health</h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            {moduleCards.map((module) => (
+              <Link key={module.path} to={module.path} className="group rounded-lg border border-app-border bg-app-card p-5 transition hover:border-brand-500/50 hover:shadow-lg hover:shadow-black/5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
+                      <module.icon className="h-5 w-5" />
                     </div>
-                    <div className="text-right">
-                      <span className={`text-xs font-black uppercase tracking-widest ${statusColor}`}>{item.status}</span>
+                    <div>
+                      <h4 className="font-black text-app-text">{module.title}</h4>
+                      <p className="text-xs font-bold uppercase text-brand-500">{module.status}</p>
                     </div>
                   </div>
-                );
-              })
-            )}
+                  <ChevronRight className="h-4 w-4 text-app-muted transition group-hover:translate-x-1 group-hover:text-brand-500" />
+                </div>
+                <p className="mt-4 text-sm text-app-muted">{module.detail}</p>
+              </Link>
+            ))}
           </div>
-        </div>
+        </section>
 
-        <div className="space-y-4">
-          <h3 className="text-xl font-black text-app-text tracking-tight">Compliance Status</h3>
-          <div className="glass rounded-2xl p-6 space-y-6 border-app-border/50">
-             {[
-               { label: 'KRA Tax Compliance', progress: 100, status: 'Active' },
-               { label: 'CR12 Certificate', progress: 100, status: 'Active' },
-               { label: 'AGPO Certificate', progress: 40, status: 'Expiring Soon', warn: true },
-             ].map((doc, i) => (
-               <div key={i} className="space-y-2">
-                 <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
-                   <span className="text-app-text">{doc.label}</span>
-                   <span className={doc.warn ? 'text-amber-500' : 'text-brand-500'}>{doc.status}</span>
-                 </div>
-                 <div className="h-2 w-full bg-app-elevated rounded-full overflow-hidden shadow-inner">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-1000 ${doc.warn ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' : 'bg-brand-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]'}`}
-                        style={{ width: `${doc.progress}%` }}
-                      />
-                  </div>
-               </div>
-             ))}
-             <button className="w-full py-3 rounded-xl border border-app-border hover:border-brand-500 text-app-muted hover:text-brand-600 dark:hover:text-white transition-all text-xs font-black uppercase tracking-widest mt-2">
-               View All Documents
-             </button>
+        <section className="space-y-4">
+          <h3 className="text-xl font-black text-app-text">Go-Live Checklist</h3>
+          <div className="rounded-lg border border-app-border bg-app-card p-5">
+            <div className="space-y-3">
+              {checks.map((check) => (
+                <Link key={check.label} to={check.path} className="flex items-center justify-between gap-4 rounded-md bg-app-elevated px-3 py-3 transition hover:bg-brand-500/10">
+                  <span className="text-sm font-bold text-app-text">{check.label}</span>
+                  {check.done ? (
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-brand-500" />
+                  ) : (
+                    <Landmark className="h-5 w-5 shrink-0 text-amber-500" />
+                  )}
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       </div>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-app-border bg-app-card p-5">
+          <Tags className="h-5 w-5 text-brand-500" />
+          <p className="mt-4 text-2xl font-black text-app-text">{total(stats, 'purchasePricelists')}</p>
+          <p className="text-xs font-bold uppercase text-app-muted">Purchase pricelists</p>
+        </div>
+        <div className="rounded-lg border border-app-border bg-app-card p-5">
+          <GitBranch className="h-5 w-5 text-brand-500" />
+          <p className="mt-4 text-2xl font-black text-app-text">{total(stats, 'branches')}</p>
+          <p className="text-xs font-bold uppercase text-app-muted">Property branches</p>
+        </div>
+        <div className="rounded-lg border border-app-border bg-app-card p-5">
+          <Landmark className="h-5 w-5 text-brand-500" />
+          <p className="mt-4 text-2xl font-black text-app-text">{total(stats, 'bankAccounts')}</p>
+          <p className="text-xs font-bold uppercase text-app-muted">Financial ledgers</p>
+        </div>
+      </section>
     </div>
   );
 }
