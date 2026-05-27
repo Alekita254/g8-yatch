@@ -30,7 +30,12 @@ import Sidebar from './components/Sidebar';
 import DashboardOverview from './pages/DashboardOverview';
 import MembersTablePage from './pages/MembersTablePage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import ProductCategoriesPage from './pages/ProductCategoriesPage';
+import ProductsItemsPage from './pages/ProductsItemsPage';
+import ProductsSetupPage from './pages/ProductsSetupPage';
+import PurchasePricelistsPage from './pages/PurchasePricelistsPage';
 import RolesSetupPage from './pages/RolesSetupPage';
+import SalesPricelistsPage from './pages/SalesPricelistsPage';
 import ServicePointsSetupPage from './pages/ServicePointsSetupPage';
 import UserSetupPage from './pages/UserSetupPage';
 import UsersDashboard from './pages/UsersDashboard';
@@ -359,10 +364,12 @@ export default function App() {
             <Route path="roles" element={<RolesSetupPage />} />
             <Route path="service-points" element={<ServicePointsSetupPage />} />
           </Route>
-          <Route
-            path="/products"
-            element={<PlaceholderPage icon={Package} title="Products" description="Set up rooms, menu items, minibar stock, workshop items, and saleable services." />}
-          />
+          <Route path="/products" element={<ProductsSetupPage />}>
+            <Route path="categories" element={<ProductCategoriesPage />} />
+            <Route path="items" element={<ProductsItemsPage />} />
+            <Route path="sales-pricelists" element={<SalesPricelistsPage />} />
+            <Route path="purchase-pricelists" element={<PurchasePricelistsPage />} />
+          </Route>
           <Route
             path="/taxes-discounts"
             element={<PlaceholderPage icon={Percent} title="Taxes & Discount" description="Configure VAT, service charge, discount rules, exemptions, and approval thresholds." />}

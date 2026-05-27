@@ -7,6 +7,10 @@ const routeLabels = {
   '/users/roles': 'Roles',
   '/users/service-points': 'Service Points',
   '/products': 'Products',
+  '/products/categories': 'Categories',
+  '/products/items': 'Products & Items',
+  '/products/sales-pricelists': 'Sales Pricelists',
+  '/products/purchase-pricelists': 'Purchase Pricelists',
   '/taxes-discounts': 'Taxes & Discount',
   '/payments': 'Payment',
   '/organisation': 'Organisation Setup',
@@ -23,6 +27,14 @@ function breadcrumbFor(pathname) {
     return [
       { label: 'Admin Console', path: '/dashboard' },
       { label: 'User Setup', path: '/users' },
+      { label: routeLabels[pathname] || 'Details' },
+    ];
+  }
+
+  if (pathname.startsWith('/products/')) {
+    return [
+      { label: 'Admin Console', path: '/dashboard' },
+      { label: 'Products', path: '/products' },
       { label: routeLabels[pathname] || 'Details' },
     ];
   }

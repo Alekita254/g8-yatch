@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Loader2, MapPin, Plus, Save } from 'lucide-react';
+import { Loader2, MapPin, Plus } from 'lucide-react';
 
 import api from '../api';
-
-const KIND_OPTIONS = [
-  ['POS_TERMINAL', 'POS Terminal'],
-  ['FRONTDESK', 'Frontdesk'],
-  ['BAR', 'Bar'],
-  ['RESTAURANT', 'Restaurant'],
-  ['WORKSHOP', 'Workshop'],
-  ['MARINA', 'Marina'],
-];
+import ServicePointFormModal from '../components/ServicePointFormModal';
 
 const emptyServicePoint = {
   name: '',
@@ -28,6 +20,7 @@ export default function ServicePointsSetupPage() {
   const [form, setForm] = useState(emptyServicePoint);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const fetchServicePoints = async () => {
     try {
@@ -60,6 +53,7 @@ export default function ServicePointsSetupPage() {
       const response = await api.post('/api/users/service-points/', payload);
       setServicePoints((current) => [response.data, ...current]);
       setForm(emptyServicePoint);
+      setShowAddModal(false);
       toast.success('Service point created');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to create service point');
@@ -78,77 +72,24 @@ export default function ServicePointsSetupPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-app-border bg-app-card p-6">
-        <div className="mb-5 flex items-center gap-3">
-          <MapPin className="h-6 w-6 text-brand-500" />
+      <div className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-6 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
+            <MapPin className="h-5 w-5" />
+          </div>
           <div>
             <h2 className="text-2xl font-black text-app-text">Service Points</h2>
             <p className="text-sm text-app-muted">Register physical points where staff operate the system.</p>
           </div>
         </div>
-
-        <form onSubmit={createServicePoint} className="grid gap-4 lg:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-xs font-bold uppercase text-app-muted">Name</span>
-            <input
-              value={form.name}
-              onChange={(event) => updateForm('name', event.target.value)}
-              required
-              placeholder="Pool Bar POS"
-              className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-xs font-bold uppercase text-app-muted">Code</span>
-            <input
-              value={form.code}
-              onChange={(event) => updateForm('code', event.target.value.toLowerCase().replace(/\s+/g, '-'))}
-              required
-              placeholder="pool-bar-pos"
-              className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-xs font-bold uppercase text-app-muted">Kind</span>
-            <select
-              value={form.kind}
-              onChange={(event) => updateForm('kind', event.target.value)}
-              className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              {KIND_OPTIONS.map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-2">
-            <span className="text-xs font-bold uppercase text-app-muted">Terminal MAC</span>
-            <input
-              value={form.mac_address}
-              onChange={(event) => updateForm('mac_address', event.target.value)}
-              placeholder="AA:BB:CC:DD:EE:FF"
-              className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </label>
-          <label className="space-y-2 lg:col-span-2">
-            <span className="text-xs font-bold uppercase text-app-muted">Location</span>
-            <input
-              value={form.location}
-              onChange={(event) => updateForm('location', event.target.value)}
-              placeholder="Pool bar"
-              className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </label>
-          <div className="flex justify-end lg:col-span-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Service Point
-            </button>
-          </div>
-        </form>
+        <button
+          type="button"
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+        >
+          <Plus className="h-4 w-4" />
+          Add Service Point
+        </button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -171,6 +112,15 @@ export default function ServicePointsSetupPage() {
           </article>
         ))}
       </div>
+
+      <ServicePointFormModal
+        isOpen={showAddModal}
+        form={form}
+        onChange={updateForm}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={createServicePoint}
+        isSaving={saving}
+      />
     </div>
   );
 }
