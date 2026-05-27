@@ -1,6 +1,22 @@
 from django.contrib import admin
 
-from .models import UserIdentity
+from .models import Role, ServicePoint, UserIdentity
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ("name", "key", "sync_to_keycloak", "is_active")
+    list_filter = ("sync_to_keycloak", "is_active")
+    search_fields = ("name", "key", "description")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(ServicePoint)
+class ServicePointAdmin(admin.ModelAdmin):
+    list_display = ("name", "code", "kind", "mac_address", "location", "is_active")
+    list_filter = ("kind", "is_active")
+    search_fields = ("name", "code", "mac_address", "location")
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(UserIdentity)

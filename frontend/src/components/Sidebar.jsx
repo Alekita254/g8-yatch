@@ -43,16 +43,16 @@ export default function Sidebar({ djangoUser }) {
   const userInitials = userName ? userName.substring(0, 2).toUpperCase() : "US";
 
   return (
-    <aside className="w-72 bg-app-card border-r border-app-border h-screen flex flex-col shrink-0 z-20 shadow-2xl shadow-black/5">
+    <aside className="w-72 bg-[#172326] border-r border-[#d7b56d]/20 h-screen flex flex-col shrink-0 z-20 shadow-2xl shadow-black/15 text-white">
       {/* Logo */}
-      <div className="h-20 flex items-center px-8 border-b border-app-border">
+      <div className="h-20 flex items-center px-8 border-b border-white/10">
         <Link to="/home" className="flex items-center gap-3 group cursor-pointer">
-          <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-110 transition-transform">
-            <Anchor className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-[#d7b56d] flex items-center justify-center shadow-lg shadow-[#d7b56d]/20 group-hover:scale-110 transition-transform">
+            <Anchor className="w-6 h-6 text-[#172326]" />
           </div>
           <div>
-            <p className="text-lg font-black text-app-text tracking-tight uppercase leading-none">G8 Yacht</p>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-app-muted mt-1">Admin Console</p>
+            <p className="text-lg font-black text-white tracking-tight uppercase leading-none">G8 Yacht</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55 mt-1">Admin Console</p>
           </div>
         </Link>
       </div>
@@ -70,19 +70,19 @@ export default function Sidebar({ djangoUser }) {
                 to={item.path}
                 className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-300 border-2 ${
                   active
-                    ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20 shadow-inner'
-                    : 'text-app-muted hover:bg-app-elevated hover:text-app-text border-transparent hover:border-app-border/50'
+                    ? 'bg-[#d7b56d]/15 text-[#f1d58a] border-[#d7b56d]/30 shadow-inner'
+                    : 'text-white/62 hover:bg-white/8 hover:text-white border-transparent hover:border-white/10'
                 }`}
               >
-                <item.icon className={`w-5 h-5 ${active ? 'text-brand-500' : 'text-app-muted'}`} />
+                <item.icon className={`w-5 h-5 ${active ? 'text-[#d7b56d]' : 'text-white/50'}`} />
                 <span className="min-w-0 flex-1">{item.name}</span>
                 {item.children && (
-                  <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180 text-brand-500' : 'text-app-muted'}`} />
+                  <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180 text-[#d7b56d]' : 'text-white/45'}`} />
                 )}
               </Link>
 
               {expanded && (
-                <div className="ml-5 border-l border-app-border pl-3 space-y-1">
+                <div className="ml-5 border-l border-white/10 pl-3 space-y-1">
                   {item.children.map((child) => {
                     const childActive = currentPath === child.path;
                     return (
@@ -91,8 +91,8 @@ export default function Sidebar({ djangoUser }) {
                         to={child.path}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-black uppercase tracking-widest transition ${
                           childActive
-                            ? 'bg-brand-500/10 text-brand-500'
-                            : 'text-app-muted hover:bg-app-elevated hover:text-app-text'
+                            ? 'bg-[#d7b56d]/15 text-[#f1d58a]'
+                            : 'text-white/55 hover:bg-white/8 hover:text-white'
                         }`}
                       >
                         <child.icon className="h-4 w-4" />
@@ -108,25 +108,25 @@ export default function Sidebar({ djangoUser }) {
       </nav>
 
       {/* Company/User Footer with 1-Click Logout */}
-      <div className="p-6 border-t border-app-border bg-app-elevated/20">
-        <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-app-card border border-app-border shadow-sm hover:border-brand-500/30 transition-all group">
+      <div className="p-6 border-t border-white/10 bg-black/10">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white/7 border border-white/10 shadow-sm hover:border-[#d7b56d]/30 transition-all group">
           <Link 
             to="/profile" 
             className="flex items-center gap-4 flex-1 overflow-hidden"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-black text-sm shadow-md group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-[#d7b56d] flex items-center justify-center text-[#172326] font-black text-sm shadow-md group-hover:scale-105 transition-transform">
               {userInitials}
             </div>
             <div className="flex-1 overflow-hidden text-left">
-              <p className="text-sm font-black text-app-text truncate leading-tight">{userName}</p>
-              <p className="text-[10px] font-bold text-app-muted truncate uppercase tracking-tighter">
+              <p className="text-sm font-black text-white truncate leading-tight">{userName}</p>
+              <p className="text-[10px] font-bold text-white/55 truncate uppercase tracking-tighter">
                 {djangoUser?.role || 'Manage Account'}
               </p>
             </div>
           </Link>
           <button
             onClick={() => auth.signoutRedirect()}
-            className="p-2.5 rounded-xl hover:bg-red-500/10 text-app-muted hover:text-red-500 transition-all cursor-pointer flex items-center justify-center"
+            className="p-2.5 rounded-xl hover:bg-red-500/10 text-white/55 hover:text-red-300 transition-all cursor-pointer flex items-center justify-center"
             title="Sign Out"
           >
             <LogOut className="w-4.5 h-4.5" />

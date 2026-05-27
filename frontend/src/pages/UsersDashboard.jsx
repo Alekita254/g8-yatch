@@ -13,12 +13,7 @@ import {
 } from 'lucide-react';
 
 import api from '../api';
-
-const ROLE_OPTIONS = [
-  { value: 'POS_MANAGER', label: 'POS Manager' },
-  { value: 'WAITER', label: 'Waiter' },
-  { value: 'NAIROBI_BRANCH', label: 'Nairobi Branch' },
-];
+import UserRoleModal from '../components/UserRoleModal';
 
 const emptyForm = {
   username: '',
@@ -31,11 +26,13 @@ const emptyForm = {
 
 export default function UsersDashboard({ embedded = false }) {
   const [users, setUsers] = useState([]);
+  const [roleOptions, setRoleOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingUser, setSavingUser] = useState(false);
   const [savingRoleFor, setSavingRoleFor] = useState(null);
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [roleModalUser, setRoleModalUser] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
   const totalManagers = useMemo(
@@ -57,8 +54,19 @@ export default function UsersDashboard({ embedded = false }) {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const response = await api.get('/api/users/roles/');
+      const roles = Array.isArray(response.data.results) ? response.data.results : [];
+      setRoleOptions(roles.map((role) => ({ value: role.key, label: role.name })));
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to load role options');
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
   }, []);
 
   const updateForm = (field, value) => {
@@ -74,12 +82,7 @@ export default function UsersDashboard({ embedded = false }) {
     });
   };
 
-  const toggleUserRole = async (user, role) => {
-    const currentRoles = user.realm_roles || [];
-    const nextRoles = currentRoles.includes(role)
-      ? currentRoles.filter((item) => item !== role)
-      : [...currentRoles, role];
-
+  const saveUserRoles = async (user, nextRoles) => {
     try {
       setSavingRoleFor(user.keycloak_sub);
       const response = await api.patch(`/api/users/${user.keycloak_sub}/roles/`, {
@@ -91,6 +94,7 @@ export default function UsersDashboard({ embedded = false }) {
         )
       );
       toast.success('Roles updated');
+      setRoleModalUser(null);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to update roles');
     } finally {
@@ -202,7 +206,7 @@ export default function UsersDashboard({ embedded = false }) {
         </div>
         <div className="rounded-lg border border-app-border bg-app-card p-5">
           <p className="text-xs font-black uppercase text-app-muted">Available Roles</p>
-          <p className="mt-2 text-3xl font-black text-app-text">{ROLE_OPTIONS.length}</p>
+          <p className="mt-2 text-3xl font-black text-app-text">{roleOptions.length}</p>
         </div>
       </div>
 
@@ -235,7 +239,7 @@ export default function UsersDashboard({ embedded = false }) {
           <div className="mt-5">
             <p className="mb-3 text-xs font-bold uppercase text-app-muted">Roles</p>
             <div className="flex flex-wrap gap-2">
-              {ROLE_OPTIONS.map((role) => {
+              {roleOptions.map((role) => {
                 const active = form.realm_roles.includes(role.value);
                 return (
                   <button
@@ -269,10 +273,11 @@ export default function UsersDashboard({ embedded = false }) {
       )}
 
       <div className="overflow-hidden rounded-lg border border-app-border bg-app-card">
-        <div className="grid grid-cols-[1.2fr_1.4fr_1.5fr] border-b border-app-border bg-app-elevated px-4 py-3 text-xs font-black uppercase text-app-muted">
+        <div className="grid grid-cols-[1.2fr_1.4fr_1.1fr_120px] border-b border-app-border bg-app-elevated px-4 py-3 text-xs font-black uppercase text-app-muted">
           <span>User</span>
           <span>Email</span>
           <span>Realm Roles</span>
+          <span className="text-right">Action</span>
         </div>
         {users.length === 0 ? (
           <div className="p-10 text-center text-sm text-app-muted">No users have signed in or been created yet.</div>
@@ -280,7 +285,7 @@ export default function UsersDashboard({ embedded = false }) {
           users.map((user) => (
             <div
               key={user.keycloak_sub}
-              className="grid grid-cols-[1.2fr_1.4fr_1.5fr] items-center gap-4 border-b border-app-border px-4 py-4 last:border-b-0"
+              className="grid grid-cols-[1.2fr_1.4fr_1.1fr_120px] items-center gap-4 border-b border-app-border px-4 py-4 last:border-b-0"
             >
               <div>
                 <p className="font-bold text-app-text">
@@ -290,34 +295,40 @@ export default function UsersDashboard({ embedded = false }) {
               </div>
               <p className="text-sm text-app-muted">{user.email || '-'}</p>
               <div className="flex flex-wrap gap-2">
-                {ROLE_OPTIONS.map((role) => {
-                  const active = user.realm_roles?.includes(role.value);
-                  return (
-                    <button
-                      key={role.value}
-                      type="button"
-                      disabled={savingRoleFor === user.keycloak_sub}
-                      onClick={() => toggleUserRole(user, role.value)}
-                      className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-black transition disabled:opacity-50 ${
-                        active
-                          ? 'border-brand-500 bg-brand-500/10 text-brand-500'
-                          : 'border-app-border text-app-muted hover:text-app-text'
-                      }`}
-                    >
-                      {savingRoleFor === user.keycloak_sub ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : active ? (
-                        <ShieldCheck className="h-3 w-3" />
-                      ) : null}
-                      {role.label}
-                    </button>
-                  );
-                })}
+                {(user.realm_roles || []).slice(0, 3).map((role) => (
+                  <span key={role} className="inline-flex items-center gap-1 rounded-md bg-brand-500/10 px-2 py-1 text-xs font-bold text-brand-500">
+                    <ShieldCheck className="h-3 w-3" />
+                    {role}
+                  </span>
+                ))}
+                {(user.realm_roles || []).length > 3 && (
+                  <span className="rounded-md bg-app-elevated px-2 py-1 text-xs font-bold text-app-muted">
+                    +{user.realm_roles.length - 3}
+                  </span>
+                )}
+              </div>
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setRoleModalUser(user)}
+                  className="rounded-md border border-app-border px-3 py-2 text-xs font-black text-app-text transition hover:bg-app-elevated"
+                >
+                  Manage
+                </button>
               </div>
             </div>
           ))
         )}
       </div>
+
+      <UserRoleModal
+        isOpen={Boolean(roleModalUser)}
+        user={roleModalUser}
+        roleOptions={roleOptions}
+        onClose={() => setRoleModalUser(null)}
+        onSave={saveUserRoles}
+        isSaving={Boolean(savingRoleFor)}
+      />
     </div>
   );
 }

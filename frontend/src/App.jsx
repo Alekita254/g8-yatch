@@ -25,6 +25,7 @@ import {
   Wrench,
 } from 'lucide-react';
 
+import AdminTopbar from './components/AdminTopbar';
 import Sidebar from './components/Sidebar';
 import DashboardOverview from './pages/DashboardOverview';
 import MembersTablePage from './pages/MembersTablePage';
@@ -317,6 +318,7 @@ function DashboardShell() {
     <div className="min-h-screen bg-app-bg text-app-text flex">
       <Sidebar djangoUser={profile.djangoUser?.identity} />
       <main className="flex-1 min-w-0 h-screen overflow-y-auto">
+        <AdminTopbar userName={profile.userName} />
         <div className="mx-auto max-w-7xl px-8 py-8">
           <Outlet
             context={{

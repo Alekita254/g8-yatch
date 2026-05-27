@@ -91,6 +91,27 @@ class KeycloakAdminClient:
         )
         return response.json()
 
+    def create_realm_role(self, role_name, description=""):
+        response = requests.get(
+            f"{self.base_url}/admin/realms/{self.realm}/roles/{role_name}",
+            headers=self._headers(),
+            timeout=20,
+        )
+        if response.status_code == 200:
+            return response.json()
+        if response.status_code != 404:
+            raise KeycloakAdminError(
+                f"Keycloak role check failed: {response.status_code} {response.text}"
+            )
+
+        self._request(
+            "POST",
+            f"{self.base_url}/admin/realms/{self.realm}/roles",
+            headers=self._headers(),
+            json={"name": role_name, "description": description},
+        )
+        return self.get_realm_role(role_name)
+
     def replace_realm_roles(self, keycloak_user_id, role_names):
         headers = self._headers()
         current = self._request(

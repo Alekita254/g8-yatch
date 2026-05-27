@@ -1,6 +1,44 @@
 from rest_framework import serializers
 
-from .models import UserIdentity
+from .models import Role, ServicePoint, UserIdentity
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = [
+            "id",
+            "key",
+            "name",
+            "description",
+            "permissions",
+            "sync_to_keycloak",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class ServicePointSerializer(serializers.ModelSerializer):
+    kind_display = serializers.CharField(source="get_kind_display", read_only=True)
+
+    class Meta:
+        model = ServicePoint
+        fields = [
+            "id",
+            "name",
+            "code",
+            "kind",
+            "kind_display",
+            "mac_address",
+            "location",
+            "description",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "kind_display", "created_at", "updated_at"]
 
 
 class UserIdentitySerializer(serializers.ModelSerializer):

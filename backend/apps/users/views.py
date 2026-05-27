@@ -2,11 +2,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .keycloak_admin import KeycloakAdminClient, KeycloakAdminError
-from .models import UserIdentity
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+
+from .models import Role, ServicePoint, UserIdentity
 from .permissions import IsPosManager
 from .serializers import (
     AdminUserCreateSerializer,
     AdminUserRoleSerializer,
+    RoleSerializer,
+    ServicePointSerializer,
     UserIdentitySerializer,
 )
 
@@ -85,6 +90,75 @@ class AdminUserRoleView(APIView):
         identity.realm_roles = roles
         identity.save(update_fields=["realm_roles", "updated_at"])
         return Response(UserIdentitySerializer(identity).data)
+
+
+class RoleListCreateView(APIView):
+    permission_classes = [IsPosManager]
+
+    def get(self, request):
+        roles = Role.objects.all()
+        serializer = RoleSerializer(roles, many=True)
+        return Response({"total": roles.count(), "results": serializer.data})
+
+    def post(self, request):
+        serializer = RoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        role = serializer.save()
+
+        if role.sync_to_keycloak:
+            try:
+                KeycloakAdminClient().create_realm_role(role.key, role.description)
+            except KeycloakAdminError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(RoleSerializer(role).data, status=status.HTTP_201_CREATED)
+
+
+class RoleDetailView(APIView):
+    permission_classes = [IsPosManager]
+
+    def patch(self, request, pk):
+        role = get_object_or_404(Role, pk=pk)
+        serializer = RoleSerializer(role, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        role = serializer.save()
+
+        if role.sync_to_keycloak:
+            try:
+                KeycloakAdminClient().create_realm_role(role.key, role.description)
+            except KeycloakAdminError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(RoleSerializer(role).data)
+
+
+class ServicePointListCreateView(APIView):
+    permission_classes = [IsPosManager]
+
+    def get(self, request):
+        service_points = ServicePoint.objects.all()
+        serializer = ServicePointSerializer(service_points, many=True)
+        return Response({"total": service_points.count(), "results": serializer.data})
+
+    def post(self, request):
+        serializer = ServicePointSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        service_point = serializer.save()
+        return Response(
+            ServicePointSerializer(service_point).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ServicePointDetailView(APIView):
+    permission_classes = [IsPosManager]
+
+    def patch(self, request, pk):
+        service_point = get_object_or_404(ServicePoint, pk=pk)
+        serializer = ServicePointSerializer(service_point, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        service_point = serializer.save()
+        return Response(ServicePointSerializer(service_point).data)
 
 
 class MyTokenObtainPairView(APIView):
