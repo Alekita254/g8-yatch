@@ -9,13 +9,14 @@ import {
   Calculator,
   ChevronDown,
   CreditCard,
+  GitBranch,
   Landmark,
   ListTree,
   LogOut,
   MapPin,
   Package,
   Percent,
-  ShoppingCart,
+  Route,
   ShieldCheck,
   Tags,
   Truck,
@@ -55,8 +56,25 @@ const navItems = [
       { name: 'Discount Rules', path: '/taxes-discounts/discounts', icon: BadgePercent },
     ],
   },
-  { name: 'Payment', path: '/payments', icon: CreditCard },
-  { name: 'Organisation Setup', path: '/organisation', icon: Building2 },
+  {
+    name: 'Payment',
+    path: '/payments',
+    icon: CreditCard,
+    children: [
+      { name: 'Payment Methods', path: '/payments/methods', icon: CreditCard },
+      { name: 'Bank Details', path: '/payments/bank-accounts', icon: Landmark },
+      { name: 'Payment Routing', path: '/payments/routing-rules', icon: Route },
+    ],
+  },
+  {
+    name: 'Organisation Setup',
+    path: '/organisation',
+    icon: Building2,
+    children: [
+      { name: 'Organizations', path: '/organisation/organizations', icon: Building2 },
+      { name: 'Branches', path: '/organisation/branches', icon: GitBranch },
+    ],
+  },
 ];
 
 export default function Sidebar({ djangoUser }) {

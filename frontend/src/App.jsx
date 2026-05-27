@@ -6,7 +6,6 @@ import {
   Building2,
   CalendarCheck,
   ConciergeBell,
-  CreditCard,
   FileText,
   FolderOpen,
   LayoutDashboard,
@@ -27,9 +26,16 @@ import {
 
 import AdminTopbar from './components/AdminTopbar';
 import Sidebar from './components/Sidebar';
+import BankAccountsPage from './pages/BankAccountsPage';
+import BranchesPage from './pages/BranchesPage';
 import DashboardOverview from './pages/DashboardOverview';
 import DiscountRulesPage from './pages/DiscountRulesPage';
 import MembersTablePage from './pages/MembersTablePage';
+import OrganisationSetupPage from './pages/OrganisationSetupPage';
+import OrganizationsPage from './pages/OrganizationsPage';
+import PaymentMethodsPage from './pages/PaymentMethodsPage';
+import PaymentRoutingRulesPage from './pages/PaymentRoutingRulesPage';
+import PaymentSetupPage from './pages/PaymentSetupPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import ProductCategoriesPage from './pages/ProductCategoriesPage';
 import ProductsItemsPage from './pages/ProductsItemsPage';
@@ -44,7 +50,6 @@ import TaxOfficesPage from './pages/TaxOfficesPage';
 import TaxesDiscountsSetupPage from './pages/TaxesDiscountsSetupPage';
 import UserSetupPage from './pages/UserSetupPage';
 import UsersDashboard from './pages/UsersDashboard';
-import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
 import useProfile from './hooks/useProfile';
 import useStats from './hooks/useStats';
 
@@ -381,11 +386,15 @@ export default function App() {
             <Route path="offices" element={<TaxOfficesPage />} />
             <Route path="discounts" element={<DiscountRulesPage />} />
           </Route>
-          <Route
-            path="/payments"
-            element={<PlaceholderPage icon={CreditCard} title="Payment" description="Manage payment methods, settlement accounts, cashier shifts, and reconciliation rules." />}
-          />
-          <Route path="/organisation" element={<WorkspaceSettingsPage />} />
+          <Route path="/payments" element={<PaymentSetupPage />}>
+            <Route path="methods" element={<PaymentMethodsPage />} />
+            <Route path="bank-accounts" element={<BankAccountsPage />} />
+            <Route path="routing-rules" element={<PaymentRoutingRulesPage />} />
+          </Route>
+          <Route path="/organisation" element={<OrganisationSetupPage />}>
+            <Route path="organizations" element={<OrganizationsPage />} />
+            <Route path="branches" element={<BranchesPage />} />
+          </Route>
           <Route
             path="/frontdesk"
             element={<PlaceholderPage icon={ConciergeBell} title="Frontdesk" description="Guest arrivals, villa movements, and concierge operations are being connected." />}
