@@ -52,6 +52,9 @@ import UserSetupPage from './pages/UserSetupPage';
 import UsersDashboard from './pages/UsersDashboard';
 import useProfile from './hooks/useProfile';
 import useStats from './hooks/useStats';
+import FrontdeskDashboard from './frontdesk/FrontdeskDashboard';
+import FrontdeskListPage from './frontdesk/FrontdeskListPage';
+import FrontdeskShell from './frontdesk/FrontdeskShell';
 import SalesDashboard from './sales/SalesDashboard';
 import SalesListPage from './sales/SalesListPage';
 import SalesShell from './sales/SalesShell';
@@ -377,6 +380,14 @@ export default function App() {
           <Route path="payments" element={<SalesListPage type="payments" />} />
           <Route path="payment-runs" element={<SalesListPage type="paymentRuns" />} />
         </Route>
+        <Route path="/frontdesk" element={<FrontdeskShell />}>
+          <Route index element={<FrontdeskDashboard />} />
+          <Route path="business-partners" element={<FrontdeskListPage type="partners" />} />
+          <Route path="rooms" element={<FrontdeskListPage type="rooms" />} />
+          <Route path="reservations" element={<FrontdeskListPage type="reservations" />} />
+          <Route path="folios" element={<FrontdeskListPage type="folios" />} />
+          <Route path="requests" element={<FrontdeskListPage type="requests" />} />
+        </Route>
         <Route element={<DashboardShell />}>
           <Route path="/dashboard" element={<DashboardOverview />} />
           <Route path="/users" element={<UserSetupPage />}>
@@ -405,10 +416,6 @@ export default function App() {
             <Route path="organizations" element={<OrganizationsPage />} />
             <Route path="branches" element={<BranchesPage />} />
           </Route>
-          <Route
-            path="/frontdesk"
-            element={<PlaceholderPage icon={ConciergeBell} title="Frontdesk" description="Guest arrivals, villa movements, and concierge operations are being connected." />}
-          />
           <Route
             path="/tenders"
             element={<PlaceholderPage icon={FileText} title="Tenders" description="Tender workflows are being connected." />}
