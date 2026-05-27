@@ -5,20 +5,46 @@ import { Edit3, Loader2, Package, Plus } from 'lucide-react';
 import api from '../api';
 import ProductFormModal from '../components/ProductFormModal';
 
+const packageLabels = {
+  INDIVIDUAL: 'individual item',
+  DOZEN: 'dozen',
+  CARTON: 'carton',
+  BALE: 'bale',
+  BAG: 'bag',
+  SACK: 'sack',
+  BOX: 'box',
+  CRATE: 'crate',
+  BOTTLE: 'bottle',
+  CAN: 'can',
+  JAR: 'jar',
+  PACK: 'pack',
+};
+
 const emptyProduct = {
   name: '',
   sku: '',
   product_type: 'BILLABLE',
   category: '',
   unit: 'EACH',
+  package_type: 'INDIVIDUAL',
+  pack_size: '1.000',
+  quantity: '0.000',
   description: '',
   is_sellable: true,
   is_inventory_tracked: false,
+  purchase_pricelist: '',
+  purchase_price: '',
+  purchase_currency: 'KES',
+  sales_pricelist: '',
+  sales_price: '',
+  sales_currency: 'KES',
 };
 
 export default function ProductsItemsPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [purchasePricelists, setPurchasePricelists] = useState([]);
+  const [salesPricelists, setSalesPricelists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -28,12 +54,16 @@ export default function ProductsItemsPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const [productsResponse, categoriesResponse] = await Promise.all([
+        const [productsResponse, categoriesResponse, purchaseResponse, salesResponse] = await Promise.all([
           api.get('/api/products/items/'),
           api.get('/api/products/categories/'),
+          api.get('/api/products/purchase-pricelists/'),
+          api.get('/api/products/sales-pricelists/'),
         ]);
         setProducts(Array.isArray(productsResponse.data.results) ? productsResponse.data.results : []);
         setCategories(Array.isArray(categoriesResponse.data.results) ? categoriesResponse.data.results : []);
+        setPurchasePricelists(Array.isArray(purchaseResponse.data.results) ? purchaseResponse.data.results : []);
+        setSalesPricelists(Array.isArray(salesResponse.data.results) ? salesResponse.data.results : []);
       } catch (err) {
         toast.error(err.response?.data?.detail || 'Failed to load products');
       } finally {
@@ -56,7 +86,16 @@ export default function ProductsItemsPage() {
     setForm({
       ...product,
       category: product.category || '',
+      package_type: product.package_type || 'INDIVIDUAL',
+      pack_size: product.pack_size || '1.000',
+      quantity: product.quantity || '0.000',
       description: product.description || '',
+      purchase_pricelist: '',
+      purchase_price: '',
+      purchase_currency: 'KES',
+      sales_pricelist: '',
+      sales_price: '',
+      sales_currency: 'KES',
     });
     setShowAddModal(true);
   };
@@ -71,9 +110,48 @@ export default function ProductsItemsPage() {
     event.preventDefault();
     try {
       setSaving(true);
+      const {
+        purchase_pricelist,
+        purchase_price,
+        purchase_currency,
+        sales_pricelist,
+        sales_price,
+        sales_currency,
+        ...productPayload
+      } = form;
       const response = editingProduct
-        ? await api.patch(`/api/products/items/${editingProduct.id}/`, form)
-        : await api.post('/api/products/items/', form);
+        ? await api.patch(`/api/products/items/${editingProduct.id}/`, productPayload)
+        : await api.post('/api/products/items/', productPayload);
+
+      if (purchase_pricelist && purchase_price) {
+        const pricelist = purchasePricelists.find((item) => String(item.id) === String(purchase_pricelist));
+        const items = [
+          ...(pricelist?.items || []).filter((item) => String(item.product) !== String(response.data.id)),
+          {
+            product: response.data.id,
+            price: purchase_price,
+            currency: purchase_currency || 'KES',
+            unit: response.data.unit,
+          },
+        ];
+        const purchaseUpdate = await api.patch(`/api/products/purchase-pricelists/${purchase_pricelist}/`, { items });
+        setPurchasePricelists((current) => current.map((item) => (item.id === purchaseUpdate.data.id ? purchaseUpdate.data : item)));
+      }
+
+      if (sales_pricelist && sales_price) {
+        const pricelist = salesPricelists.find((item) => String(item.id) === String(sales_pricelist));
+        const items = [
+          ...(pricelist?.items || []).filter((item) => String(item.product) !== String(response.data.id)),
+          {
+            product: response.data.id,
+            price: sales_price,
+            currency: sales_currency || 'KES',
+          },
+        ];
+        const salesUpdate = await api.patch(`/api/products/sales-pricelists/${sales_pricelist}/`, { items });
+        setSalesPricelists((current) => current.map((item) => (item.id === salesUpdate.data.id ? salesUpdate.data : item)));
+      }
+
       setProducts((current) => (
         editingProduct
           ? current.map((product) => (product.id === response.data.id ? response.data : product))
@@ -134,7 +212,9 @@ export default function ProductsItemsPage() {
                 </button>
               </div>
             </div>
-            <p className="mt-3 text-sm text-app-muted">{product.category_name} / {product.unit}</p>
+            <p className="mt-3 text-sm text-app-muted">
+              {product.category_name} / {product.quantity || '0.000'} {packageLabels[product.package_type] || 'package'} x {product.pack_size || '1.000'} {product.unit}
+            </p>
             {product.bom_items?.length > 0 && (
               <div className="mt-4 rounded-md bg-app-elevated p-3">
                 <p className="text-xs font-black uppercase text-app-muted">Bill of Materials</p>
@@ -155,6 +235,8 @@ export default function ProductsItemsPage() {
         isOpen={showAddModal}
         form={form}
         categories={categories}
+        purchasePricelists={purchasePricelists}
+        salesPricelists={salesPricelists}
         onChange={updateForm}
         onClose={closeModal}
         onSubmit={createProduct}

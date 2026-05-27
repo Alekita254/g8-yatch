@@ -26,8 +26,8 @@ class ProductCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "sku", "product_type", "category", "unit", "is_sellable", "is_inventory_tracked", "is_active")
-    list_filter = ("product_type", "is_sellable", "is_inventory_tracked", "is_active")
+    list_display = ("name", "sku", "product_type", "category", "quantity", "package_type", "pack_size", "unit", "is_sellable", "is_inventory_tracked", "is_active")
+    list_filter = ("product_type", "package_type", "is_sellable", "is_inventory_tracked", "is_active")
     search_fields = ("name", "sku")
     inlines = [BillOfMaterialsItemInline]
 

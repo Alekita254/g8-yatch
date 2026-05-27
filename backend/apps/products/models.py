@@ -42,6 +42,20 @@ class Product(models.Model):
         ML = "ML", "Millilitre"
         HOUR = "HOUR", "Hour"
 
+    class PackageType(models.TextChoices):
+        INDIVIDUAL = "INDIVIDUAL", "Individual Item"
+        DOZEN = "DOZEN", "Dozen"
+        CARTON = "CARTON", "Carton"
+        BALE = "BALE", "Bale"
+        BAG = "BAG", "Bag"
+        SACK = "SACK", "Sack"
+        BOX = "BOX", "Box"
+        CRATE = "CRATE", "Crate"
+        BOTTLE = "BOTTLE", "Bottle"
+        CAN = "CAN", "Can"
+        JAR = "JAR", "Jar"
+        PACK = "PACK", "Pack"
+
     name = models.CharField(max_length=160)
     sku = models.CharField(max_length=80, unique=True)
     product_type = models.CharField(max_length=20, choices=ProductType.choices)
@@ -51,6 +65,13 @@ class Product(models.Model):
         on_delete=models.PROTECT,
     )
     unit = models.CharField(max_length=20, choices=Unit.choices, default=Unit.EACH)
+    package_type = models.CharField(
+        max_length=20,
+        choices=PackageType.choices,
+        default=PackageType.INDIVIDUAL,
+    )
+    pack_size = models.DecimalField(max_digits=12, decimal_places=3, default=1)
+    quantity = models.DecimalField(max_digits=14, decimal_places=3, default=0)
     description = models.TextField(blank=True)
     is_sellable = models.BooleanField(default=True)
     is_inventory_tracked = models.BooleanField(default=False)
