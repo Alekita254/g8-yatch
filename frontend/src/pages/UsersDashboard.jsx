@@ -1,50 +1,124 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { setAuthToken } from '../api';
-import api from '../api';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Users, Loader2, AlertCircle, Plus } from 'lucide-react';
-import UserDistributionSummary from '../components/UserDistributionSummary';
+import {
+  AlertCircle,
+  Check,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 
-/**
- * UsersDashboard – a high‑level overview of all users in the system.
- * Shows total user count, recent sign‑ups and simple analytics.
- * This page lives at `/users` while the organisation‑specific members view
- * remains at `/users/members`.
- */
-export default function UsersDashboard() {
-  const navigate = useNavigate();
-  const [totalUsers, setTotalUsers] = useState(null);
-  const [recent, setRecent] = useState([]);
+import api from '../api';
+
+const ROLE_OPTIONS = [
+  { value: 'POS_MANAGER', label: 'POS Manager' },
+  { value: 'WAITER', label: 'Waiter' },
+  { value: 'NAIROBI_BRANCH', label: 'Nairobi Branch' },
+];
+
+const emptyForm = {
+  username: '',
+  email: '',
+  first_name: '',
+  last_name: '',
+  password: '',
+  realm_roles: ['WAITER'],
+};
+
+export default function UsersDashboard({ embedded = false }) {
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [savingUser, setSavingUser] = useState(false);
+  const [savingRoleFor, setSavingRoleFor] = useState(null);
   const [error, setError] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState(emptyForm);
 
-  const fetchSummary = async () => {
+  const totalManagers = useMemo(
+    () => users.filter((user) => user.realm_roles?.includes('POS_MANAGER')).length,
+    [users]
+  );
+
+  const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (token) setAuthToken(token);
-      const res = await api.get('/api/organisation/user_summary/');
-      // backend currently returns `total_users`; accept either key for compatibility
-      setTotalUsers(res.data.total ?? res.data.total_users ?? 0);
-      // ensure `recent` is always an array to avoid runtime errors when backend doesn't provide it
-      setRecent(Array.isArray(res.data.recent) ? res.data.recent : []);
+      setLoading(true);
+      setError(null);
+      const response = await api.get('/api/users/');
+      setUsers(Array.isArray(response.data.results) ? response.data.results : []);
     } catch (err) {
       setError(err);
-      toast.error(err.response?.data?.detail || 'Failed to load user summary');
+      toast.error(err.response?.data?.detail || 'Failed to load users');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSummary();
+    fetchUsers();
   }, []);
+
+  const updateForm = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const toggleFormRole = (role) => {
+    setForm((current) => {
+      const roles = current.realm_roles.includes(role)
+        ? current.realm_roles.filter((item) => item !== role)
+        : [...current.realm_roles, role];
+      return { ...current, realm_roles: roles };
+    });
+  };
+
+  const toggleUserRole = async (user, role) => {
+    const currentRoles = user.realm_roles || [];
+    const nextRoles = currentRoles.includes(role)
+      ? currentRoles.filter((item) => item !== role)
+      : [...currentRoles, role];
+
+    try {
+      setSavingRoleFor(user.keycloak_sub);
+      const response = await api.patch(`/api/users/${user.keycloak_sub}/roles/`, {
+        realm_roles: nextRoles,
+      });
+      setUsers((current) =>
+        current.map((item) =>
+          item.keycloak_sub === user.keycloak_sub ? response.data : item
+        )
+      );
+      toast.success('Roles updated');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to update roles');
+    } finally {
+      setSavingRoleFor(null);
+    }
+  };
+
+  const createUser = async (event) => {
+    event.preventDefault();
+    try {
+      setSavingUser(true);
+      const response = await api.post('/api/users/', form);
+      setUsers((current) => [response.data, ...current]);
+      setForm(emptyForm);
+      setShowCreate(false);
+      toast.success('User created in Keycloak');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to create user');
+    } finally {
+      setSavingUser(false);
+    }
+  };
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 space-y-4">
         <Loader2 className="w-12 h-12 text-brand-500 animate-spin" />
-        <p className="text-sm font-bold text-app-muted animate-pulse">Loading user dashboard…</p>
+        <p className="text-sm font-bold text-app-muted animate-pulse">Loading admin users...</p>
       </div>
     );
   }
@@ -54,60 +128,194 @@ export default function UsersDashboard() {
       <div className="flex flex-col items-center justify-center py-32 space-y-4 text-center">
         <AlertCircle className="w-12 h-12 text-red-500" />
         <p className="text-lg font-bold text-app-text">
-          {error.response?.status === 401
-            ? 'Authentication required. Please log in.'
-            : 'Unable to load user data.'}
+          {error.response?.status === 403
+            ? 'You need the POS_MANAGER role to manage users.'
+            : 'Unable to load users.'}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="glass rounded-[2rem] p-8 border-app-border/40 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div className="flex items-center gap-6">
-          <Users className="w-12 h-12 text-brand-500" />
-          <div>
-            <h2 className="text-2xl font-black text-app-text">User Dashboard</h2>
-            <p className="text-xs text-app-muted">Overview of all platform users across organisations.</p>
+    <div className="space-y-6 animate-fade-in">
+      {!embedded && (
+        <div className="flex flex-col gap-5 rounded-lg border border-app-border bg-app-card p-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
+              <Users className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-app-text">User Management</h2>
+              <p className="text-sm text-app-muted">Create Keycloak users and manage realm roles.</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={fetchUsers}
+              className="inline-flex items-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate((value) => !value)}
+              className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+            >
+              <Plus className="h-4 w-4" />
+              Add User
+            </button>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/users/members')}
-          className="inline-flex items-center gap-2 px-4 py-3 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700"
-        >
-          <Plus className="w-4 h-4" />
-          View Members
-        </button>
-      </div>
+      )}
 
-      {/* Summary cards */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="glass rounded-xl p-6 bg-brand-500/5 border border-brand-500/10">
-          <h3 className="text-sm font-semibold text-app-muted uppercase">Total Users</h3>
-          <p className="text-3xl font-black text-app-text mt-2">{totalUsers}</p>
+      {embedded && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={fetchUsers}
+            className="inline-flex items-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreate((value) => !value)}
+            className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
+          >
+            <Plus className="h-4 w-4" />
+            Add User
+          </button>
         </div>
-        {/* Additional summary cards can be added here */}
+      )}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-app-border bg-app-card p-5">
+          <p className="text-xs font-black uppercase text-app-muted">Total Users</p>
+          <p className="mt-2 text-3xl font-black text-app-text">{users.length}</p>
+        </div>
+        <div className="rounded-lg border border-app-border bg-app-card p-5">
+          <p className="text-xs font-black uppercase text-app-muted">Managers</p>
+          <p className="mt-2 text-3xl font-black text-app-text">{totalManagers}</p>
+        </div>
+        <div className="rounded-lg border border-app-border bg-app-card p-5">
+          <p className="text-xs font-black uppercase text-app-muted">Available Roles</p>
+          <p className="mt-2 text-3xl font-black text-app-text">{ROLE_OPTIONS.length}</p>
+        </div>
       </div>
 
-      <UserDistributionSummary />
-
-      {/* Recent sign‑ups */}
-      <div className="glass rounded-xl p-6 border-app-border/40">
-        <h3 className="text-sm font-semibold text-app-muted uppercase mb-4">Recent Sign‑ups</h3>
-        {recent.length === 0 ? (
-          <p className="text-app-muted">No recent activity.</p>
-        ) : (
-          <ul className="space-y-2">
-            {recent.map((u) => (
-              <li key={u.id} className="flex items-center justify-between">
-                <span className="text-sm text-app-text">{u.email}</span>
-                <span className="text-xs text-app-muted">{new Date(u.created_at).toLocaleDateString()}</span>
-              </li>
+      {showCreate && (
+        <form onSubmit={createUser} className="rounded-lg border border-app-border bg-app-card p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <UserPlus className="h-5 w-5 text-brand-500" />
+            <h3 className="text-lg font-black text-app-text">Add User</h3>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[
+              ['username', 'Username'],
+              ['email', 'Email'],
+              ['first_name', 'First name'],
+              ['last_name', 'Last name'],
+              ['password', 'Temporary password'],
+            ].map(([field, label]) => (
+              <label key={field} className="space-y-2">
+                <span className="text-xs font-bold uppercase text-app-muted">{label}</span>
+                <input
+                  type={field === 'password' ? 'password' : field === 'email' ? 'email' : 'text'}
+                  value={form[field]}
+                  required={['username', 'email', 'password'].includes(field)}
+                  onChange={(event) => updateForm(field, event.target.value)}
+                  className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </label>
             ))}
-          </ul>
+          </div>
+          <div className="mt-5">
+            <p className="mb-3 text-xs font-bold uppercase text-app-muted">Roles</p>
+            <div className="flex flex-wrap gap-2">
+              {ROLE_OPTIONS.map((role) => {
+                const active = form.realm_roles.includes(role.value);
+                return (
+                  <button
+                    key={role.value}
+                    type="button"
+                    onClick={() => toggleFormRole(role.value)}
+                    className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-black transition ${
+                      active
+                        ? 'border-brand-500 bg-brand-500/10 text-brand-500'
+                        : 'border-app-border text-app-muted hover:text-app-text'
+                    }`}
+                  >
+                    {active && <Check className="h-3 w-3" />}
+                    {role.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end">
+            <button
+              type="submit"
+              disabled={savingUser}
+              className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
+            >
+              {savingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Create User
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="overflow-hidden rounded-lg border border-app-border bg-app-card">
+        <div className="grid grid-cols-[1.2fr_1.4fr_1.5fr] border-b border-app-border bg-app-elevated px-4 py-3 text-xs font-black uppercase text-app-muted">
+          <span>User</span>
+          <span>Email</span>
+          <span>Realm Roles</span>
+        </div>
+        {users.length === 0 ? (
+          <div className="p-10 text-center text-sm text-app-muted">No users have signed in or been created yet.</div>
+        ) : (
+          users.map((user) => (
+            <div
+              key={user.keycloak_sub}
+              className="grid grid-cols-[1.2fr_1.4fr_1.5fr] items-center gap-4 border-b border-app-border px-4 py-4 last:border-b-0"
+            >
+              <div>
+                <p className="font-bold text-app-text">
+                  {[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}
+                </p>
+                <p className="text-xs text-app-muted">{user.username}</p>
+              </div>
+              <p className="text-sm text-app-muted">{user.email || '-'}</p>
+              <div className="flex flex-wrap gap-2">
+                {ROLE_OPTIONS.map((role) => {
+                  const active = user.realm_roles?.includes(role.value);
+                  return (
+                    <button
+                      key={role.value}
+                      type="button"
+                      disabled={savingRoleFor === user.keycloak_sub}
+                      onClick={() => toggleUserRole(user, role.value)}
+                      className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-black transition disabled:opacity-50 ${
+                        active
+                          ? 'border-brand-500 bg-brand-500/10 text-brand-500'
+                          : 'border-app-border text-app-muted hover:text-app-text'
+                      }`}
+                    >
+                      {savingRoleFor === user.keycloak_sub ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : active ? (
+                        <ShieldCheck className="h-3 w-3" />
+                      ) : null}
+                      {role.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

@@ -2,17 +2,33 @@ import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
 import { 
-  LayoutDashboard, FileText, Users, FolderOpen, 
-  Zap, Building2, Target, LogOut 
+  Anchor,
+  Building2,
+  ChevronDown,
+  CreditCard,
+  LogOut,
+  MapPin,
+  Package,
+  Percent,
+  ShieldCheck,
+  Users,
 } from 'lucide-react';
 
 const navItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Tenders', path: '/tenders', icon: FileText },
-  { name: 'CRM', path: '/crm', icon: Target },
-  { name: 'Documents', path: '/documents', icon: FolderOpen },
-  { name: 'Organisation', path: '/organisation', icon: Building2 },
-  { name: 'Users', path: '/users', icon: Users },
+  {
+    name: 'User Setup',
+    path: '/users',
+    icon: Users,
+    children: [
+      { name: 'Users', path: '/users', icon: Users },
+      { name: 'Roles', path: '/users/roles', icon: ShieldCheck },
+      { name: 'Service Points', path: '/users/service-points', icon: MapPin },
+    ],
+  },
+  { name: 'Products', path: '/products', icon: Package },
+  { name: 'Taxes & Discount', path: '/taxes-discounts', icon: Percent },
+  { name: 'Payment', path: '/payments', icon: CreditCard },
+  { name: 'Organisation Setup', path: '/organisation', icon: Building2 },
 ];
 
 export default function Sidebar({ djangoUser }) {
@@ -30,13 +46,14 @@ export default function Sidebar({ djangoUser }) {
     <aside className="w-72 bg-app-card border-r border-app-border h-screen flex flex-col shrink-0 z-20 shadow-2xl shadow-black/5">
       {/* Logo */}
       <div className="h-20 flex items-center px-8 border-b border-app-border">
-        <Link to="/" className="flex items-center gap-3 group cursor-pointer">
+        <Link to="/home" className="flex items-center gap-3 group cursor-pointer">
           <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-110 transition-transform">
-            <Zap className="w-6 h-6 text-white" />
+            <Anchor className="w-6 h-6 text-white" />
           </div>
-          <span className="text-2xl font-black text-app-text tracking-tight uppercase">
-            Tender<span className="text-brand-500 font-medium">Safi</span>
-          </span>
+          <div>
+            <p className="text-lg font-black text-app-text tracking-tight uppercase leading-none">G8 Yacht</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-app-muted mt-1">Admin Console</p>
+          </div>
         </Link>
       </div>
 
@@ -44,23 +61,48 @@ export default function Sidebar({ djangoUser }) {
       <nav className="flex-1 py-8 flex flex-col gap-2 px-4">
         {navItems.map((item) => {
           // Check active state
-          const active = item.path === '/dashboard' 
-            ? currentPath === '/dashboard' || currentPath === '/dashboard/'
-            : currentPath.startsWith(item.path);
+          const active = currentPath === item.path || currentPath.startsWith(`${item.path}/`);
+          const expanded = item.children && active;
 
           return (
-            <Link
-              key={item.name}
-              to={item.path}
-              className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-300 border-2 ${
-                active
-                  ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20 shadow-inner'
-                  : 'text-app-muted hover:bg-app-elevated hover:text-app-text border-transparent hover:border-app-border/50'
-              }`}
-            >
-              <item.icon className={`w-5 h-5 ${active ? 'text-brand-500' : 'text-app-muted'}`} />
-              {item.name}
-            </Link>
+            <div key={item.name} className="space-y-1">
+              <Link
+                to={item.path}
+                className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-300 border-2 ${
+                  active
+                    ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20 shadow-inner'
+                    : 'text-app-muted hover:bg-app-elevated hover:text-app-text border-transparent hover:border-app-border/50'
+                }`}
+              >
+                <item.icon className={`w-5 h-5 ${active ? 'text-brand-500' : 'text-app-muted'}`} />
+                <span className="min-w-0 flex-1">{item.name}</span>
+                {item.children && (
+                  <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180 text-brand-500' : 'text-app-muted'}`} />
+                )}
+              </Link>
+
+              {expanded && (
+                <div className="ml-5 border-l border-app-border pl-3 space-y-1">
+                  {item.children.map((child) => {
+                    const childActive = currentPath === child.path;
+                    return (
+                      <Link
+                        key={child.name}
+                        to={child.path}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-black uppercase tracking-widest transition ${
+                          childActive
+                            ? 'bg-brand-500/10 text-brand-500'
+                            : 'text-app-muted hover:bg-app-elevated hover:text-app-text'
+                        }`}
+                      >
+                        <child.icon className="h-4 w-4" />
+                        {child.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from urllib.parse import urlparse, urlunparse
 
 import jwt
 from django.conf import settings
@@ -47,8 +48,9 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
 
     def _decode_token(self, token):
         try:
-            jwks_client = PyJWKClient(settings.KEYCLOAK_JWKS_URL)
-            signing_key = jwks_client.get_signing_key_from_jwt(token)
+            claims = jwt.decode(token, options={"verify_signature": False})
+            issuer = claims.get("iss", settings.KEYCLOAK_ISSUER)
+            signing_key = self._get_signing_key(token, issuer)
             return jwt.decode(
                 token,
                 signing_key.key,
@@ -58,7 +60,29 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
                 options={"require": ["exp", "iat", "iss", "sub"]},
             )
         except jwt.PyJWTError as exc:
+            if settings.DEBUG:
+                raise exceptions.AuthenticationFailed(
+                    f"Invalid Keycloak token: {exc}"
+                ) from exc
             raise exceptions.AuthenticationFailed("Invalid Keycloak token.") from exc
+
+    def _get_signing_key(self, token, issuer):
+        jwks_urls = [f"{issuer.rstrip('/')}/protocol/openid-connect/certs"]
+
+        parsed = urlparse(issuer)
+        if parsed.hostname == "localhost":
+            netloc = parsed.netloc.replace("localhost", "127.0.0.1", 1)
+            fallback_issuer = urlunparse(parsed._replace(netloc=netloc))
+            jwks_urls.append(f"{fallback_issuer.rstrip('/')}/protocol/openid-connect/certs")
+
+        last_error = None
+        for jwks_url in dict.fromkeys(jwks_urls):
+            try:
+                return PyJWKClient(jwks_url).get_signing_key_from_jwt(token)
+            except Exception as exc:
+                last_error = exc
+
+        raise jwt.PyJWTError(f"Unable to fetch Keycloak JWKS: {last_error}")
 
     def _principal_from_claims(self, claims):
         roles = claims.get("realm_access", {}).get("roles", [])

@@ -6,6 +6,7 @@ import {
   Building2,
   CalendarCheck,
   ConciergeBell,
+  CreditCard,
   FileText,
   FolderOpen,
   LayoutDashboard,
@@ -13,6 +14,8 @@ import {
   LogIn,
   Martini,
   MonitorCog,
+  Package,
+  Percent,
   Sailboat,
   ShieldCheck,
   Sparkles,
@@ -26,6 +29,9 @@ import Sidebar from './components/Sidebar';
 import DashboardOverview from './pages/DashboardOverview';
 import MembersTablePage from './pages/MembersTablePage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import RolesSetupPage from './pages/RolesSetupPage';
+import ServicePointsSetupPage from './pages/ServicePointsSetupPage';
+import UserSetupPage from './pages/UserSetupPage';
 import UsersDashboard from './pages/UsersDashboard';
 import WorkspaceSettingsPage from './pages/WorkspaceSettingsPage';
 import useProfile from './hooks/useProfile';
@@ -346,6 +352,24 @@ export default function App() {
         <Route path="/home" element={<AppChooserPage />} />
         <Route element={<DashboardShell />}>
           <Route path="/dashboard" element={<DashboardOverview />} />
+          <Route path="/users" element={<UserSetupPage />}>
+            <Route index element={<UsersDashboard embedded />} />
+            <Route path="roles" element={<RolesSetupPage />} />
+            <Route path="service-points" element={<ServicePointsSetupPage />} />
+          </Route>
+          <Route
+            path="/products"
+            element={<PlaceholderPage icon={Package} title="Products" description="Set up rooms, menu items, minibar stock, workshop items, and saleable services." />}
+          />
+          <Route
+            path="/taxes-discounts"
+            element={<PlaceholderPage icon={Percent} title="Taxes & Discount" description="Configure VAT, service charge, discount rules, exemptions, and approval thresholds." />}
+          />
+          <Route
+            path="/payments"
+            element={<PlaceholderPage icon={CreditCard} title="Payment" description="Manage payment methods, settlement accounts, cashier shifts, and reconciliation rules." />}
+          />
+          <Route path="/organisation" element={<WorkspaceSettingsPage />} />
           <Route
             path="/frontdesk"
             element={<PlaceholderPage icon={ConciergeBell} title="Frontdesk" description="Guest arrivals, villa movements, and concierge operations are being connected." />}
@@ -358,8 +382,6 @@ export default function App() {
             path="/tenders"
             element={<PlaceholderPage icon={FileText} title="Tenders" description="Tender workflows are being connected." />}
           />
-          <Route path="/organisation" element={<WorkspaceSettingsPage />} />
-          <Route path="/users" element={<UsersDashboard />} />
           <Route path="/users/members" element={<MembersTablePage />} />
           <Route
             path="/crm"
