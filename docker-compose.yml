@@ -1,0 +1,54 @@
+services:
+  app-postgres:
+    image: postgres:16-alpine
+    container_name: g8-app-postgres
+    environment:
+      POSTGRES_DB: g8_yacht
+      POSTGRES_USER: g8_yacht
+      POSTGRES_PASSWORD: g8_yacht_dev_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - g8_app_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U g8_yacht -d g8_yacht"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  keycloak-postgres:
+    image: postgres:16-alpine
+    container_name: g8-keycloak-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_dev_password
+    volumes:
+      - g8_keycloak_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.1
+    container_name: g8-keycloak
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL_HOST: g8-keycloak-postgres
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_dev_password
+    ports:
+      - "8081:8080"
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+
+volumes:
+  g8_app_postgres_data:
+  g8_keycloak_postgres_data:
