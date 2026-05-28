@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Edit3, ListTree, Loader2, Plus } from 'lucide-react';
 
-import api from '../api';
+import api, { emptyPagination, paginationFromResponse } from '../api';
+import DataTable from '../components/DataTable';
 import ProductCategoryFormModal from '../components/ProductCategoryFormModal';
 
 const emptyCategory = {
@@ -24,12 +25,17 @@ export default function ProductCategoriesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState(emptyCategory);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [pagination, setPagination] = useState(emptyPagination);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await api.get('/api/products/categories/');
+        const response = await api.get('/api/products/categories/', { params: { page, page_size: pageSize } });
         setCategories(Array.isArray(response.data.results) ? response.data.results : []);
+        setPagination(paginationFromResponse(response.data, page, pageSize));
       } catch (err) {
         toast.error(err.response?.data?.detail || 'Failed to load categories');
       } finally {
@@ -37,9 +43,18 @@ export default function ProductCategoriesPage() {
       }
     };
     fetchCategories();
-  }, []);
+  }, [page, pageSize]);
 
   const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const visibleCategories = categories.filter((category) => [
+    category.name,
+    category.code,
+    category.parent_name,
+    category.tax_code,
+    category.ui_tab,
+    category.route_station,
+    category.route_printer_ip,
+  ].join(' ').toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
   const openCreateModal = () => {
     setEditingCategory(null);
@@ -114,35 +129,61 @@ export default function ProductCategoriesPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {categories.map((category) => (
-          <article key={category.id} className="rounded-lg border border-app-border bg-app-card p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-black text-app-text">{category.name}</h3>
-                <p className="text-xs font-bold uppercase text-brand-500">{category.parent_name || 'Root category'}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="rounded-md bg-app-elevated px-2 py-1 text-xs font-bold text-app-muted">{category.code}</span>
-                <button
-                  type="button"
-                  onClick={() => openEditModal(category)}
-                  className="rounded-md p-2 text-app-muted transition hover:bg-app-elevated hover:text-brand-500"
-                  title="Edit category"
-                >
-                  <Edit3 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 text-sm text-app-muted md:grid-cols-2">
-              <p><span className="font-bold text-app-text">Tax:</span> {category.tax_code || 'None'} {category.tax_rate}%</p>
-              <p><span className="font-bold text-app-text">UI tab:</span> {category.ui_tab || '-'}</p>
-              <p><span className="font-bold text-app-text">Station:</span> {category.route_station || '-'}</p>
-              <p><span className="font-bold text-app-text">Printer:</span> {category.route_printer_ip || '-'}</p>
-            </div>
-          </article>
-        ))}
-      </div>
+      <DataTable
+        rows={visibleCategories}
+        columns={[
+          {
+            key: 'name',
+            header: 'Category',
+            render: (category) => (
+              <>
+                <p className="font-black text-app-text">{category.name}</p>
+                <p className="mt-1 text-xs font-bold uppercase text-brand-500">{category.code}</p>
+              </>
+            ),
+          },
+          { key: 'parent', header: 'Parent', render: (category) => category.parent_name || 'Root category' },
+          { key: 'tax', header: 'Tax', render: (category) => `${category.tax_code || 'None'} ${category.tax_rate}%` },
+          { key: 'ui_tab', header: 'UI Tab', render: (category) => category.ui_tab || '-' },
+          { key: 'station', header: 'Station', render: (category) => category.route_station || '-' },
+          { key: 'printer', header: 'Printer', render: (category) => category.route_printer_ip || '-' },
+          {
+            key: 'actions',
+            header: 'Actions',
+            headerClassName: 'text-right',
+            cellClassName: 'text-right',
+            render: (category) => (
+              <button
+                type="button"
+                onClick={() => openEditModal(category)}
+                className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500"
+                title="Edit category"
+              >
+                <Edit3 className="h-4 w-4" />
+              </button>
+            ),
+          },
+        ]}
+        getRowKey={(category) => category.id}
+        title={`${visibleCategories.length} categories`}
+        description="Search by category, tax, UI tab, routing station, or printer."
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search categories"
+        emptyMessage="No product categories match your search."
+        minWidth="980px"
+        pagination={{
+          total: pagination.total,
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          totalPages: pagination.totalPages,
+          onPageChange: setPage,
+          onPageSizeChange: (nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          },
+        }}
+      />
 
       <ProductCategoryFormModal
         isOpen={showAddModal}

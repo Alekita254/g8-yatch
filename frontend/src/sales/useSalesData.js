@@ -16,10 +16,10 @@ export default function useSalesData() {
     try {
       setLoading(true);
       const [orders, invoices, payments, paymentRuns] = await Promise.all([
-        api.get('/api/sales/orders/'),
-        api.get('/api/sales/invoices/'),
-        api.get('/api/sales/payments/'),
-        api.get('/api/sales/payment-runs/'),
+        api.get('/api/sales/orders/', { params: { page_size: 100 } }),
+        api.get('/api/sales/invoices/', { params: { page_size: 100 } }),
+        api.get('/api/sales/payments/', { params: { page_size: 100 } }),
+        api.get('/api/sales/payment-runs/', { params: { page_size: 100 } }),
       ]);
       setData({
         orders: orders.data.results || [],

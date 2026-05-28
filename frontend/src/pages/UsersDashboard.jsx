@@ -12,7 +12,8 @@ import {
   Users,
 } from 'lucide-react';
 
-import api from '../api';
+import api, { emptyPagination, paginationFromResponse } from '../api';
+import DataTable from '../components/DataTable';
 import UserRoleModal from '../components/UserRoleModal';
 
 const emptyForm = {
@@ -34,6 +35,10 @@ export default function UsersDashboard({ embedded = false }) {
   const [showCreate, setShowCreate] = useState(false);
   const [roleModalUser, setRoleModalUser] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [pagination, setPagination] = useState(emptyPagination);
 
   const totalManagers = useMemo(
     () => users.filter((user) => user.realm_roles?.includes('POS_MANAGER')).length,
@@ -44,8 +49,9 @@ export default function UsersDashboard({ embedded = false }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/api/users/');
+      const response = await api.get('/api/users/', { params: { page, page_size: pageSize } });
       setUsers(Array.isArray(response.data.results) ? response.data.results : []);
+      setPagination(paginationFromResponse(response.data, page, pageSize));
     } catch (err) {
       setError(err);
       toast.error(err.response?.data?.detail || 'Failed to load users');
@@ -56,7 +62,7 @@ export default function UsersDashboard({ embedded = false }) {
 
   const fetchRoles = async () => {
     try {
-      const response = await api.get('/api/users/roles/');
+      const response = await api.get('/api/users/roles/', { params: { page_size: 100 } });
       const roles = Array.isArray(response.data.results) ? response.data.results : [];
       setRoleOptions(roles.map((role) => ({ value: role.key, label: role.name })));
     } catch (err) {
@@ -67,7 +73,15 @@ export default function UsersDashboard({ embedded = false }) {
   useEffect(() => {
     fetchUsers();
     fetchRoles();
-  }, []);
+  }, [page, pageSize]);
+
+  const visibleUsers = users.filter((user) => [
+    user.first_name,
+    user.last_name,
+    user.username,
+    user.email,
+    ...(user.realm_roles || []),
+  ].join(' ').toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
   const updateForm = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -107,10 +121,15 @@ export default function UsersDashboard({ embedded = false }) {
     try {
       setSavingUser(true);
       const response = await api.post('/api/users/', form);
-      setUsers((current) => [response.data, ...current]);
       setForm(emptyForm);
       setShowCreate(false);
       toast.success('User created in Keycloak');
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        setUsers((current) => [response.data, ...current].slice(0, pageSize));
+        setPagination((current) => ({ ...current, total: current.total + 1 }));
+      }
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to create user');
     } finally {
@@ -198,7 +217,7 @@ export default function UsersDashboard({ embedded = false }) {
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-app-border bg-app-card p-5">
           <p className="text-xs font-black uppercase text-app-muted">Total Users</p>
-          <p className="mt-2 text-3xl font-black text-app-text">{users.length}</p>
+          <p className="mt-2 text-3xl font-black text-app-text">{pagination.total}</p>
         </div>
         <div className="rounded-lg border border-app-border bg-app-card p-5">
           <p className="text-xs font-black uppercase text-app-muted">Managers</p>
@@ -272,28 +291,26 @@ export default function UsersDashboard({ embedded = false }) {
         </form>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-app-border bg-app-card">
-        <div className="grid grid-cols-[1.2fr_1.4fr_1.1fr_120px] border-b border-app-border bg-app-elevated px-4 py-3 text-xs font-black uppercase text-app-muted">
-          <span>User</span>
-          <span>Email</span>
-          <span>Realm Roles</span>
-          <span className="text-right">Action</span>
-        </div>
-        {users.length === 0 ? (
-          <div className="p-10 text-center text-sm text-app-muted">No users have signed in or been created yet.</div>
-        ) : (
-          users.map((user) => (
-            <div
-              key={user.keycloak_sub}
-              className="grid grid-cols-[1.2fr_1.4fr_1.1fr_120px] items-center gap-4 border-b border-app-border px-4 py-4 last:border-b-0"
-            >
-              <div>
+      <DataTable
+        rows={visibleUsers}
+        columns={[
+          {
+            key: 'user',
+            header: 'User',
+            render: (user) => (
+              <>
                 <p className="font-bold text-app-text">
                   {[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}
                 </p>
                 <p className="text-xs text-app-muted">{user.username}</p>
-              </div>
-              <p className="text-sm text-app-muted">{user.email || '-'}</p>
+              </>
+            ),
+          },
+          { key: 'email', header: 'Email', render: (user) => user.email || '-' },
+          {
+            key: 'roles',
+            header: 'Realm Roles',
+            render: (user) => (
               <div className="flex flex-wrap gap-2">
                 {(user.realm_roles || []).slice(0, 3).map((role) => (
                   <span key={role} className="inline-flex items-center gap-1 rounded-md bg-brand-500/10 px-2 py-1 text-xs font-bold text-brand-500">
@@ -301,25 +318,50 @@ export default function UsersDashboard({ embedded = false }) {
                     {role}
                   </span>
                 ))}
-                {(user.realm_roles || []).length > 3 && (
+                {(user.realm_roles || []).length > 3 ? (
                   <span className="rounded-md bg-app-elevated px-2 py-1 text-xs font-bold text-app-muted">
                     +{user.realm_roles.length - 3}
                   </span>
-                )}
+                ) : null}
               </div>
-              <div className="text-right">
-                <button
-                  type="button"
-                  onClick={() => setRoleModalUser(user)}
-                  className="rounded-md border border-app-border px-3 py-2 text-xs font-black text-app-text transition hover:bg-app-elevated"
-                >
-                  Manage
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+            ),
+          },
+          {
+            key: 'actions',
+            header: 'Action',
+            headerClassName: 'text-right',
+            cellClassName: 'text-right',
+            render: (user) => (
+              <button
+                type="button"
+                onClick={() => setRoleModalUser(user)}
+                className="rounded-md border border-app-border px-3 py-2 text-xs font-black text-app-text transition hover:bg-app-elevated"
+              >
+                Manage
+              </button>
+            ),
+          },
+        ]}
+        getRowKey={(user) => user.keycloak_sub}
+        title={`${visibleUsers.length} users`}
+        description="Search by name, username, email, or realm role."
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search users"
+        emptyMessage={users.length ? 'No users match your search.' : 'No users have signed in or been created yet.'}
+        minWidth="860px"
+        pagination={{
+          total: pagination.total,
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          totalPages: pagination.totalPages,
+          onPageChange: setPage,
+          onPageSizeChange: (nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          },
+        }}
+      />
 
       <UserRoleModal
         isOpen={Boolean(roleModalUser)}

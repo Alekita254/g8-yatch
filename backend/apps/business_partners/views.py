@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsPosManager
+from apps.pagination import paginated_response
 
 from .models import BusinessPartner
 from .serializers import BusinessPartnerSerializer
@@ -14,8 +15,7 @@ class BusinessPartnerListCreateView(APIView):
 
     def get(self, request):
         queryset = BusinessPartner.objects.all()
-        serializer = BusinessPartnerSerializer(queryset, many=True)
-        return Response({"total": queryset.count(), "results": serializer.data})
+        return paginated_response(request, queryset, BusinessPartnerSerializer)
 
     def post(self, request):
         serializer = BusinessPartnerSerializer(data=request.data)

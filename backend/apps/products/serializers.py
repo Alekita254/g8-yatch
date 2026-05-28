@@ -98,6 +98,10 @@ class SalesPricelistItemSerializer(serializers.ModelSerializer):
 
 class SalesPricelistSerializer(serializers.ModelSerializer):
     items = SalesPricelistItemSerializer(many=True, required=False)
+    service_point_name = serializers.CharField(source="service_point.name", read_only=True)
+    service_point_code = serializers.CharField(source="service_point.code", read_only=True)
+    service_point_kind_display = serializers.CharField(source="service_point.get_kind_display", read_only=True)
+    service_point_names = serializers.SerializerMethodField()
 
     class Meta:
         model = SalesPricelist
@@ -106,7 +110,13 @@ class SalesPricelistSerializer(serializers.ModelSerializer):
             "name",
             "code",
             "description",
+            "service_point",
+            "service_point_name",
+            "service_point_code",
             "service_point_kind",
+            "service_point_kind_display",
+            "service_points",
+            "service_point_names",
             "valid_from",
             "valid_to",
             "is_active",
@@ -115,16 +125,21 @@ class SalesPricelistSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items = validated_data.pop("items", [])
+        service_points = validated_data.pop("service_points", [])
         pricelist = SalesPricelist.objects.create(**validated_data)
+        pricelist.service_points.set(service_points)
         for item in items:
             SalesPricelistItem.objects.create(pricelist=pricelist, **item)
         return pricelist
 
     def update(self, instance, validated_data):
         items = validated_data.pop("items", None)
+        service_points = validated_data.pop("service_points", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        if service_points is not None:
+            instance.service_points.set(service_points)
 
         if items is not None:
             instance.items.all().delete()
@@ -132,6 +147,9 @@ class SalesPricelistSerializer(serializers.ModelSerializer):
                 SalesPricelistItem.objects.create(pricelist=instance, **item)
 
         return instance
+
+    def get_service_point_names(self, obj):
+        return [point.name for point in obj.service_points.all()]
 
 
 class PurchasePricelistItemSerializer(serializers.ModelSerializer):

@@ -39,8 +39,9 @@ class SalesPricelistItemInline(admin.TabularInline):
 
 @admin.register(SalesPricelist)
 class SalesPricelistAdmin(admin.ModelAdmin):
-    list_display = ("name", "code", "service_point_kind", "valid_from", "valid_to", "is_active")
-    list_filter = ("service_point_kind", "is_active")
+    list_display = ("name", "code", "service_point", "service_point_kind", "valid_from", "valid_to", "is_active")
+    list_filter = ("service_points", "service_point", "service_point_kind", "is_active")
+    filter_horizontal = ("service_points",)
     search_fields = ("name", "code")
     inlines = [SalesPricelistItemInline]
 

@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsPosManager
+from apps.pagination import paginated_response
 
 from .models import DiscountRule, TaxCategory, TaxConfiguration, TaxOffice
 from .serializers import (
@@ -24,8 +25,7 @@ class ListCreateMixin(APIView):
 
     def get(self, request):
         queryset = self.get_queryset()
-        serializer = self.serializer_class(queryset, many=True)
-        return Response({"total": queryset.count(), "results": serializer.data})
+        return paginated_response(request, queryset, self.serializer_class)
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)

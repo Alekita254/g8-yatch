@@ -21,4 +21,18 @@ export const setAuthToken = (token) => {
   }
 };
 
+export const emptyPagination = {
+  total: 0,
+  page: 1,
+  pageSize: 20,
+  totalPages: 1,
+};
+
+export const paginationFromResponse = (data, fallbackPage = 1, fallbackPageSize = 20) => ({
+  total: data?.count ?? data?.total ?? data?.results?.length ?? 0,
+  page: data?.page ?? fallbackPage,
+  pageSize: data?.page_size ?? fallbackPageSize,
+  totalPages: data?.total_pages ?? Math.max(Math.ceil((data?.count ?? data?.total ?? 0) / fallbackPageSize), 1),
+});
+
 export default api;

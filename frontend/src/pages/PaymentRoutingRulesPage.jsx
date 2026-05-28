@@ -23,9 +23,9 @@ export default function PaymentRoutingRulesPage() {
     const fetchOptions = async () => {
       try {
         const [methods, accounts, servicePoints] = await Promise.all([
-          api.get('/api/payments/methods/'),
-          api.get('/api/payments/bank-accounts/'),
-          api.get('/api/users/service-points/'),
+          api.get('/api/payments/methods/', { params: { page_size: 100 } }),
+          api.get('/api/payments/bank-accounts/', { params: { page_size: 100 } }),
+          api.get('/api/users/service-points/', { params: { page_size: 100 } }),
         ]);
         setMethodOptions(Array.isArray(methods.data.results) ? methods.data.results.map((item) => ({ value: item.id, label: item.name })) : []);
         setAccountOptions(Array.isArray(accounts.data.results) ? accounts.data.results.map((item) => ({ value: item.id, label: item.name })) : []);

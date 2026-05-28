@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
-import useSalesData from './useSalesData';
+import api, { emptyPagination, paginationFromResponse } from '../api';
+import DataTable from '../components/DataTable';
 
 const configs = {
   orders: {
@@ -65,9 +68,35 @@ function valueFor(item, key) {
 }
 
 export default function SalesListPage({ type }) {
-  const { data, loading } = useSalesData();
   const config = configs[type];
-  const rows = data[type] || [];
+  const endpoints = {
+    orders: '/api/sales/orders/',
+    invoices: '/api/sales/invoices/',
+    payments: '/api/sales/payments/',
+    paymentRuns: '/api/sales/payment-runs/',
+  };
+  const [rows, setRows] = useState([]);
+  const [pagination, setPagination] = useState(emptyPagination);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  useEffect(() => {
+    const fetchRows = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(endpoints[type], { params: { page, page_size: pageSize } });
+        setRows(response.data.results || []);
+        setPagination(paginationFromResponse(response.data, page, pageSize));
+      } catch (err) {
+        toast.error(err.response?.data?.detail || 'Failed to load sales records');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRows();
+  }, [type, page, pageSize]);
 
   if (loading) {
     return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
@@ -80,28 +109,29 @@ export default function SalesListPage({ type }) {
         <p className="mt-1 text-sm text-app-muted">{config.description}</p>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-app-border bg-app-card">
-        {rows.length === 0 ? (
-          <div className="p-10 text-center text-sm font-bold text-app-muted">{config.empty}</div>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-app-border bg-app-elevated text-xs font-black uppercase tracking-[0.12em] text-app-muted">
-              <tr>
-                {config.columns.map(([label]) => <th key={label} className="px-4 py-3">{label}</th>)}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-app-border">
-              {rows.map((row) => (
-                <tr key={row.id} className="hover:bg-app-elevated/60">
-                  {config.columns.map(([label, key]) => (
-                    <td key={`${row.id}-${label}`} className="px-4 py-3 font-medium text-app-text">{valueFor(row, key)}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <DataTable
+        rows={rows}
+        columns={config.columns.map(([label, key]) => ({
+          key,
+          header: label,
+          cellClassName: 'font-medium text-app-text',
+          render: (row) => valueFor(row, key),
+        }))}
+        getRowKey={(row) => row.id}
+        emptyMessage={config.empty}
+        minWidth="860px"
+        pagination={{
+          total: pagination.total,
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          totalPages: pagination.totalPages,
+          onPageChange: setPage,
+          onPageSizeChange: (nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          },
+        }}
+      />
     </div>
   );
 }

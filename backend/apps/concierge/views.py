@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsPosManager
+from apps.pagination import paginated_response
 
 from .models import ServiceRequest
 from .serializers import ServiceRequestSerializer
@@ -19,7 +20,7 @@ class ServiceRequestListCreateView(APIView):
 
     def get(self, request):
         queryset = ServiceRequest.objects.select_related("room", "business_partner")
-        return Response({"total": queryset.count(), "results": ServiceRequestSerializer(queryset, many=True).data})
+        return paginated_response(request, queryset, ServiceRequestSerializer)
 
     def post(self, request):
         data = request.data.copy()

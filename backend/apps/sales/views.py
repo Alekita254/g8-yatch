@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsPosManager
+from apps.pagination import paginated_response
 
 from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
 from .serializers import CustomerPaymentRunSerializer, SalesInvoiceSerializer, SalesOrderItemSerializer, SalesOrderSerializer, SalesPaymentSerializer
@@ -28,8 +29,7 @@ class ListCreateMixin(APIView):
 
     def get(self, request):
         queryset = self.get_queryset()
-        serializer = self.serializer_class(queryset, many=True)
-        return Response({"total": queryset.count(), "results": serializer.data})
+        return paginated_response(request, queryset, self.serializer_class)
 
 
 class SalesOrderListCreateView(ListCreateMixin):

@@ -1,4 +1,5 @@
-import { BedDouble, BriefcaseBusiness, CalendarDays, ClipboardList, Loader2, ReceiptText } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BedDouble, BriefcaseBusiness, CalendarDays, ClipboardList, Loader2, MapPin, ReceiptText } from 'lucide-react';
 
 import StatCard from '../components/StatCard';
 import useFrontdeskData from './useFrontdeskData';
@@ -46,6 +47,14 @@ export default function FrontdeskDashboard() {
           <p className="mt-4 text-2xl font-black text-app-text">{data.reservations.length}</p>
           <p className="text-xs font-bold uppercase text-app-muted">Reservations</p>
         </div>
+      </div>
+
+      <div className="grid gap-4">
+        <Link to="/frontdesk/service-points" className="rounded-lg border border-app-border bg-app-card p-5 transition hover:border-brand-500/50">
+          <MapPin className="h-5 w-5 text-brand-500" />
+          <h3 className="mt-4 text-xl font-black text-app-text">Service Points</h3>
+          <p className="mt-2 text-sm leading-6 text-app-muted">Open the right POS for the bar, restaurant, marina, or hotel frontdesk.</p>
+        </Link>
       </div>
     </div>
   );

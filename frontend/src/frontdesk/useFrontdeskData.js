@@ -17,11 +17,11 @@ export default function useFrontdeskData() {
     try {
       setLoading(true);
       const [partners, rooms, reservations, folios, requests] = await Promise.all([
-        api.get('/api/business-partners/'),
-        api.get('/api/rooms/'),
-        api.get('/api/reservations/'),
-        api.get('/api/folios/'),
-        api.get('/api/concierge/requests/'),
+        api.get('/api/business-partners/', { params: { page_size: 100 } }),
+        api.get('/api/rooms/', { params: { page_size: 100 } }),
+        api.get('/api/reservations/', { params: { page_size: 100 } }),
+        api.get('/api/folios/', { params: { page_size: 100 } }),
+        api.get('/api/concierge/requests/', { params: { page_size: 100 } }),
       ]);
       setData({
         partners: partners.data.results || [],

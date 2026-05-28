@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Edit3, Loader2, Plus, Tags } from 'lucide-react';
 
-import api from '../api';
+import api, { emptyPagination, paginationFromResponse } from '../api';
+import DataTable from '../components/DataTable';
 import PricelistFormModal from '../components/PricelistFormModal';
 import PricelistItemFormModal from '../components/PricelistItemFormModal';
 
@@ -10,6 +11,8 @@ const emptySalesPricelist = {
   name: '',
   code: '',
   description: '',
+  service_point: '',
+  service_points: [],
   service_point_kind: '',
   is_active: true,
 };
@@ -23,6 +26,8 @@ const emptyPriceItem = {
 export default function SalesPricelistsPage() {
   const [pricelists, setPricelists] = useState([]);
   const [products, setProducts] = useState([]);
+  const [servicePoints, setServicePoints] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -31,16 +36,22 @@ export default function SalesPricelistsPage() {
   const [priceForm, setPriceForm] = useState(emptyPriceItem);
   const [editingPricelist, setEditingPricelist] = useState(null);
   const [pricePricelist, setPricePricelist] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [pagination, setPagination] = useState(emptyPagination);
 
   useEffect(() => {
     const fetchPricelists = async () => {
       try {
-        const [pricelistsResponse, productsResponse] = await Promise.all([
-          api.get('/api/products/sales-pricelists/'),
-          api.get('/api/products/items/'),
+        const [pricelistsResponse, productsResponse, servicePointsResponse] = await Promise.all([
+          api.get('/api/products/sales-pricelists/', { params: { page, page_size: pageSize } }),
+          api.get('/api/products/items/', { params: { page_size: 100 } }),
+          api.get('/api/users/service-points/', { params: { page_size: 100 } }),
         ]);
         setPricelists(Array.isArray(pricelistsResponse.data.results) ? pricelistsResponse.data.results : []);
+        setPagination(paginationFromResponse(pricelistsResponse.data, page, pageSize));
         setProducts(Array.isArray(productsResponse.data.results) ? productsResponse.data.results : []);
+        setServicePoints(Array.isArray(servicePointsResponse.data.results) ? servicePointsResponse.data.results.filter((point) => point.is_active) : []);
       } catch (err) {
         toast.error(err.response?.data?.detail || 'Failed to load sales pricelists');
       } finally {
@@ -48,10 +59,24 @@ export default function SalesPricelistsPage() {
       }
     };
     fetchPricelists();
-  }, []);
+  }, [page, pageSize]);
 
   const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const updatePriceForm = (field, value) => setPriceForm((current) => ({ ...current, [field]: value }));
+  const visiblePricelists = pricelists.filter((pricelist) => {
+    const servicePointText = pricelist.service_point_names?.length
+      ? pricelist.service_point_names.join(' ')
+      : pricelist.service_point_name || pricelist.service_point_kind || 'All service points';
+    const haystack = [
+      pricelist.name,
+      pricelist.code,
+      pricelist.description,
+      servicePointText,
+      ...(pricelist.items || []).map((item) => `${item.product_name} ${item.product_sku} ${item.price}`),
+    ].join(' ').toLowerCase();
+
+    return haystack.includes(searchTerm.trim().toLowerCase());
+  });
 
   const openCreateModal = () => {
     setEditingPricelist(null);
@@ -64,6 +89,8 @@ export default function SalesPricelistsPage() {
     setForm({
       ...pricelist,
       description: pricelist.description || '',
+      service_point: pricelist.service_point || '',
+      service_points: pricelist.service_points || (pricelist.service_point ? [pricelist.service_point] : []),
       service_point_kind: pricelist.service_point_kind || '',
     });
     setShowAddModal(true);
@@ -91,9 +118,14 @@ export default function SalesPricelistsPage() {
     event.preventDefault();
     try {
       setSaving(true);
+      const payload = {
+        ...form,
+        service_point: form.service_points[0] || null,
+        service_point_kind: '',
+      };
       const response = editingPricelist
-        ? await api.patch(`/api/products/sales-pricelists/${editingPricelist.id}/`, form)
-        : await api.post('/api/products/sales-pricelists/', form);
+        ? await api.patch(`/api/products/sales-pricelists/${editingPricelist.id}/`, payload)
+        : await api.post('/api/products/sales-pricelists/', payload);
       setPricelists((current) => (
         editingPricelist
           ? current.map((pricelist) => (pricelist.id === response.data.id ? response.data : pricelist))
@@ -133,6 +165,94 @@ export default function SalesPricelistsPage() {
     return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
   }
 
+  const columns = [
+    {
+      key: 'pricelist',
+      header: 'Pricelist',
+      render: (pricelist) => (
+        <>
+          <p className="font-black text-app-text">{pricelist.name}</p>
+          <p className="mt-1 text-xs font-bold uppercase text-brand-500">{pricelist.code}</p>
+          <p className="mt-2 max-w-sm text-xs leading-5 text-app-muted">{pricelist.description || 'No description.'}</p>
+        </>
+      ),
+    },
+    {
+      key: 'service_points',
+      header: 'Service Points',
+      render: (pricelist) => {
+        const servicePointLabel = pricelist.service_point_names?.length
+          ? pricelist.service_point_names.join(', ')
+          : pricelist.service_point_name || pricelist.service_point_kind || 'All service points';
+
+        return (
+          <span className="inline-flex max-w-xs rounded-md bg-app-elevated px-2 py-1 text-xs font-black uppercase text-app-muted">
+            {servicePointLabel}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'prices',
+      header: 'Prices',
+      render: (pricelist) => {
+        const pricePreview = (pricelist.items || []).slice(0, 3);
+        const extraPriceCount = Math.max((pricelist.items || []).length - pricePreview.length, 0);
+
+        if (!pricePreview.length) {
+          return <span className="text-xs font-bold text-app-muted">No prices yet</span>;
+        }
+
+        return (
+          <div className="space-y-1.5">
+            {pricePreview.map((item) => (
+              <div key={item.id} className="flex max-w-sm items-center justify-between gap-4 rounded-md bg-app-elevated px-3 py-2">
+                <span className="truncate font-bold text-app-text">{item.product_name}</span>
+                <span className="shrink-0 text-app-muted">{item.currency} {item.price}</span>
+              </div>
+            ))}
+            {extraPriceCount > 0 ? <p className="text-xs font-bold text-app-muted">+{extraPriceCount} more prices</p> : null}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (pricelist) => (
+        <span className={`rounded-md px-2 py-1 text-xs font-black uppercase ${pricelist.is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+          {pricelist.is_active ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right',
+      render: (pricelist) => (
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => openPriceModal(pricelist)}
+            className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase text-app-text transition hover:border-brand-500 hover:text-brand-500"
+          >
+            <Plus className="h-4 w-4" />
+            Price
+          </button>
+          <button
+            type="button"
+            onClick={() => openEditModal(pricelist)}
+            className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500"
+            title="Edit pricelist"
+          >
+            <Edit3 className="h-4 w-4" />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-6 md:flex-row md:items-center md:justify-between">
@@ -155,43 +275,29 @@ export default function SalesPricelistsPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {pricelists.map((pricelist) => (
-          <article key={pricelist.id} className="rounded-lg border border-app-border bg-app-card p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-black text-app-text">{pricelist.name}</h3>
-                <p className="text-xs font-bold uppercase text-brand-500">{pricelist.code}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => openEditModal(pricelist)}
-                className="rounded-md p-2 text-app-muted transition hover:bg-app-elevated hover:text-brand-500"
-                title="Edit pricelist"
-              >
-                <Edit3 className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="mt-3 text-sm text-app-muted">{pricelist.description || 'No description.'}</p>
-            <button
-              type="button"
-              onClick={() => openPriceModal(pricelist)}
-              className="mt-4 inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase text-app-text transition hover:border-brand-500 hover:text-brand-500"
-            >
-              <Plus className="h-4 w-4" />
-              Add Price
-            </button>
-            <div className="mt-4 space-y-2">
-              {pricelist.items?.map((item) => (
-                <div key={item.id} className="flex justify-between rounded-md bg-app-elevated px-3 py-2 text-sm">
-                  <span className="font-bold text-app-text">{item.product_name}</span>
-                  <span className="text-app-muted">{item.currency} {item.price}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
+      <DataTable
+        rows={visiblePricelists}
+        columns={columns}
+        getRowKey={(pricelist) => pricelist.id}
+        title={`${visiblePricelists.length} pricelists`}
+        description="Search by pricelist, service point, product, or price."
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search pricelists"
+        emptyMessage="No sales pricelists match your search."
+        minWidth="960px"
+        pagination={{
+          total: pagination.total,
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          totalPages: pagination.totalPages,
+          onPageChange: setPage,
+          onPageSizeChange: (nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          },
+        }}
+      />
 
       <PricelistFormModal
         isOpen={showAddModal}
@@ -202,6 +308,7 @@ export default function SalesPricelistsPage() {
         onSubmit={createPricelist}
         isSaving={saving}
         isEditing={Boolean(editingPricelist)}
+        servicePoints={servicePoints}
       />
 
       <PricelistItemFormModal

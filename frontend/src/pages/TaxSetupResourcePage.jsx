@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Edit3, Loader2, Plus } from 'lucide-react';
 
-import api from '../api';
+import api, { emptyPagination, paginationFromResponse } from '../api';
+import DataTable from '../components/DataTable';
 import TaxSetupFormModal from '../components/TaxSetupFormModal';
 
 function displayValue(item, key) {
@@ -31,12 +32,17 @@ export default function TaxSetupResourcePage({
   const [isOpen, setIsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [pagination, setPagination] = useState(emptyPagination);
 
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const response = await api.get(endpoint);
+        const response = await api.get(endpoint, { params: { page, page_size: pageSize } });
         setItems(Array.isArray(response.data.results) ? response.data.results : []);
+        setPagination(paginationFromResponse(response.data, page, pageSize));
       } catch (err) {
         toast.error(err.response?.data?.detail || `Failed to load ${title.toLowerCase()}`);
       } finally {
@@ -44,9 +50,14 @@ export default function TaxSetupResourcePage({
       }
     };
     fetchItems();
-  }, [endpoint, title]);
+  }, [endpoint, title, page, pageSize]);
 
   const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const visibleItems = items.filter((item) => [
+    summary.title(item),
+    summary.subtitle(item),
+    ...columns.map((column) => column.render ? column.render(item) : displayValue(item, column.key)),
+  ].join(' ').toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
   const openCreateModal = () => {
     setEditingItem(null);
@@ -116,33 +127,61 @@ export default function TaxSetupResourcePage({
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {items.map((item) => (
-          <article key={item.id} className="rounded-lg border border-app-border bg-app-card p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-black text-app-text">{summary.title(item)}</h3>
-                <p className="text-xs font-bold uppercase text-brand-500">{summary.subtitle(item)}</p>
-              </div>
+      <DataTable
+        rows={visibleItems}
+        columns={[
+          {
+            key: 'summary',
+            header: title,
+            render: (item) => (
+              <>
+                <p className="font-black text-app-text">{summary.title(item)}</p>
+                <p className="mt-1 text-xs font-bold uppercase text-brand-500">{summary.subtitle(item)}</p>
+              </>
+            ),
+          },
+          ...columns.map((column) => ({
+            key: column.key,
+            header: column.label,
+            render: (item) => column.render ? column.render(item) : displayValue(item, column.key),
+          })),
+          {
+            key: 'actions',
+            header: 'Actions',
+            headerClassName: 'text-right',
+            cellClassName: 'text-right',
+            render: (item) => (
               <button
                 type="button"
                 onClick={() => openEditModal(item)}
-                className="rounded-md p-2 text-app-muted transition hover:bg-app-elevated hover:text-brand-500"
+                className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500"
                 title={`Edit ${title}`}
               >
                 <Edit3 className="h-4 w-4" />
               </button>
-            </div>
-            <div className="mt-4 grid gap-3 text-sm text-app-muted md:grid-cols-2">
-              {columns.map((column) => (
-                <p key={column.key}>
-                  <span className="font-bold text-app-text">{column.label}:</span> {column.render ? column.render(item) : displayValue(item, column.key)}
-                </p>
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
+            ),
+          },
+        ]}
+        getRowKey={(item) => item.id}
+        title={`${visibleItems.length} ${title.toLowerCase()}`}
+        description={`Search ${title.toLowerCase()} by visible table values.`}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder={`Search ${title.toLowerCase()}`}
+        emptyMessage={items.length ? `No ${title.toLowerCase()} match your search.` : `No ${title.toLowerCase()} yet.`}
+        minWidth="920px"
+        pagination={{
+          total: pagination.total,
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          totalPages: pagination.totalPages,
+          onPageChange: setPage,
+          onPageSizeChange: (nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          },
+        }}
+      />
 
       <TaxSetupFormModal
         isOpen={isOpen}

@@ -59,7 +59,7 @@ export default function FrontdeskPosPage() {
             <ReceiptText className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-app-text">Frontdesk POS</h2>
+            <h2 className="text-2xl font-black text-app-text">Hotel Folio POS</h2>
             <p className="text-sm text-app-muted">Post charges, adjustments, and payments directly to guest folios.</p>
           </div>
         </div>

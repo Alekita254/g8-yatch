@@ -24,7 +24,7 @@ export default function BranchesPage() {
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
-        const response = await api.get('/api/organisation/organizations/');
+        const response = await api.get('/api/organisation/organizations/', { params: { page_size: 100 } });
         setOrganizationOptions(
           Array.isArray(response.data.results)
             ? response.data.results.map((org) => ({ value: org.id, label: org.name }))

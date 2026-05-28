@@ -5,6 +5,8 @@ from .keycloak_admin import KeycloakAdminClient, KeycloakAdminError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 
+from apps.pagination import paginated_response
+
 from .models import Role, ServicePoint, UserIdentity
 from .permissions import IsPosManager
 from .serializers import (
@@ -32,13 +34,7 @@ class AdminUserListCreateView(APIView):
 
     def get(self, request):
         users = UserIdentity.objects.all()
-        serializer = UserIdentitySerializer(users, many=True)
-        return Response(
-            {
-                "total": users.count(),
-                "results": serializer.data,
-            }
-        )
+        return paginated_response(request, users, UserIdentitySerializer)
 
     def post(self, request):
         serializer = AdminUserCreateSerializer(data=request.data)
@@ -97,8 +93,7 @@ class RoleListCreateView(APIView):
 
     def get(self, request):
         roles = Role.objects.all()
-        serializer = RoleSerializer(roles, many=True)
-        return Response({"total": roles.count(), "results": serializer.data})
+        return paginated_response(request, roles, RoleSerializer)
 
     def post(self, request):
         serializer = RoleSerializer(data=request.data)
@@ -137,8 +132,7 @@ class ServicePointListCreateView(APIView):
 
     def get(self, request):
         service_points = ServicePoint.objects.all()
-        serializer = ServicePointSerializer(service_points, many=True)
-        return Response({"total": service_points.count(), "results": serializer.data})
+        return paginated_response(request, service_points, ServicePointSerializer)
 
     def post(self, request):
         serializer = ServicePointSerializer(data=request.data)

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Edit3, Loader2, Plus } from 'lucide-react';
 
-import api from '../api';
+import api, { emptyPagination, paginationFromResponse } from '../api';
+import DataTable from '../components/DataTable';
 import TaxSetupFormModal from '../components/TaxSetupFormModal';
 import useFrontdeskData from './useFrontdeskData';
 
@@ -127,13 +128,19 @@ export default function FrontdeskListPage({ type }) {
   const [editingItem, setEditingItem] = useState(null);
   const config = baseConfigs[type];
   const [form, setForm] = useState(config.emptyForm);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [rows, setRows] = useState([]);
+  const [rowsLoading, setRowsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [pagination, setPagination] = useState(emptyPagination);
 
   useEffect(() => {
     const fetchOptions = async () => {
       try {
         const [roomTypeResponse, branchResponse] = await Promise.all([
-          api.get('/api/rooms/types/'),
-          api.get('/api/organisation/branches/'),
+          api.get('/api/rooms/types/', { params: { page_size: 100 } }),
+          api.get('/api/organisation/branches/', { params: { page_size: 100 } }),
         ]);
         setRoomTypes(roomTypeResponse.data.results || []);
         setBranches(branchResponse.data.results || []);
@@ -143,6 +150,23 @@ export default function FrontdeskListPage({ type }) {
     };
     fetchOptions();
   }, []);
+
+  useEffect(() => {
+    const fetchRows = async () => {
+      try {
+        setRowsLoading(true);
+        const response = await api.get(config.endpoint, { params: { page, page_size: pageSize } });
+        setRows(response.data.results || []);
+        setPagination(paginationFromResponse(response.data, page, pageSize));
+      } catch (err) {
+        toast.error(err.response?.data?.detail || `Failed to load ${config.title.toLowerCase()}`);
+      } finally {
+        setRowsLoading(false);
+      }
+    };
+
+    fetchRows();
+  }, [config.endpoint, config.title, page, pageSize]);
 
   const dynamicFields = useMemo(() => {
     if (type === 'rooms') {
@@ -203,7 +227,11 @@ export default function FrontdeskListPage({ type }) {
     return config.fields;
   }, [branches, config.fields, data.partners, data.reservations, data.rooms, roomTypes, type]);
 
-  const rows = data[type] || [];
+  const visibleRows = rows.filter((row) => config.columns
+    .map(([, key]) => valueFor(row, key))
+    .join(' ')
+    .toLowerCase()
+    .includes(searchTerm.trim().toLowerCase()));
   const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const openCreate = () => {
@@ -247,6 +275,9 @@ export default function FrontdeskListPage({ type }) {
       toast.success(editingItem ? `${config.title} updated` : `${config.title} created`);
       closeModal();
       refresh();
+      const response = await api.get(config.endpoint, { params: { page, page_size: pageSize } });
+      setRows(response.data.results || []);
+      setPagination(paginationFromResponse(response.data, page, pageSize));
     } catch (err) {
       const detail = err.response?.data?.detail || Object.values(err.response?.data || {})?.[0]?.[0];
       toast.error(detail || `Failed to save ${config.title.toLowerCase()}`);
@@ -255,7 +286,7 @@ export default function FrontdeskListPage({ type }) {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
+  if (loading || rowsLoading) return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
 
   return (
     <div className="space-y-6">
@@ -270,32 +301,47 @@ export default function FrontdeskListPage({ type }) {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-app-border bg-app-card">
-        {rows.length === 0 ? (
-          <div className="p-10 text-center text-sm font-bold text-app-muted">{config.empty}</div>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-app-border bg-app-elevated text-xs font-black uppercase tracking-[0.12em] text-app-muted">
-              <tr>
-                {config.columns.map(([label]) => <th key={label} className="px-4 py-3">{label}</th>)}
-                <th className="px-4 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-app-border">
-              {rows.map((row) => (
-                <tr key={row.id} className="hover:bg-app-elevated/60">
-                  {config.columns.map(([label, key]) => <td key={`${row.id}-${label}`} className="px-4 py-3 font-medium text-app-text">{valueFor(row, key)}</td>)}
-                  <td className="px-4 py-3 text-right">
-                    <button type="button" onClick={() => openEdit(row)} className="rounded-md p-2 text-app-muted transition hover:bg-app-elevated hover:text-brand-500" title="Edit">
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <DataTable
+        rows={visibleRows}
+        columns={[
+          ...config.columns.map(([label, key]) => ({
+            key,
+            header: label,
+            cellClassName: 'font-medium text-app-text',
+            render: (row) => valueFor(row, key),
+          })),
+          {
+            key: 'actions',
+            header: 'Action',
+            headerClassName: 'text-right',
+            cellClassName: 'text-right',
+            render: (row) => (
+              <button type="button" onClick={() => openEdit(row)} className="rounded-md p-2 text-app-muted transition hover:bg-app-elevated hover:text-brand-500" title="Edit">
+                <Edit3 className="h-4 w-4" />
+              </button>
+            ),
+          },
+        ]}
+        getRowKey={(row) => row.id}
+        title={`${visibleRows.length} records`}
+        description={`Search ${config.title.toLowerCase()} by visible table values.`}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder={`Search ${config.title.toLowerCase()}`}
+        emptyMessage={rows.length ? `No ${config.title.toLowerCase()} match your search.` : config.empty}
+        minWidth="920px"
+        pagination={{
+          total: pagination.total,
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          totalPages: pagination.totalPages,
+          onPageChange: setPage,
+          onPageSizeChange: (nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          },
+        }}
+      />
 
       <TaxSetupFormModal
         isOpen={isOpen}

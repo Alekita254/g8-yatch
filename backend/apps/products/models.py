@@ -112,6 +112,18 @@ class SalesPricelist(models.Model):
     code = models.SlugField(max_length=80, unique=True)
     description = models.TextField(blank=True)
     service_point_kind = models.CharField(max_length=40, blank=True)
+    service_point = models.ForeignKey(
+        "users.ServicePoint",
+        related_name="sales_pricelists",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
+    service_points = models.ManyToManyField(
+        "users.ServicePoint",
+        related_name="sales_pricelist_groups",
+        blank=True,
+    )
     valid_from = models.DateTimeField(null=True, blank=True)
     valid_to = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)

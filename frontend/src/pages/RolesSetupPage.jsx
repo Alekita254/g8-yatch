@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Loader2, Plus, ShieldCheck } from 'lucide-react';
 
-import api from '../api';
+import api, { emptyPagination, paginationFromResponse } from '../api';
+import DataTable from '../components/DataTable';
 import RoleFormModal from '../components/RoleFormModal';
 
 const emptyRole = {
@@ -21,12 +22,17 @@ export default function RolesSetupPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [pagination, setPagination] = useState(emptyPagination);
 
   const fetchRoles = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/users/roles/');
+      const response = await api.get('/api/users/roles/', { params: { page, page_size: pageSize } });
       setRoles(Array.isArray(response.data.results) ? response.data.results : []);
+      setPagination(paginationFromResponse(response.data, page, pageSize));
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to load roles');
     } finally {
@@ -36,11 +42,18 @@ export default function RolesSetupPage() {
 
   useEffect(() => {
     fetchRoles();
-  }, []);
+  }, [page, pageSize]);
 
   const updateForm = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
+
+  const visibleRoles = roles.filter((role) => [
+    role.name,
+    role.key,
+    role.description,
+    ...(role.permissions || []),
+  ].join(' ').toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
   const createRole = async (event) => {
     event.preventDefault();
@@ -93,31 +106,61 @@ export default function RolesSetupPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {roles.map((role) => (
-          <article key={role.id} className="rounded-lg border border-app-border bg-app-card p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-black text-app-text">{role.name}</h3>
-                <p className="text-xs font-bold uppercase text-brand-500">{role.key}</p>
-              </div>
-              <span className="rounded-md bg-app-elevated px-2 py-1 text-xs font-bold text-app-muted">
-                {role.is_active ? 'Active' : 'Inactive'}
-              </span>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-app-muted">{role.description || 'No description yet.'}</p>
-            {(role.permissions || []).length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
+      <DataTable
+        rows={visibleRoles}
+        columns={[
+          {
+            key: 'role',
+            header: 'Role',
+            render: (role) => (
+              <>
+                <p className="font-black text-app-text">{role.name}</p>
+                <p className="mt-1 text-xs font-bold uppercase text-brand-500">{role.key}</p>
+              </>
+            ),
+          },
+          { key: 'description', header: 'Description', render: (role) => role.description || 'No description yet.' },
+          {
+            key: 'permissions',
+            header: 'Permissions',
+            render: (role) => (role.permissions || []).length ? (
+              <div className="flex flex-wrap gap-2">
                 {role.permissions.map((permission) => (
-                  <span key={permission} className="rounded-md bg-brand-500/10 px-2 py-1 text-xs font-bold text-brand-500">
-                    {permission}
-                  </span>
+                  <span key={permission} className="rounded-md bg-brand-500/10 px-2 py-1 text-xs font-bold text-brand-500">{permission}</span>
                 ))}
               </div>
-            )}
-          </article>
-        ))}
-      </div>
+            ) : '-',
+          },
+          {
+            key: 'status',
+            header: 'Status',
+            render: (role) => (
+              <span className={`rounded-md px-2 py-1 text-xs font-black uppercase ${role.is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                {role.is_active ? 'Active' : 'Inactive'}
+              </span>
+            ),
+          },
+        ]}
+        getRowKey={(role) => role.id}
+        title={`${visibleRoles.length} roles`}
+        description="Search by role, key, description, or permission."
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search roles"
+        emptyMessage="No roles match your search."
+        minWidth="880px"
+        pagination={{
+          total: pagination.total,
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          totalPages: pagination.totalPages,
+          onPageChange: setPage,
+          onPageSizeChange: (nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          },
+        }}
+      />
 
       <RoleFormModal
         isOpen={showAddModal}

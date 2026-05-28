@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsPosManager
+from apps.pagination import paginated_response
 
 from .models import Reservation
 from .serializers import ReservationSerializer
@@ -19,7 +20,7 @@ class ReservationListCreateView(APIView):
 
     def get(self, request):
         queryset = Reservation.objects.select_related("business_partner", "room")
-        return Response({"total": queryset.count(), "results": ReservationSerializer(queryset, many=True).data})
+        return paginated_response(request, queryset, ReservationSerializer)
 
     def post(self, request):
         data = request.data.copy()

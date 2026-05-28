@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsPosManager
+from apps.pagination import paginated_response
 
 from .models import Folio, FolioLine
 from .serializers import FolioLineSerializer, FolioSerializer
@@ -19,7 +20,7 @@ class FolioListCreateView(APIView):
 
     def get(self, request):
         queryset = Folio.objects.select_related("reservation", "business_partner", "room").prefetch_related("lines")
-        return Response({"total": queryset.count(), "results": FolioSerializer(queryset, many=True).data})
+        return paginated_response(request, queryset, FolioSerializer)
 
     def post(self, request):
         data = request.data.copy()

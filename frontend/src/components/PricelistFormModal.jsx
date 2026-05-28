@@ -1,9 +1,29 @@
-import { Loader2, Save, Tags, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2, MapPin, Save, Tags, X } from 'lucide-react';
 
-export default function PricelistFormModal({ isOpen, mode, form, onChange, onClose, onSubmit, isSaving, isEditing = false }) {
+export default function PricelistFormModal({
+  isOpen,
+  mode,
+  form,
+  onChange,
+  onClose,
+  onSubmit,
+  isSaving,
+  isEditing = false,
+  servicePoints = [],
+}) {
   if (!isOpen) return null;
 
   const purchase = mode === 'purchase';
+  const activeServicePoints = servicePoints.filter((point) => point.is_active);
+  const selectedServicePoints = Array.isArray(form.service_points) ? form.service_points.map(String) : [];
+  const toggleServicePoint = (pointId) => {
+    const id = String(pointId);
+    const next = selectedServicePoints.includes(id)
+      ? selectedServicePoints.filter((selectedId) => selectedId !== id)
+      : [...selectedServicePoints, id];
+    onChange('service_points', next);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
@@ -35,10 +55,40 @@ export default function PricelistFormModal({ isOpen, mode, form, onChange, onClo
             <input required value={form.code} onChange={(e) => onChange('code', e.target.value.toLowerCase().replace(/\s+/g, '-'))} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
           </label>
           {!purchase && (
-            <label className="space-y-2">
-              <span className="text-xs font-bold uppercase text-app-muted">Service point kind</span>
-              <input value={form.service_point_kind} onChange={(e) => onChange('service_point_kind', e.target.value.toUpperCase())} placeholder="RESTAURANT" className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-            </label>
+            <div className="space-y-2 md:col-span-2">
+              <span className="text-xs font-bold uppercase text-app-muted">Service points</span>
+              {activeServicePoints.length ? (
+                <div className="rounded-md border border-app-border bg-app-elevated p-3">
+                  <div className="grid max-h-44 gap-2 overflow-y-auto md:grid-cols-2">
+                    {activeServicePoints.map((point) => {
+                      const checked = selectedServicePoints.includes(String(point.id));
+                      return (
+                        <label key={point.id} className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm font-bold transition ${checked ? 'border-brand-500 bg-brand-500/10 text-app-text' : 'border-app-border text-app-muted hover:text-app-text'}`}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleServicePoint(point.id)}
+                            className="h-4 w-4 accent-brand-600"
+                          />
+                          <span>{point.name} - {point.kind_display || point.kind}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-3 text-xs font-bold text-app-muted">
+                    Leave all unchecked to apply this pricelist everywhere.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border border-app-border bg-app-elevated p-3">
+                  <p className="text-sm font-bold text-app-muted">Create a service point before assigning this pricelist.</p>
+                  <Link to="/users/service-points" onClick={onClose} className="mt-3 inline-flex items-center gap-2 text-sm font-black text-brand-600">
+                    <MapPin className="h-4 w-4" />
+                    Open service points
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
           <label className="space-y-2 md:col-span-2">
             <span className="text-xs font-bold uppercase text-app-muted">Description</span>

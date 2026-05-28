@@ -21,7 +21,7 @@ export default function TaxCategoriesPage() {
   useEffect(() => {
     const fetchTaxOptions = async () => {
       try {
-        const response = await api.get('/api/taxes/configurations/');
+        const response = await api.get('/api/taxes/configurations/', { params: { page_size: 100 } });
         const options = Array.isArray(response.data.results)
           ? response.data.results.map((tax) => ({ value: tax.id, label: `${tax.name} (${tax.rate}%)` }))
           : [];

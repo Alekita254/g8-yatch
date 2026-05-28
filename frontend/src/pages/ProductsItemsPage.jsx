@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Edit3, Loader2, Package, Plus } from 'lucide-react';
 
-import api from '../api';
+import api, { emptyPagination, paginationFromResponse } from '../api';
+import DataTable from '../components/DataTable';
 import ProductFormModal from '../components/ProductFormModal';
 
 const packageLabels = {
@@ -50,17 +51,22 @@ export default function ProductsItemsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState(emptyProduct);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [pagination, setPagination] = useState(emptyPagination);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const [productsResponse, categoriesResponse, purchaseResponse, salesResponse] = await Promise.all([
-          api.get('/api/products/items/'),
-          api.get('/api/products/categories/'),
-          api.get('/api/products/purchase-pricelists/'),
-          api.get('/api/products/sales-pricelists/'),
+          api.get('/api/products/items/', { params: { page, page_size: pageSize } }),
+          api.get('/api/products/categories/', { params: { page_size: 100 } }),
+          api.get('/api/products/purchase-pricelists/', { params: { page_size: 100 } }),
+          api.get('/api/products/sales-pricelists/', { params: { page_size: 100 } }),
         ]);
         setProducts(Array.isArray(productsResponse.data.results) ? productsResponse.data.results : []);
+        setPagination(paginationFromResponse(productsResponse.data, page, pageSize));
         setCategories(Array.isArray(categoriesResponse.data.results) ? categoriesResponse.data.results : []);
         setPurchasePricelists(Array.isArray(purchaseResponse.data.results) ? purchaseResponse.data.results : []);
         setSalesPricelists(Array.isArray(salesResponse.data.results) ? salesResponse.data.results : []);
@@ -71,9 +77,19 @@ export default function ProductsItemsPage() {
       }
     };
     fetchProducts();
-  }, []);
+  }, [page, pageSize]);
 
   const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const visibleProducts = products.filter((product) => [
+    product.name,
+    product.sku,
+    product.product_type_display,
+    product.product_type,
+    product.category_name,
+    product.unit,
+    product.package_type,
+    product.description,
+  ].join(' ').toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
   const openCreateModal = () => {
     setEditingProduct(null);
@@ -192,44 +208,74 @@ export default function ProductsItemsPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {products.map((product) => (
-          <article key={product.id} className="rounded-lg border border-app-border bg-app-card p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-black text-app-text">{product.name}</h3>
-                <p className="text-xs font-bold uppercase text-brand-500">{product.sku}</p>
+      <DataTable
+        rows={visibleProducts}
+        columns={[
+          {
+            key: 'product',
+            header: 'Product',
+            render: (product) => (
+              <>
+                <p className="font-black text-app-text">{product.name}</p>
+                <p className="mt-1 text-xs font-bold uppercase text-brand-500">{product.sku}</p>
+              </>
+            ),
+          },
+          { key: 'type', header: 'Type', render: (product) => product.product_type_display || product.product_type },
+          { key: 'category', header: 'Category', render: (product) => product.category_name || '-' },
+          { key: 'stock', header: 'Quantity', render: (product) => `${product.quantity || '0.000'} ${packageLabels[product.package_type] || 'package'} x ${product.pack_size || '1.000'} ${product.unit}` },
+          {
+            key: 'flags',
+            header: 'Flags',
+            render: (product) => (
+              <div className="flex flex-wrap gap-2">
+                {product.is_sellable ? <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-black uppercase text-emerald-600">Sellable</span> : null}
+                {product.is_inventory_tracked ? <span className="rounded-md bg-blue-500/10 px-2 py-1 text-xs font-black uppercase text-blue-600">Tracked</span> : null}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="rounded-md bg-app-elevated px-2 py-1 text-xs font-bold text-app-muted">{product.product_type_display}</span>
-                <button
-                  type="button"
-                  onClick={() => openEditModal(product)}
-                  className="rounded-md p-2 text-app-muted transition hover:bg-app-elevated hover:text-brand-500"
-                  title="Edit product"
-                >
-                  <Edit3 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-app-muted">
-              {product.category_name} / {product.quantity || '0.000'} {packageLabels[product.package_type] || 'package'} x {product.pack_size || '1.000'} {product.unit}
-            </p>
-            {product.bom_items?.length > 0 && (
-              <div className="mt-4 rounded-md bg-app-elevated p-3">
-                <p className="text-xs font-black uppercase text-app-muted">Bill of Materials</p>
-                <div className="mt-2 space-y-1">
-                  {product.bom_items.map((item) => (
-                    <p key={item.id} className="text-sm text-app-text">
-                      {item.quantity} {item.unit} {item.component_name}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
+            ),
+          },
+          {
+            key: 'bom',
+            header: 'BOM',
+            render: (product) => product.bom_items?.length ? `${product.bom_items.length} components` : '-',
+          },
+          {
+            key: 'actions',
+            header: 'Actions',
+            headerClassName: 'text-right',
+            cellClassName: 'text-right',
+            render: (product) => (
+              <button
+                type="button"
+                onClick={() => openEditModal(product)}
+                className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500"
+                title="Edit product"
+              >
+                <Edit3 className="h-4 w-4" />
+              </button>
+            ),
+          },
+        ]}
+        getRowKey={(product) => product.id}
+        title={`${visibleProducts.length} products`}
+        description="Search by product, SKU, category, type, package, or unit."
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Search products"
+        emptyMessage="No products match your search."
+        minWidth="1040px"
+        pagination={{
+          total: pagination.total,
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          totalPages: pagination.totalPages,
+          onPageChange: setPage,
+          onPageSizeChange: (nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          },
+        }}
+      />
 
       <ProductFormModal
         isOpen={showAddModal}
