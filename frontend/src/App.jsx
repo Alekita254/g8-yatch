@@ -54,7 +54,9 @@ import useProfile from './hooks/useProfile';
 import useStats from './hooks/useStats';
 import FrontdeskDashboard from './frontdesk/FrontdeskDashboard';
 import FrontdeskListPage from './frontdesk/FrontdeskListPage';
+import FrontdeskPosPage from './frontdesk/FrontdeskPosPage';
 import FrontdeskShell from './frontdesk/FrontdeskShell';
+import RoomTypesPage from './frontdesk/RoomTypesPage';
 import SalesDashboard from './sales/SalesDashboard';
 import SalesListPage from './sales/SalesListPage';
 import SalesShell from './sales/SalesShell';
@@ -382,7 +384,9 @@ export default function App() {
         </Route>
         <Route path="/frontdesk" element={<FrontdeskShell />}>
           <Route index element={<FrontdeskDashboard />} />
+          <Route path="pos" element={<FrontdeskPosPage />} />
           <Route path="business-partners" element={<FrontdeskListPage type="partners" />} />
+          <Route path="room-types" element={<RoomTypesPage />} />
           <Route path="rooms" element={<FrontdeskListPage type="rooms" />} />
           <Route path="reservations" element={<FrontdeskListPage type="reservations" />} />
           <Route path="folios" element={<FrontdeskListPage type="folios" />} />

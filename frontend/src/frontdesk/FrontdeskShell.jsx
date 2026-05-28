@@ -1,12 +1,14 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
-import { Anchor, Bell, BedDouble, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, Home, LayoutDashboard, Loader2, LogOut, ReceiptText } from 'lucide-react';
+import { Anchor, Bell, BedDouble, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, Home, Layers, LayoutDashboard, Loader2, LogOut, ReceiptText, ShoppingCart } from 'lucide-react';
 
 import useProfile from '../hooks/useProfile';
 
 const navItems = [
   { name: 'Dashboard', path: '/frontdesk', icon: LayoutDashboard },
+  { name: 'Frontdesk POS', path: '/frontdesk/pos', icon: ShoppingCart },
   { name: 'Guests & Customers', path: '/frontdesk/business-partners', icon: BriefcaseBusiness },
+  { name: 'Room Types', path: '/frontdesk/room-types', icon: Layers },
   { name: 'Rooms', path: '/frontdesk/rooms', icon: BedDouble },
   { name: 'Reservations', path: '/frontdesk/reservations', icon: CalendarDays },
   { name: 'Folios', path: '/frontdesk/folios', icon: ReceiptText },
@@ -15,7 +17,9 @@ const navItems = [
 
 const routeLabels = {
   '/frontdesk': 'Frontdesk Dashboard',
+  '/frontdesk/pos': 'Frontdesk POS',
   '/frontdesk/business-partners': 'Guests & Customers',
+  '/frontdesk/room-types': 'Room Types',
   '/frontdesk/rooms': 'Rooms',
   '/frontdesk/reservations': 'Reservations',
   '/frontdesk/folios': 'Folios',
