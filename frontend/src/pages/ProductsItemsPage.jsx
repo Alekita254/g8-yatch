@@ -21,6 +21,24 @@ const packageLabels = {
   PACK: 'pack',
 };
 
+const skuPrefixByProductType = {
+  RAW: 'RAW',
+  SERVICE: 'SERVICE',
+};
+
+const formatSkuPart = (value) => String(value || '')
+  .normalize('NFKD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toUpperCase()
+  .replace(/[^A-Z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+
+const generateSku = (product, categories) => {
+  const category = categories.find((item) => String(item.id) === String(product.category));
+  const prefix = skuPrefixByProductType[product.product_type] || category?.code || product.product_type;
+  return formatSkuPart([prefix, product.name].filter(Boolean).join('-')).slice(0, 80).replace(/-+$/g, '');
+};
+
 const emptyProduct = {
   name: '',
   sku: '',
@@ -51,6 +69,7 @@ export default function ProductsItemsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState(emptyProduct);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [isSkuAutomatic, setIsSkuAutomatic] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -79,7 +98,21 @@ export default function ProductsItemsPage() {
     fetchProducts();
   }, [page, pageSize]);
 
-  const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const updateForm = (field, value) => {
+    if (field === 'sku') setIsSkuAutomatic(false);
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      if (!editingProduct && isSkuAutomatic && ['name', 'product_type', 'category'].includes(field)) {
+        next.sku = generateSku(next, categories);
+      }
+      return next;
+    });
+  };
+
+  const regenerateSku = () => {
+    setIsSkuAutomatic(true);
+    setForm((current) => ({ ...current, sku: generateSku(current, categories) }));
+  };
   const visibleProducts = products.filter((product) => [
     product.name,
     product.sku,
@@ -93,12 +126,14 @@ export default function ProductsItemsPage() {
 
   const openCreateModal = () => {
     setEditingProduct(null);
+    setIsSkuAutomatic(true);
     setForm(emptyProduct);
     setShowAddModal(true);
   };
 
   const openEditModal = (product) => {
     setEditingProduct(product);
+    setIsSkuAutomatic(false);
     setForm({
       ...product,
       category: product.category || '',
@@ -119,6 +154,7 @@ export default function ProductsItemsPage() {
   const closeModal = () => {
     setShowAddModal(false);
     setEditingProduct(null);
+    setIsSkuAutomatic(true);
     setForm(emptyProduct);
   };
 
@@ -284,6 +320,7 @@ export default function ProductsItemsPage() {
         purchasePricelists={purchasePricelists}
         salesPricelists={salesPricelists}
         onChange={updateForm}
+        onRegenerateSku={regenerateSku}
         onClose={closeModal}
         onSubmit={createProduct}
         isSaving={saving}

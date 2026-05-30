@@ -1,4 +1,4 @@
-import { Loader2, Package, Save, Tags, Truck, X } from 'lucide-react';
+import { Loader2, Package, RefreshCw, Save, Tags, Truck, X } from 'lucide-react';
 
 const units = ['EACH', 'KG', 'G', 'L', 'ML', 'HOUR'];
 const packageTypes = [
@@ -23,6 +23,7 @@ export default function ProductFormModal({
   purchasePricelists = [],
   salesPricelists = [],
   onChange,
+  onRegenerateSku,
   onClose,
   onSubmit,
   isSaving,
@@ -54,10 +55,17 @@ export default function ProductFormModal({
             <span className="text-xs font-bold uppercase text-app-muted">Name</span>
             <input required value={form.name} onChange={(e) => onChange('name', e.target.value)} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
           </label>
-          <label className="space-y-2">
-            <span className="text-xs font-bold uppercase text-app-muted">SKU</span>
-            <input required value={form.sku} onChange={(e) => onChange('sku', e.target.value.toUpperCase().replace(/\s+/g, '-'))} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-          </label>
+          <div className="space-y-2">
+            <span className="flex items-center justify-between gap-2">
+              <label htmlFor="product-sku" className="text-xs font-bold uppercase text-app-muted">SKU</label>
+              <button type="button" onClick={onRegenerateSku} className="inline-flex items-center gap-1 text-xs font-bold text-brand-500 hover:text-brand-600">
+                <RefreshCw className="h-3 w-3" />
+                Generate
+              </button>
+            </span>
+            <input id="product-sku" required maxLength={80} value={form.sku} onChange={(e) => onChange('sku', e.target.value.toUpperCase().replace(/\s+/g, '-'))} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+            <span className="block text-xs text-app-muted">Generated as you enter product details. You can customize it.</span>
+          </div>
           <label className="space-y-2">
             <span className="text-xs font-bold uppercase text-app-muted">Type</span>
             <select value={form.product_type} onChange={(e) => onChange('product_type', e.target.value)} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
