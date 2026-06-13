@@ -52,16 +52,14 @@ function foodImage(categoryName = '') {
 export async function placeHospitalityOrder({
   items,
   customerName,
-  guestType,
   serviceArea,
-  tableOrRoom,
+  tableNumber,
   hasArrived,
   notes,
 }) {
   const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0)
-  const location = `${serviceArea} ${tableOrRoom}`.trim()
+  const location = `${serviceArea} ${tableNumber}`.trim()
   const orderNotes = [
-    guestType === 'hotel' ? 'Hotel resident' : 'Walk-in guest',
     hasArrived ? 'Guest has arrived - alert a waiter' : 'Guest has not arrived yet',
     notes ? `Guest note: ${notes}` : '',
   ].filter(Boolean).join('. ')
@@ -91,7 +89,6 @@ export async function placeHospitalityOrder({
       order_id: data.id,
       order_number: data.order_number,
       guest_name: customerName,
-      guest_type: guestType,
       location,
       message: notes,
     }).catch(() => undefined)

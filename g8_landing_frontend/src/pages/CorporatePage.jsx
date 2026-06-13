@@ -24,19 +24,18 @@ export default function CorporatePage() {
 
   return (
     <main>
-      <section className="bg-ink py-16 text-white sm:py-24 lg:py-28">
-        <div className="page-shell grid gap-10 lg:grid-cols-[1fr_.8fr] lg:items-center">
-          <div>
+      <section className="relative min-h-[560px] overflow-hidden bg-ink text-white lg:min-h-[700px]">
+        <img src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=2000&q=90" alt="Corporate team event" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/15 lg:bg-gradient-to-r lg:from-ink lg:via-ink/65 lg:to-ink/10" />
+        <div className="page-shell relative flex min-h-[560px] items-end pb-12 pt-24 lg:min-h-[700px] lg:items-center lg:pb-20">
+          <div className="max-w-2xl">
             <p className="eyebrow text-sun">Conferences & Events</p>
             <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">Give your team room to think differently.</h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">Purpose-built gatherings in Embu, with thoughtful service and everything coordinated through one team.</p>
             <button type="button" onClick={() => setOpen(true)} className="touch-button mt-7 bg-sun text-ink">Request a proposal <ArrowRight className="h-4 w-4" /></button>
-          </div>
-          <div className="relative overflow-hidden rounded-[2rem]">
-            <img src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1400&q=88" alt="Corporate team event" className="aspect-[4/3] w-full object-cover" />
-            <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white/90 p-4 text-ink backdrop-blur">
+            <div className="mt-7 max-w-md rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
               <p className="font-extrabold">Day and residential packages</p>
-              <p className="mt-1 text-sm text-slate-600">Venue, meals, equipment and accommodation in one proposal.</p>
+              <p className="mt-1 text-sm text-white/65">Venue, meals, equipment and accommodation in one proposal.</p>
             </div>
           </div>
         </div>

@@ -40,7 +40,7 @@ const pillars = [
     label: 'Build Better',
     title: 'Cabro Blocks',
     text: 'Durable paving blocks for homes, commercial yards and roads.',
-    image: 'https://images.unsplash.com/photo-1584467541268-b040f83be3fd?auto=format&fit=crop&w=1400&q=85',
+    image: '/images/cabro-standard-60mm.png',
   },
 ]
 

@@ -107,7 +107,7 @@ export const cabroProducts = [
     pricePerSqm: 1450,
     coveragePerPack: 1.2,
     colors: ['Charcoal', 'Terracotta', 'Natural'],
-    image: 'https://images.unsplash.com/photo-1597047084897-51e81819a499?auto=format&fit=crop&w=1000&q=85',
+    image: '/images/cabro-standard-60mm.png',
   },
   {
     id: 202,
@@ -116,7 +116,7 @@ export const cabroProducts = [
     pricePerSqm: 1950,
     coveragePerPack: 1,
     colors: ['Charcoal', 'Natural'],
-    image: 'https://images.unsplash.com/photo-1584467541268-b040f83be3fd?auto=format&fit=crop&w=1000&q=85',
+    image: '/images/cabro-heavy-duty-80mm.png',
   },
   {
     id: 203,
@@ -125,6 +125,6 @@ export const cabroProducts = [
     pricePerSqm: 2200,
     coveragePerPack: 0.8,
     colors: ['Terracotta', 'Slate', 'Sand'],
-    image: 'https://images.unsplash.com/photo-1596998791568-386ef5297c2e?auto=format&fit=crop&w=1000&q=85',
+    image: '/images/cabro-rectangular-paver.png',
   },
 ]

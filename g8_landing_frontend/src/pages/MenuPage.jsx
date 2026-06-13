@@ -1,4 +1,4 @@
-import { BellRing, CheckCircle2, Hotel, MapPin, Minus, Plus, ShoppingBag } from 'lucide-react'
+import { BellRing, CheckCircle2, Minus, Plus, ShoppingBag } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { getMenu, placeHospitalityOrder } from '../api/hospitalityService'
@@ -19,9 +19,8 @@ export default function MenuPage() {
   const [cartOpen, setCartOpen] = useState(false)
   const [orderForm, setOrderForm] = useState({
     customerName: '',
-    guestType: 'walk-in',
     serviceArea: 'Restaurant table',
-    tableOrRoom: '',
+    tableNumber: '',
     hasArrived: true,
     notes: '',
   })
@@ -65,21 +64,20 @@ export default function MenuPage() {
 
   return (
     <main className="pb-24">
-      <section className="bg-ink py-14 text-white sm:py-20">
-        <div className="page-shell grid gap-8 lg:grid-cols-[1fr_.75fr] lg:items-center">
-          <div>
+      <section className="relative min-h-[540px] overflow-hidden bg-ink text-white lg:min-h-[680px]">
+        <img
+          src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=2000&q=90"
+          alt="Fresh food served at G8 Yatch"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/65 to-ink/15 lg:bg-gradient-to-r lg:from-ink lg:via-ink/60 lg:to-ink/10" />
+        <div className="page-shell relative flex min-h-[540px] items-end pb-12 pt-24 lg:min-h-[680px] lg:items-center lg:pb-20">
+          <div className="max-w-2xl">
             <p className="eyebrow text-sun">Food Menu</p>
             <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">Start with something delicious.</h1>
             <p className="mt-4 max-w-xl leading-7 text-white/70">
-              Browse the G8 kitchen menu, add your favourites and tell us where in the Embu property to serve them.
+              Browse the G8 kitchen menu, add your favourites and tell us exactly where you are seated.
             </p>
-          </div>
-          <div className="overflow-hidden rounded-[2rem]">
-            <img
-              src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=88"
-              alt="Fresh food served at G8 Yatch"
-              className="aspect-[4/3] w-full object-cover"
-            />
           </div>
         </div>
       </section>
@@ -176,31 +174,20 @@ export default function MenuPage() {
             </div>
             <div className="mt-5 space-y-4">
               <Field label="Your name" value={orderForm.customerName} onChange={(event) => setOrderForm({ ...orderForm, customerName: event.target.value })} placeholder="Guest name" required />
-              <div>
-                <p className="text-sm font-bold text-ink">Are you staying at the hotel?</p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <ChoiceButton active={orderForm.guestType === 'hotel'} onClick={() => setOrderForm({ ...orderForm, guestType: 'hotel', serviceArea: 'Hotel room delivery' })}>
-                    <Hotel className="h-4 w-4" /> Hotel guest
-                  </ChoiceButton>
-                  <ChoiceButton active={orderForm.guestType === 'walk-in'} onClick={() => setOrderForm({ ...orderForm, guestType: 'walk-in', serviceArea: 'Restaurant table' })}>
-                    <MapPin className="h-4 w-4" /> Visiting guest
-                  </ChoiceButton>
-                </div>
-              </div>
               <label className="block text-sm font-bold text-ink">
-                Service area
+                Where are you seated?
                 <select required value={orderForm.serviceArea} onChange={(event) => setOrderForm({ ...orderForm, serviceArea: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal outline-none focus:border-lake">
                   <option>Restaurant table</option>
                   <option>Outdoor seating</option>
+                  <option>Garden seating</option>
                   <option>Conference room</option>
-                  <option>Hotel room delivery</option>
                 </select>
               </label>
               <Field
-                label={orderForm.guestType === 'hotel' ? 'Room or table number' : 'Table number'}
-                value={orderForm.tableOrRoom}
-                onChange={(event) => setOrderForm({ ...orderForm, tableOrRoom: event.target.value })}
-                placeholder={orderForm.guestType === 'hotel' ? 'Example: Room 12 or Table 4' : 'Example: Table 4'}
+                label="Table or seating number"
+                value={orderForm.tableNumber}
+                onChange={(event) => setOrderForm({ ...orderForm, tableNumber: event.target.value })}
+                placeholder="Example: Table 4"
                 required
               />
               <button
@@ -235,18 +222,6 @@ export default function MenuPage() {
         )}
       </BottomSheet>
     </main>
-  )
-}
-
-function ChoiceButton({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold ${active ? 'border-lake bg-lake text-white' : 'border-slate-200 bg-white text-slate-600'}`}
-    >
-      {children}
-    </button>
   )
 }
 
