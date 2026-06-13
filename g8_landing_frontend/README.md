@@ -1,7 +1,8 @@
 # G8 Yatch Landing Frontend
 
 Standalone mobile-first public website for G8 Yatch food ordering, hotel
-accommodation, corporate events, and cabro-block sales in Embu.
+accommodation, conferences, garden events, team building, family activities,
+and cabro-block sales in Embu.
 
 ## Setup
 
@@ -20,6 +21,7 @@ npm run dev
 - `VITE_GOOGLE_MAP_QUERY`: Exact Google Maps place name or Embu address.
 - `VITE_MENU_PRICELIST_CODE`: Public menu pricelist code.
 - `VITE_HOTEL_ENQUIRIES_ENDPOINT`: ERP/CRM endpoint for room enquiries.
+- `VITE_WAITER_ALERT_ENDPOINT`: Optional waiter-arrival notification endpoint.
 - `VITE_CONTACT_PHONE` and `VITE_CONTACT_EMAIL`: Verified public contacts.
 
 Hospitality orders are already shaped for `POST /api/sales/orders/`. The CRM

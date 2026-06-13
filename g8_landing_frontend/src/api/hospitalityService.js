@@ -30,6 +30,7 @@ export async function getMenu() {
       description: product.description || '',
       price: Number(item.price),
       category: menuCategory(product.category_name),
+      image: product.image_url || foodImage(product.category_name),
     }
   })
 }
@@ -41,8 +42,29 @@ function menuCategory(categoryName = '') {
   return 'Mains'
 }
 
-export async function placeHospitalityOrder({ items, location, customerName }) {
+function foodImage(categoryName = '') {
+  const category = menuCategory(categoryName)
+  if (category === 'Starters') return 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=900&q=85'
+  if (category === 'Drinks') return 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=900&q=85'
+  return 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=85'
+}
+
+export async function placeHospitalityOrder({
+  items,
+  customerName,
+  guestType,
+  serviceArea,
+  tableOrRoom,
+  hasArrived,
+  notes,
+}) {
   const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0)
+  const location = `${serviceArea} ${tableOrRoom}`.trim()
+  const orderNotes = [
+    guestType === 'hotel' ? 'Hotel resident' : 'Walk-in guest',
+    hasArrived ? 'Guest has arrived - alert a waiter' : 'Guest has not arrived yet',
+    notes ? `Guest note: ${notes}` : '',
+  ].filter(Boolean).join('. ')
   const payload = {
     table_name: location,
     customer_name: customerName || 'Guest order',
@@ -50,7 +72,7 @@ export async function placeHospitalityOrder({ items, location, customerName }) {
     tax_total: 0,
     discount_total: 0,
     grand_total: subtotal,
-    notes: `Landing-page order for ${location}`,
+    notes: orderNotes,
     items: items.map((item) => ({
       product: item.id,
       quantity: item.quantity,
@@ -62,6 +84,19 @@ export async function placeHospitalityOrder({ items, location, customerName }) {
   }
   if (useMockData) return wait({ id: Date.now(), order_number: `WEB-${Date.now()}`, ...payload })
   const { data } = await apiClient.post('/api/sales/orders/', payload)
+
+  const waiterAlertEndpoint = import.meta.env.VITE_WAITER_ALERT_ENDPOINT
+  if (hasArrived && waiterAlertEndpoint) {
+    apiClient.post(waiterAlertEndpoint, {
+      order_id: data.id,
+      order_number: data.order_number,
+      guest_name: customerName,
+      guest_type: guestType,
+      location,
+      message: notes,
+    }).catch(() => undefined)
+  }
+
   return data
 }
 

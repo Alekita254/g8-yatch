@@ -1,4 +1,4 @@
-import { CheckCircle2, Minus, Plus, ShoppingBag, Utensils } from 'lucide-react'
+import { BellRing, CheckCircle2, Hotel, MapPin, Minus, Plus, ShoppingBag } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { getMenu, placeHospitalityOrder } from '../api/hospitalityService'
@@ -17,7 +17,14 @@ export default function MenuPage() {
   const [category, setCategory] = useState('Starters')
   const [cart, setCart] = useState([])
   const [cartOpen, setCartOpen] = useState(false)
-  const [orderForm, setOrderForm] = useState({ customerName: '', location: '' })
+  const [orderForm, setOrderForm] = useState({
+    customerName: '',
+    guestType: 'walk-in',
+    serviceArea: 'Restaurant table',
+    tableOrRoom: '',
+    hasArrived: true,
+    notes: '',
+  })
   const [status, setStatus] = useState('')
   const [loadError, setLoadError] = useState('')
 
@@ -99,34 +106,36 @@ export default function MenuPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {visibleMenu.map((item) => {
               const quantity = cart.find((entry) => entry.id === item.id)?.quantity || 0
               return (
-                <article key={item.id} className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-sand text-lake">
-                    <Utensils className="h-6 w-6" />
+                <article key={item.id} className="overflow-hidden rounded-[1.5rem] bg-white shadow-sm">
+                  <div className="relative">
+                    <img src={item.image} alt={item.name} className="h-48 w-full object-cover" loading="lazy" />
+                    <p className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1.5 text-sm font-extrabold text-lake shadow-sm">{money(item.price)}</p>
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="flex min-h-44 flex-col p-4">
                     <h2 className="font-extrabold text-ink">{item.name}</h2>
                     <p className="mt-1 text-sm leading-5 text-slate-500">{item.description}</p>
-                    <p className="mt-2 text-sm font-bold text-lake">{money(item.price)}</p>
-                  </div>
-                  {quantity ? (
-                    <div className="flex items-center rounded-full bg-ink text-white">
-                      <button type="button" onClick={() => changeQuantity(item, -1)} className="flex h-11 w-10 items-center justify-center" aria-label={`Remove one ${item.name}`}>
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      <span className="w-5 text-center text-sm font-bold">{quantity}</span>
-                      <button type="button" onClick={() => changeQuantity(item, 1)} className="flex h-11 w-10 items-center justify-center" aria-label={`Add one ${item.name}`}>
-                        <Plus className="h-4 w-4" />
-                      </button>
+                    <div className="mt-auto pt-4">
+                      {quantity ? (
+                        <div className="flex items-center justify-between rounded-full bg-ink text-white">
+                          <button type="button" onClick={() => changeQuantity(item, -1)} className="flex h-12 w-12 items-center justify-center" aria-label={`Remove one ${item.name}`}>
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="text-sm font-bold">{quantity} in order</span>
+                          <button type="button" onClick={() => changeQuantity(item, 1)} className="flex h-12 w-12 items-center justify-center" aria-label={`Add one ${item.name}`}>
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => changeQuantity(item, 1)} className="touch-button w-full bg-lake text-white" aria-label={`Add ${item.name}`}>
+                          <Plus className="h-5 w-5" /> Add to order
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <button type="button" onClick={() => changeQuantity(item, 1)} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-lake text-white" aria-label={`Add ${item.name}`}>
-                      <Plus className="h-5 w-5" />
-                    </button>
-                  )}
+                  </div>
                 </article>
               )
             })}
@@ -166,16 +175,57 @@ export default function MenuPage() {
               ))}
             </div>
             <div className="mt-5 space-y-4">
-              <Field label="Name optional" value={orderForm.customerName} onChange={(event) => setOrderForm({ ...orderForm, customerName: event.target.value })} placeholder="Guest name" />
+              <Field label="Your name" value={orderForm.customerName} onChange={(event) => setOrderForm({ ...orderForm, customerName: event.target.value })} placeholder="Guest name" required />
+              <div>
+                <p className="text-sm font-bold text-ink">Are you staying at the hotel?</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <ChoiceButton active={orderForm.guestType === 'hotel'} onClick={() => setOrderForm({ ...orderForm, guestType: 'hotel', serviceArea: 'Hotel room delivery' })}>
+                    <Hotel className="h-4 w-4" /> Hotel guest
+                  </ChoiceButton>
+                  <ChoiceButton active={orderForm.guestType === 'walk-in'} onClick={() => setOrderForm({ ...orderForm, guestType: 'walk-in', serviceArea: 'Restaurant table' })}>
+                    <MapPin className="h-4 w-4" /> Visiting guest
+                  </ChoiceButton>
+                </div>
+              </div>
               <label className="block text-sm font-bold text-ink">
-                Where should we bring it?
-                <select required value={orderForm.location} onChange={(event) => setOrderForm({ ...orderForm, location: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal outline-none focus:border-lake">
-                  <option value="">Select your location</option>
+                Service area
+                <select required value={orderForm.serviceArea} onChange={(event) => setOrderForm({ ...orderForm, serviceArea: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal outline-none focus:border-lake">
                   <option>Restaurant table</option>
                   <option>Outdoor seating</option>
                   <option>Conference room</option>
                   <option>Hotel room delivery</option>
                 </select>
+              </label>
+              <Field
+                label={orderForm.guestType === 'hotel' ? 'Room or table number' : 'Table number'}
+                value={orderForm.tableOrRoom}
+                onChange={(event) => setOrderForm({ ...orderForm, tableOrRoom: event.target.value })}
+                placeholder={orderForm.guestType === 'hotel' ? 'Example: Room 12 or Table 4' : 'Example: Table 4'}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setOrderForm({ ...orderForm, hasArrived: !orderForm.hasArrived })}
+                className={`flex min-h-14 w-full items-center gap-3 rounded-2xl border p-3 text-left ${orderForm.hasArrived ? 'border-lake bg-lake/10' : 'border-slate-200 bg-white'}`}
+                aria-pressed={orderForm.hasArrived}
+              >
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${orderForm.hasArrived ? 'bg-lake text-white' : 'bg-slate-100 text-slate-500'}`}>
+                  <BellRing className="h-5 w-5" />
+                </span>
+                <span>
+                  <span className="block text-sm font-bold text-ink">I have arrived - alert a waiter</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">The waiter will know you are seated and ready for service.</span>
+                </span>
+              </button>
+              <label className="block text-sm font-bold text-ink">
+                Notes for the kitchen or waiter optional
+                <textarea
+                  value={orderForm.notes}
+                  onChange={(event) => setOrderForm({ ...orderForm, notes: event.target.value })}
+                  rows="3"
+                  placeholder="Allergies, no chilli, birthday setup, bring cutlery..."
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-lake"
+                />
               </label>
             </div>
             <button disabled={status === 'sending'} className="touch-button mt-5 w-full bg-lake text-white disabled:opacity-60">
@@ -185,6 +235,18 @@ export default function MenuPage() {
         )}
       </BottomSheet>
     </main>
+  )
+}
+
+function ChoiceButton({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold ${active ? 'border-lake bg-lake text-white' : 'border-slate-200 bg-white text-slate-600'}`}
+    >
+      {children}
+    </button>
   )
 }
 

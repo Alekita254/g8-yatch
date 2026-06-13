@@ -9,7 +9,7 @@ import { corporateExperiences } from '../data/mockData'
 export default function CorporatePage() {
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState('')
-  const [form, setForm] = useState({ name: '', company: '', email: '', phone: '', start_date: '', end_date: '', pax_size: '', event_type: 'Conference' })
+  const [form, setForm] = useState({ name: '', company: '', email: '', phone: '', start_date: '', end_date: '', pax_size: '', event_type: 'Conference Hall' })
 
   const submit = async (event) => {
     event.preventDefault()
@@ -88,7 +88,7 @@ export default function CorporatePage() {
             <Field label="Your name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
             <Field label="Company" value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} required />
             <div className="grid grid-cols-2 gap-3"><Field label="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /><Field label="Phone" type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required /></div>
-            <label className="block text-sm font-bold text-ink">Event type<select value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal"><option>Conference</option><option>Team Building</option><option>Meeting</option><option>Training</option></select></label>
+            <label className="block text-sm font-bold text-ink">Event type<select value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal"><option>Conference Hall</option><option>Team Building</option><option>Garden Event</option><option>Meeting</option><option>Training</option><option>Kids Party / Family Day</option></select></label>
             <div className="grid grid-cols-2 gap-3"><Field label="Start date" type="date" value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} required /><Field label="End date" type="date" value={form.end_date} onChange={(event) => setForm({ ...form, end_date: event.target.value })} required /></div>
             <Field label="Number of people" type="number" min="1" value={form.pax_size} onChange={(event) => setForm({ ...form, pax_size: event.target.value })} required />
             {status === 'error' && <p className="text-sm font-bold text-red-600">Could not send the request. Please try again.</p>}

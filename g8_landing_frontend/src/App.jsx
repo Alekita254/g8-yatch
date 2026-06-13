@@ -4,6 +4,7 @@ import SiteFooter from './components/SiteFooter'
 import SiteHeader from './components/SiteHeader'
 import CabroBlocksPage from './pages/CabroBlocksPage'
 import CorporatePage from './pages/CorporatePage'
+import ExperiencesPage from './pages/ExperiencesPage'
 import HomePage from './pages/HomePage'
 import HotelPage from './pages/HotelPage'
 import MenuPage from './pages/MenuPage'
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/hospitality" element={<Navigate to="/menu" replace />} />
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/hotel" element={<HotelPage />} />
+          <Route path="/experiences" element={<ExperiencesPage />} />
           <Route path="/corporate" element={<CorporatePage />} />
           <Route path="/cabro-blocks" element={<CabroBlocksPage />} />
           <Route path="*" element={<NotFoundPage />} />

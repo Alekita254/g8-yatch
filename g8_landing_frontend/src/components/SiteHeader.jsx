@@ -5,6 +5,7 @@ import { Link, NavLink } from 'react-router-dom'
 const links = [
   ['Food Menu', '/menu'],
   ['Hotel', '/hotel'],
+  ['Experiences', '/experiences'],
   ['Corporate', '/corporate'],
   ['Cabro Blocks', '/cabro-blocks'],
 ]
@@ -25,7 +26,7 @@ export default function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-5 md:flex lg:gap-7">
+        <nav className="hidden items-center gap-6 lg:flex">
           {links.map(([label, path]) => (
             <NavLink
               key={path}
@@ -39,7 +40,7 @@ export default function SiteHeader() {
 
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 md:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 lg:hidden"
           onClick={() => setOpen((value) => !value)}
           aria-label="Toggle navigation"
         >
@@ -48,7 +49,7 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <nav className="border-t border-white/10 px-4 pb-4 pt-2 md:hidden">
+        <nav className="border-t border-white/10 px-4 pb-4 pt-2 lg:hidden">
           {links.map(([label, path]) => (
             <NavLink
               key={path}

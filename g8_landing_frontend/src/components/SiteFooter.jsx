@@ -21,7 +21,7 @@ export default function SiteFooter() {
             </span>
           </Link>
           <p className="mt-5 max-w-md leading-7 text-white/60">
-            Food, accommodation, corporate experiences and dependable construction materials, all served from Embu.
+            Food, accommodation, conferences, garden events, team building, family activities and dependable construction materials in Embu.
           </p>
           <div className="mt-6 space-y-3 text-sm text-white/70">
             <a href={directionsUrl} target="_blank" rel="noreferrer" className="flex min-h-11 items-center gap-3 hover:text-white">
@@ -70,6 +70,7 @@ export default function SiteFooter() {
           <div className="flex gap-4">
             <Link to="/menu" className="hover:text-white">Food Menu</Link>
             <Link to="/hotel" className="hover:text-white">Hotel</Link>
+            <Link to="/experiences" className="hover:text-white">Experiences</Link>
             <Link to="/corporate" className="hover:text-white">Corporate</Link>
           </div>
         </div>

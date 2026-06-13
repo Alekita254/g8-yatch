@@ -1,4 +1,4 @@
-import { ArrowRight, BedDouble, Blocks, BriefcaseBusiness, Check, Utensils } from 'lucide-react'
+import { ArrowRight, BedDouble, Blocks, BriefcaseBusiness, Check, PartyPopper, Utensils } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const pillars = [
@@ -17,6 +17,14 @@ const pillars = [
     title: 'Hotel',
     text: 'Comfortable rooms and a simple availability request without menu distractions.',
     image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=85',
+  },
+  {
+    path: '/experiences',
+    icon: PartyPopper,
+    label: 'Play & Celebrate',
+    title: 'Experiences',
+    text: 'Garden events, team building and a playground for younger guests.',
+    image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1400&q=85',
   },
   {
     path: '/corporate',
@@ -48,12 +56,12 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,37,43,.25),rgba(16,37,43,.94))] md:bg-[linear-gradient(90deg,rgba(16,37,43,.94),rgba(16,37,43,.25))]" />
         <div className="page-shell relative flex min-h-[calc(100svh-4rem)] items-end pb-10 pt-24 md:items-center md:pb-20 lg:min-h-[760px]">
           <div className="max-w-3xl">
-            <p className="eyebrow text-sun">One destination. Four possibilities.</p>
+            <p className="eyebrow text-sun">One destination. Many reasons to visit.</p>
             <h1 className="mt-4 text-4xl font-extrabold leading-[1.02] sm:text-6xl lg:text-7xl">
               Come to stay, gather, or build something lasting.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-white/70 sm:text-lg">
-              G8 Yatch brings fresh food, comfortable accommodation, purposeful corporate experiences, and dependable construction materials under one trusted name.
+              G8 Yatch brings food, accommodation, conferences, garden events, team building, family activities and dependable construction materials under one trusted name.
             </p>
             <div className="mt-7 flex flex-wrap gap-3 text-xs font-bold text-white/75">
               {['Embu, Kenya', 'Open every day', 'Local delivery'].map((item) => (
@@ -71,7 +79,7 @@ export default function HomePage() {
           <p className="eyebrow text-lake">Choose your journey</p>
           <h2 className="mt-3 text-3xl font-extrabold text-ink sm:text-5xl">What brings you to G8 today?</h2>
         </div>
-        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
           {pillars.map((pillar) => (
             <Link key={pillar.path} to={pillar.path} className="group relative min-h-[390px] overflow-hidden rounded-[1.75rem] text-white">
               <img src={pillar.image} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
