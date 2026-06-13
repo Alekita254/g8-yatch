@@ -9,6 +9,7 @@ import HomePage from './pages/HomePage'
 import HotelPage from './pages/HotelPage'
 import MenuPage from './pages/MenuPage'
 import NotFoundPage from './pages/NotFoundPage'
+import PlanPage from './pages/PlanPage'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/experiences" element={<ExperiencesPage />} />
           <Route path="/corporate" element={<CorporatePage />} />
           <Route path="/cabro-blocks" element={<CabroBlocksPage />} />
+          <Route path="/plan" element={<PlanPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <SiteFooter />

@@ -1,13 +1,15 @@
-import { ArrowRight, CheckCircle2, PartyPopper, Trees, UsersRound } from 'lucide-react'
+import { ArrowRight, Check, CheckCircle2, PartyPopper, Plus, Trees, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { submitProposal } from '../api/corporateService'
 import BottomSheet from '../components/BottomSheet'
 import SectionHeading from '../components/SectionHeading'
+import { usePlan } from '../context/planContext'
 import { activities } from '../data/mockData'
 
 export default function ExperiencesPage() {
+  const { activities: plannedActivities, addActivity } = usePlan()
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState('')
   const [form, setForm] = useState({
@@ -39,17 +41,17 @@ export default function ExperiencesPage() {
 
   return (
     <main>
-      <section className="relative min-h-[560px] overflow-hidden bg-ink text-white">
+      <section className="relative min-h-[72svh] overflow-hidden bg-ink text-white lg:min-h-[calc(100svh-5rem)]">
         <img
           src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1800&q=90"
           alt="Friends and families enjoying activities together"
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-ink/15" />
-        <div className="page-shell relative flex min-h-[560px] items-end pb-12">
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/50 to-ink/10 lg:bg-gradient-to-r lg:from-ink/95 lg:via-ink/45 lg:to-transparent" />
+        <div className="page-shell relative flex min-h-[72svh] items-end pb-12 pt-24 lg:min-h-[calc(100svh-5rem)] lg:items-center lg:pb-20">
           <div className="max-w-3xl">
             <p className="eyebrow text-sun">Activities in Embu</p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">More than a place to visit. A place to spend the day well.</h1>
+            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl lg:text-7xl">More than a place to visit. A place to spend the day well.</h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
               Stay overnight, host a gathering, bring the team together or enjoy a relaxed family day with space for children to play.
             </p>
@@ -65,21 +67,35 @@ export default function ExperiencesPage() {
         />
         <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {activities.map((activity) => (
-            <article key={activity.id} className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+            <article key={activity.id} className="flex overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+              <div className="flex w-full flex-col">
               <img src={activity.image} alt="" className="h-52 w-full object-cover" />
-              <div className="p-5">
+              <div className="flex flex-1 flex-col p-5">
                 <p className="eyebrow text-lake">{activity.eyebrow}</p>
                 <h2 className="mt-2 text-2xl font-extrabold text-ink">{activity.title}</h2>
                 <p className="mt-3 min-h-18 text-sm leading-6 text-slate-600">{activity.text}</p>
-                {activity.path ? (
-                  <Link to={activity.path} className="touch-button mt-5 w-full bg-ink text-white">
-                    {activity.action} <ArrowRight className="h-4 w-4" />
-                  </Link>
-                ) : (
-                  <button type="button" onClick={() => openEnquiry(activity.enquiryType)} className="touch-button mt-5 w-full bg-lake text-white">
-                    {activity.action} <ArrowRight className="h-4 w-4" />
+                <div className="mt-auto grid gap-2 pt-5">
+                  <button
+                    type="button"
+                    onClick={() => addActivity(activity)}
+                    disabled={plannedActivities.some((entry) => entry.id === activity.id)}
+                    className="touch-button w-full bg-lake text-white disabled:bg-lake/15 disabled:text-lake"
+                  >
+                    {plannedActivities.some((entry) => entry.id === activity.id)
+                      ? <><Check className="h-4 w-4" /> Added to my plan</>
+                      : <><Plus className="h-4 w-4" /> Add to my plan</>}
                   </button>
-                )}
+                  {activity.path ? (
+                    <Link to={activity.path} className="touch-button w-full bg-slate-100 text-ink">
+                      {activity.action} <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  ) : (
+                    <button type="button" onClick={() => openEnquiry(activity.enquiryType)} className="touch-button w-full bg-slate-100 text-ink">
+                      Enquire now <ArrowRight className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
               </div>
             </article>
           ))}

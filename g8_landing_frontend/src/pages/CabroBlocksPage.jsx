@@ -58,13 +58,13 @@ export default function CabroBlocksPage() {
 
   return (
     <main>
-      <section className="relative min-h-[560px] overflow-hidden bg-[#242b2c] text-white lg:min-h-[700px]">
+      <section className="relative min-h-[72svh] overflow-hidden bg-[#242b2c] text-white lg:min-h-[calc(100svh-5rem)]">
         <img src="/images/cabro-standard-60mm.png" alt="Common Kenyan interlocking cabro pavement blocks" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#242b2c] via-[#242b2c]/70 to-[#242b2c]/15 lg:bg-gradient-to-r lg:from-[#242b2c] lg:via-[#242b2c]/65 lg:to-transparent" />
-        <div className="page-shell relative flex min-h-[560px] items-end pb-12 pt-24 lg:min-h-[700px] lg:items-center lg:pb-20">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#242b2c] via-[#242b2c]/50 to-[#242b2c]/10 lg:bg-gradient-to-r lg:from-[#242b2c]/95 lg:via-[#242b2c]/45 lg:to-transparent" />
+        <div className="page-shell relative flex min-h-[72svh] items-end pb-12 pt-24 lg:min-h-[calc(100svh-5rem)] lg:items-center lg:pb-20">
           <div className="max-w-2xl">
             <p className="eyebrow text-copper">Construction Materials</p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">Strong ground starts with the right block.</h1>
+            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl lg:text-7xl">Strong ground starts with the right block.</h1>
             <p className="mt-5 max-w-xl leading-7 text-white/70">The familiar Kenyan interlocking pavement blocks for walkways, compounds, parking spaces and commercial yards.</p>
             <a href="#calculator" className="touch-button mt-7 bg-copper text-white"><Calculator className="h-4 w-4" /> Calculate your project</a>
           </div>

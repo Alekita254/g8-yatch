@@ -1,6 +1,7 @@
-import { Anchor, Menu, X } from 'lucide-react'
+import { Anchor, ClipboardList, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { usePlan } from '../context/planContext'
 
 const links = [
   ['Food Menu', '/menu'],
@@ -12,6 +13,7 @@ const links = [
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false)
+  const { planCount } = usePlan()
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/95 text-white backdrop-blur-xl">
@@ -38,14 +40,21 @@ export default function SiteHeader() {
           ))}
         </nav>
 
-        <button
-          type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 lg:hidden"
-          onClick={() => setOpen((value) => !value)}
-          aria-label="Toggle navigation"
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link to="/plan" onClick={() => setOpen(false)} className="relative flex h-11 min-w-11 items-center justify-center rounded-full border border-white/15 px-3" aria-label={`My G8 Plan, ${planCount} selected`}>
+            <ClipboardList className="h-5 w-5" />
+            <span className="ml-2 hidden text-sm font-bold sm:inline">My Plan</span>
+            {planCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-sun px-1 text-[10px] font-extrabold text-ink">{planCount}</span>}
+          </Link>
+          <button
+            type="button"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 lg:hidden"
+            onClick={() => setOpen((value) => !value)}
+            aria-label="Toggle navigation"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -60,6 +69,13 @@ export default function SiteHeader() {
               {label}
             </NavLink>
           ))}
+          <NavLink
+            to="/plan"
+            onClick={() => setOpen(false)}
+            className={({ isActive }) => `flex min-h-12 items-center rounded-xl px-4 text-sm font-bold ${isActive ? 'bg-white/10 text-sun' : 'text-white/70'}`}
+          >
+            My G8 Plan {planCount > 0 ? `(${planCount})` : ''}
+          </NavLink>
         </nav>
       )}
     </header>

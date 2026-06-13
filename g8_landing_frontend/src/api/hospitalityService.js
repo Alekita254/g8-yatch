@@ -97,6 +97,20 @@ export async function placeHospitalityOrder({
   return data
 }
 
+export async function notifyWaiter({ guestName, serviceArea, tableNumber, message }) {
+  const payload = {
+    guest_name: guestName || 'Guest',
+    location: `${serviceArea} ${tableNumber}`.trim(),
+    message: message || 'Guest is ready for service',
+    source: 'G8 visit planner',
+  }
+  if (useMockData) return wait({ id: Date.now(), status: 'sent', ...payload })
+  const endpoint = import.meta.env.VITE_WAITER_ALERT_ENDPOINT
+  if (!endpoint) throw new Error('VITE_WAITER_ALERT_ENDPOINT is not configured')
+  const { data } = await apiClient.post(endpoint, payload)
+  return data
+}
+
 export async function requestRoomAvailability(payload) {
   if (useMockData) return wait({ id: Date.now(), status: 'received', ...payload })
   const endpoint = import.meta.env.VITE_HOTEL_ENQUIRIES_ENDPOINT

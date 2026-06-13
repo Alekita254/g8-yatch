@@ -47,14 +47,14 @@ const pillars = [
 export default function HomePage() {
   return (
     <main>
-      <section className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-ink text-white">
+      <section className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-ink text-white lg:min-h-[calc(100svh-5rem)]">
         <img
           src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=2000&q=90"
           alt="G8 Yatch hospitality property in Embu"
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,37,43,.25),rgba(16,37,43,.94))] md:bg-[linear-gradient(90deg,rgba(16,37,43,.94),rgba(16,37,43,.25))]" />
-        <div className="page-shell relative flex min-h-[calc(100svh-4rem)] items-end pb-10 pt-24 md:items-center md:pb-20 lg:min-h-[760px]">
+        <div className="page-shell relative flex min-h-[calc(100svh-4rem)] items-end pb-10 pt-24 md:items-center md:pb-20 lg:min-h-[calc(100svh-5rem)]">
           <div className="max-w-3xl">
             <p className="eyebrow text-sun">One destination. Many reasons to visit.</p>
             <h1 className="mt-4 text-4xl font-extrabold leading-[1.02] sm:text-6xl lg:text-7xl">

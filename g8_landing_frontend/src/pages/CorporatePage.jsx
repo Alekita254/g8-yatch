@@ -24,13 +24,13 @@ export default function CorporatePage() {
 
   return (
     <main>
-      <section className="relative min-h-[560px] overflow-hidden bg-ink text-white lg:min-h-[700px]">
+      <section className="relative min-h-[72svh] overflow-hidden bg-ink text-white lg:min-h-[calc(100svh-5rem)]">
         <img src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=2000&q=90" alt="Corporate team event" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/15 lg:bg-gradient-to-r lg:from-ink lg:via-ink/65 lg:to-ink/10" />
-        <div className="page-shell relative flex min-h-[560px] items-end pb-12 pt-24 lg:min-h-[700px] lg:items-center lg:pb-20">
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/50 to-ink/10 lg:bg-gradient-to-r lg:from-ink/95 lg:via-ink/45 lg:to-transparent" />
+        <div className="page-shell relative flex min-h-[72svh] items-end pb-12 pt-24 lg:min-h-[calc(100svh-5rem)] lg:items-center lg:pb-20">
           <div className="max-w-2xl">
             <p className="eyebrow text-sun">Conferences & Events</p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">Give your team room to think differently.</h1>
+            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl lg:text-7xl">Give your team room to think differently.</h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">Purpose-built gatherings in Embu, with thoughtful service and everything coordinated through one team.</p>
             <button type="button" onClick={() => setOpen(true)} className="touch-button mt-7 bg-sun text-ink">Request a proposal <ArrowRight className="h-4 w-4" /></button>
             <div className="mt-7 max-w-md rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
