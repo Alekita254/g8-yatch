@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from 'react-oidc-context';
@@ -13,8 +14,6 @@ import {
   LogIn,
   Martini,
   MonitorCog,
-  Package,
-  Percent,
   Sailboat,
   ShieldCheck,
   Sparkles,
@@ -42,6 +41,7 @@ import ProductsItemsPage from './pages/ProductsItemsPage';
 import ProductsSetupPage from './pages/ProductsSetupPage';
 import PurchasePricelistsPage from './pages/PurchasePricelistsPage';
 import RolesSetupPage from './pages/RolesSetupPage';
+import SalesPricelistDetailPage from './pages/SalesPricelistDetailPage';
 import SalesPricelistsPage from './pages/SalesPricelistsPage';
 import ServicePointsSetupPage from './pages/ServicePointsSetupPage';
 import TaxCategoriesPage from './pages/TaxCategoriesPage';
@@ -324,6 +324,7 @@ function AppChooserPage() {
 function DashboardShell() {
   const profile = useProfile();
   const stats = useStats(profile.isAuthenticated);
+  const [navigationOpen, setNavigationOpen] = useState(false);
 
   if (profile.auth.isLoading || profile.loading) {
     return (
@@ -338,11 +339,23 @@ function DashboardShell() {
   }
 
   return (
-    <div className="min-h-screen bg-app-bg text-app-text flex">
-      <Sidebar djangoUser={profile.djangoUser?.identity} />
-      <main className="flex-1 min-w-0 h-screen overflow-y-auto">
-        <AdminTopbar userName={profile.userName} />
-        <div className="mx-auto max-w-7xl px-8 py-8">
+    <div className="flex min-h-screen bg-app-bg text-app-text">
+      {navigationOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-black/55 lg:hidden"
+          onClick={() => setNavigationOpen(false)}
+          aria-label="Close navigation"
+        />
+      )}
+      <Sidebar
+        djangoUser={profile.djangoUser?.identity}
+        isOpen={navigationOpen}
+        onClose={() => setNavigationOpen(false)}
+      />
+      <main className="h-dvh min-w-0 flex-1 overflow-y-auto">
+        <AdminTopbar userName={profile.userName} onMenuClick={() => setNavigationOpen(true)} />
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           <Outlet
             context={{
               stats: stats.stats,
@@ -403,6 +416,7 @@ export default function App() {
             <Route path="categories" element={<ProductCategoriesPage />} />
             <Route path="items" element={<ProductsItemsPage />} />
             <Route path="sales-pricelists" element={<SalesPricelistsPage />} />
+            <Route path="sales-pricelists/:pricelistId" element={<SalesPricelistDetailPage />} />
             <Route path="purchase-pricelists" element={<PurchasePricelistsPage />} />
           </Route>
           <Route path="/taxes-discounts" element={<TaxesDiscountsSetupPage />}>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
 import { 
@@ -15,6 +14,7 @@ import {
   ListTree,
   LogOut,
   MapPin,
+  X,
   Package,
   Percent,
   Route,
@@ -79,7 +79,7 @@ const navItems = [
   },
 ];
 
-export default function Sidebar({ djangoUser }) {
+export default function Sidebar({ djangoUser, isOpen = false, onClose }) {
   const auth = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -91,9 +91,9 @@ export default function Sidebar({ djangoUser }) {
   const userInitials = userName ? userName.substring(0, 2).toUpperCase() : "US";
 
   return (
-    <aside className="w-72 bg-[#172326] border-r border-[#d7b56d]/20 h-screen flex flex-col shrink-0 z-20 shadow-2xl shadow-black/15 text-white">
+    <aside className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-72 shrink-0 flex-col border-r border-[#d7b56d]/20 bg-[#172326] text-white shadow-2xl shadow-black/15 transition-transform duration-300 lg:static lg:h-screen lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       {/* Logo */}
-      <div className="h-20 flex items-center px-8 border-b border-white/10">
+      <div className="flex h-20 items-center justify-between border-b border-white/10 px-5 sm:px-8">
         <Link to="/home" className="flex items-center gap-3 group cursor-pointer">
           <div className="w-10 h-10 rounded-xl bg-[#d7b56d] flex items-center justify-center shadow-lg shadow-[#d7b56d]/20 group-hover:scale-110 transition-transform">
             <Anchor className="w-6 h-6 text-[#172326]" />
@@ -103,10 +103,18 @@ export default function Sidebar({ djangoUser }) {
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55 mt-1">Admin Console</p>
           </div>
         </Link>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white lg:hidden"
+          aria-label="Close navigation"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-8 flex flex-col gap-2 px-4">
+      <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-6 sm:py-8">
         {navItems.map((item) => {
           // Check active state
           const active = currentPath === item.path || currentPath.startsWith(`${item.path}/`);
@@ -116,6 +124,7 @@ export default function Sidebar({ djangoUser }) {
             <div key={item.name} className="space-y-1">
               <Link
                 to={item.path}
+                onClick={onClose}
                 className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all duration-300 border-2 ${
                   active
                     ? 'bg-[#d7b56d]/15 text-[#f1d58a] border-[#d7b56d]/30 shadow-inner'
@@ -137,6 +146,7 @@ export default function Sidebar({ djangoUser }) {
                       <Link
                         key={child.name}
                         to={child.path}
+                        onClick={onClose}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-black uppercase tracking-widest transition ${
                           childActive
                             ? 'bg-[#d7b56d]/15 text-[#f1d58a]'

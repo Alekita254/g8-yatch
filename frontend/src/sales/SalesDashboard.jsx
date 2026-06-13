@@ -18,9 +18,9 @@ export default function SalesDashboard() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-lg border border-app-border bg-[#172326] p-8 text-white">
+      <section className="rounded-lg border border-app-border bg-[#172326] p-5 text-white sm:p-6 lg:p-8">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d7b56d]">Sales state machine</p>
-        <h2 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">Move transactions from editable orders to locked fiscal invoices.</h2>
+        <h2 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl md:text-4xl">Move transactions from editable orders to locked fiscal invoices.</h2>
         <p className="mt-4 max-w-3xl text-sm font-medium leading-7 text-white/68">
           Sales has its own workspace: orders, kitchen send state, immutable invoices, payment balancing, offline eTIMS sync, and corporate payment runs.
         </p>

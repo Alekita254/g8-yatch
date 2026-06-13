@@ -16,9 +16,9 @@ export default function FrontdeskDashboard() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-lg border border-app-border bg-[#172326] p-8 text-white">
+      <section className="rounded-lg border border-app-border bg-[#172326] p-5 text-white sm:p-6 lg:p-8">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d7b56d]">Space and time control</p>
-        <h2 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">Frontdesk coordinates rooms, guests, folios, and internal requests.</h2>
+        <h2 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl md:text-4xl">Frontdesk coordinates rooms, guests, folios, and internal requests.</h2>
         <p className="mt-4 max-w-3xl text-sm font-medium leading-7 text-white/68">
           This workspace composes independent backend domains: Business Partners, Rooms, Reservations, Folios, and Concierge.
         </p>

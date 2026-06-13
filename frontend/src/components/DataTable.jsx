@@ -43,7 +43,7 @@ export default function DataTable({
       {rows.length === 0 ? (
         <div className="p-10 text-center text-sm font-bold text-app-muted">{emptyMessage}</div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overscroll-x-contain">
           <table className="w-full text-left text-sm" style={{ minWidth }}>
             <thead className="border-b border-app-border bg-app-elevated text-xs font-black uppercase tracking-[0.12em] text-app-muted">
               <tr>
@@ -58,7 +58,7 @@ export default function DataTable({
               {rows.map((row) => (
                 <tr key={getRowKey(row)} className="align-top transition hover:bg-app-elevated/60">
                   {columns.map((column) => (
-                    <td key={column.key} className={`px-4 py-4 ${column.cellClassName || ''}`}>
+                    <td key={column.key} className={`px-4 py-4 first:sticky first:left-0 first:z-[1] first:bg-app-card md:first:static md:first:bg-transparent ${column.cellClassName || ''}`}>
                       {column.render ? column.render(row) : row[column.key]}
                     </td>
                   ))}

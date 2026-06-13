@@ -39,6 +39,10 @@ class DetailMixin(APIView):
     model = None
     serializer_class = None
 
+    def get(self, request, pk):
+        instance = get_object_or_404(self.model, pk=pk)
+        return Response(self.serializer_class(instance).data)
+
     def patch(self, request, pk):
         instance = get_object_or_404(self.model, pk=pk)
         serializer = self.serializer_class(instance, data=request.data, partial=True)

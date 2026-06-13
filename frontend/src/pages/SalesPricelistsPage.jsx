@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Edit3, Loader2, Plus, Tags } from 'lucide-react';
+import { Edit3, Eye, Loader2, Plus, Tags } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import api, { emptyPagination, paginationFromResponse } from '../api';
 import DataTable from '../components/DataTable';
@@ -194,27 +195,12 @@ export default function SalesPricelistsPage() {
     },
     {
       key: 'prices',
-      header: 'Prices',
-      render: (pricelist) => {
-        const pricePreview = (pricelist.items || []).slice(0, 3);
-        const extraPriceCount = Math.max((pricelist.items || []).length - pricePreview.length, 0);
-
-        if (!pricePreview.length) {
-          return <span className="text-xs font-bold text-app-muted">No prices yet</span>;
-        }
-
-        return (
-          <div className="space-y-1.5">
-            {pricePreview.map((item) => (
-              <div key={item.id} className="flex max-w-sm items-center justify-between gap-4 rounded-md bg-app-elevated px-3 py-2">
-                <span className="truncate font-bold text-app-text">{item.product_name}</span>
-                <span className="shrink-0 text-app-muted">{item.currency} {item.price}</span>
-              </div>
-            ))}
-            {extraPriceCount > 0 ? <p className="text-xs font-bold text-app-muted">+{extraPriceCount} more prices</p> : null}
-          </div>
-        );
-      },
+      header: 'Products',
+      render: (pricelist) => (
+        <span className="font-bold text-app-text">
+          {(pricelist.items || []).length} {(pricelist.items || []).length === 1 ? 'product' : 'products'}
+        </span>
+      ),
     },
     {
       key: 'status',
@@ -232,6 +218,13 @@ export default function SalesPricelistsPage() {
       cellClassName: 'text-right',
       render: (pricelist) => (
         <div className="flex justify-end gap-2">
+          <Link
+            to={`/products/sales-pricelists/${pricelist.id}`}
+            className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase text-app-text transition hover:border-brand-500 hover:text-brand-500"
+          >
+            <Eye className="h-4 w-4" />
+            Details
+          </Link>
           <button
             type="button"
             onClick={() => openPriceModal(pricelist)}

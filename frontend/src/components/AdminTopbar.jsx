@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Bell, ChevronRight, Home, Search, ShipWheel } from 'lucide-react';
+import { Bell, ChevronRight, Home, Menu, Search, ShipWheel } from 'lucide-react';
 
 const routeLabels = {
   '/dashboard': 'Dashboard',
@@ -32,6 +32,15 @@ const routeLabels = {
 };
 
 function breadcrumbFor(pathname) {
+  if (pathname.startsWith('/products/sales-pricelists/')) {
+    return [
+      { label: 'Admin Console', path: '/dashboard' },
+      { label: 'Products', path: '/products' },
+      { label: 'Sales Pricelists', path: '/products/sales-pricelists' },
+      { label: 'Pricelist Details' },
+    ];
+  }
+
   if (pathname.startsWith('/users/')) {
     return [
       { label: 'Admin Console', path: '/dashboard' },
@@ -78,14 +87,14 @@ function breadcrumbFor(pathname) {
   ];
 }
 
-export default function AdminTopbar({ userName }) {
+export default function AdminTopbar({ userName, onMenuClick }) {
   const location = useLocation();
   const breadcrumbs = breadcrumbFor(location.pathname);
   const pageTitle = breadcrumbs[breadcrumbs.length - 1]?.label || 'Workspace';
 
   return (
     <header className="sticky top-0 z-10 border-b border-[#d7b56d]/20 bg-[#172326]/95 text-white backdrop-blur-xl">
-      <div className="px-8 py-5">
+      <div className="px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <nav className="mb-2 flex flex-wrap items-center gap-1 text-xs font-bold uppercase tracking-[0.14em] text-white/55">
@@ -116,12 +125,20 @@ export default function AdminTopbar({ userName }) {
               })}
             </nav>
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onMenuClick}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white/70 transition hover:text-white lg:hidden"
+                aria-label="Open navigation"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7b56d]/25 bg-[#d7b56d]/12 text-[#d7b56d]">
                 <ShipWheel className="h-5 w-5" />
               </div>
-              <div>
-                <h1 className="truncate text-2xl font-black text-white">{pageTitle}</h1>
-                <p className="text-sm text-white/58">G8 Yacht Villa operations control</p>
+              <div className="min-w-0">
+                <h1 className="truncate text-xl font-black text-white sm:text-2xl">{pageTitle}</h1>
+                <p className="hidden text-sm text-white/58 sm:block">G8 Yacht Villa operations control</p>
               </div>
             </div>
           </div>
