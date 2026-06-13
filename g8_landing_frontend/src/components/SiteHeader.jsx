@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 
 const links = [
-  ['Hospitality', '/hospitality'],
+  ['Food Menu', '/menu'],
+  ['Hotel', '/hotel'],
   ['Corporate', '/corporate'],
   ['Cabro Blocks', '/cabro-blocks'],
 ]
@@ -24,7 +25,7 @@ export default function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav className="hidden items-center gap-5 md:flex lg:gap-7">
           {links.map(([label, path]) => (
             <NavLink
               key={path}

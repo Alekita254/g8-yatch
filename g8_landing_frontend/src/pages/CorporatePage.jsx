@@ -29,7 +29,7 @@ export default function CorporatePage() {
           <div>
             <p className="eyebrow text-sun">Conferences & Events</p>
             <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl">Give your team room to think differently.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">Purpose-built gatherings with lake air, thoughtful service and everything coordinated through one team.</p>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">Purpose-built gatherings in Embu, with thoughtful service and everything coordinated through one team.</p>
             <button type="button" onClick={() => setOpen(true)} className="touch-button mt-7 bg-sun text-ink">Request a proposal <ArrowRight className="h-4 w-4" /></button>
           </div>
           <div className="relative overflow-hidden rounded-[2rem]">

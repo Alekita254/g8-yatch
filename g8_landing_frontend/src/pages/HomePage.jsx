@@ -1,13 +1,21 @@
-import { ArrowRight, BedDouble, Blocks, BriefcaseBusiness, Check } from 'lucide-react'
+import { ArrowRight, BedDouble, Blocks, BriefcaseBusiness, Check, Utensils } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const pillars = [
   {
-    path: '/hospitality',
+    path: '/menu',
+    icon: Utensils,
+    label: 'Eat & Enjoy',
+    title: 'Food Menu',
+    text: 'Explore our food first, build your order and choose where it should be served.',
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1400&q=85',
+  },
+  {
+    path: '/hotel',
     icon: BedDouble,
-    label: 'Stay & Dine',
-    title: 'Hospitality',
-    text: 'Lakeside rooms, fresh dining and easy table ordering.',
+    label: 'Stay & Rest',
+    title: 'Hotel',
+    text: 'Comfortable rooms and a simple availability request without menu distractions.',
     image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=85',
   },
   {
@@ -34,21 +42,21 @@ export default function HomePage() {
       <section className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-ink text-white">
         <img
           src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=2000&q=90"
-          alt="Luxury lakeside hospitality"
+          alt="G8 Yatch hospitality property in Embu"
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,37,43,.25),rgba(16,37,43,.94))] md:bg-[linear-gradient(90deg,rgba(16,37,43,.94),rgba(16,37,43,.25))]" />
         <div className="page-shell relative flex min-h-[calc(100svh-4rem)] items-end pb-10 pt-24 md:items-center md:pb-20 lg:min-h-[760px]">
           <div className="max-w-3xl">
-            <p className="eyebrow text-sun">One destination. Three possibilities.</p>
+            <p className="eyebrow text-sun">One destination. Four possibilities.</p>
             <h1 className="mt-4 text-4xl font-extrabold leading-[1.02] sm:text-6xl lg:text-7xl">
               Come to stay, gather, or build something lasting.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-white/70 sm:text-lg">
-              G8 Yatch brings lakeside hospitality, purposeful corporate experiences, and dependable construction materials under one trusted name.
+              G8 Yatch brings fresh food, comfortable accommodation, purposeful corporate experiences, and dependable construction materials under one trusted name.
             </p>
             <div className="mt-7 flex flex-wrap gap-3 text-xs font-bold text-white/75">
-              {['Naivasha, Kenya', 'Open every day', 'Local delivery'].map((item) => (
+              {['Embu, Kenya', 'Open every day', 'Local delivery'].map((item) => (
                 <span key={item} className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 backdrop-blur">
                   <Check className="h-3.5 w-3.5 text-sun" /> {item}
                 </span>
@@ -63,7 +71,7 @@ export default function HomePage() {
           <p className="eyebrow text-lake">Choose your journey</p>
           <h2 className="mt-3 text-3xl font-extrabold text-ink sm:text-5xl">What brings you to G8 today?</h2>
         </div>
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {pillars.map((pillar) => (
             <Link key={pillar.path} to={pillar.path} className="group relative min-h-[390px] overflow-hidden rounded-[1.75rem] text-white">
               <img src={pillar.image} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />
