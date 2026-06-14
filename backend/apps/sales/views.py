@@ -1,6 +1,9 @@
+import os
 from decimal import Decimal
 
+from django.core.files.base import ContentFile
 from django.db import models, transaction
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
@@ -41,6 +44,98 @@ def build_fiscal_payload(order):
     }
 
 
+def generate_receipt_filename(invoice):
+    safe_number = invoice.invoice_number.replace("/", "-").replace(" ", "_")
+    return f"{safe_number}.pdf"
+
+
+def generate_invoice_pdf(invoice):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    margin = 40
+    line_height = 16
+
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(margin, height - margin, "G8 Yacht Villa")
+    c.setFont("Helvetica", 10)
+    c.drawString(margin, height - margin - 22, "Guest stay invoice")
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(width - margin - 220, height - margin, f"Invoice: {invoice.invoice_number}")
+    c.setFont("Helvetica", 10)
+    c.drawString(width - margin - 220, height - margin - 18, f"Order: {invoice.order.order_number}")
+    c.drawString(width - margin - 220, height - margin - 34, f"Date: {invoice.created_at:%Y-%m-%d}")
+
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, height - margin - 60, "Bill to:")
+    c.setFont("Helvetica", 10)
+    c.drawString(margin, height - margin - 76, invoice.customer_name or "Walk-in guest")
+    c.drawString(margin, height - margin - 92, invoice.order.visit.table_name if invoice.order.visit else "")
+    c.drawString(margin, height - margin - 108, invoice.order.visit.service_area if invoice.order.visit else "")
+
+    y = height - margin - 140
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin, y, "Item")
+    c.drawString(margin + 260, y, "Qty")
+    c.drawString(margin + 320, y, "Unit")
+    c.drawString(margin + 410, y, "Total")
+    y -= line_height
+    c.setFont("Helvetica", 10)
+
+    for item in invoice.order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product"):
+        if y < margin + 80:
+            c.showPage()
+            y = height - margin
+        c.drawString(margin, y, str(item.product.name)[:40])
+        c.drawString(margin + 260, y, str(item.quantity))
+        c.drawString(margin + 320, y, f"{item.unit_price}")
+        c.drawRightString(width - margin, y, f"{item.line_total}")
+        y -= line_height
+
+    y -= 12
+    c.line(margin, y, width - margin, y)
+    y -= 18
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, y, "Sub total")
+    c.drawRightString(width - margin, y, f"{invoice.subtotal}")
+    y -= line_height
+    c.drawString(margin, y, "Tax")
+    c.drawRightString(width - margin, y, f"{invoice.tax_total}")
+    y -= line_height
+    c.drawString(margin, y, "Discount")
+    c.drawRightString(width - margin, y, f"{invoice.discount_total}")
+    y -= line_height
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, y, "Grand total")
+    c.drawRightString(width - margin, y, f"{invoice.grand_total}")
+    y -= 2 * line_height
+
+    c.setFont("Helvetica", 10)
+    c.drawString(margin, y, f"Paid: {invoice.paid_total}")
+    y -= line_height
+    c.drawString(margin, y, f"Balance due: {invoice.balance_due}")
+    y -= 2 * line_height
+    c.setFont("Helvetica-Oblique", 9)
+    c.drawString(margin, y, "Thank you for staying at G8 Yacht Villa.")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
+def generate_invoice_receipt(invoice):
+    buffer = generate_invoice_pdf(invoice)
+    filename = generate_receipt_filename(invoice)
+    invoice.receipt_file.save(filename, ContentFile(buffer.getvalue()), save=False)
+    invoice.save(update_fields=["receipt_file"])
+
+
 def create_invoice_from_order(order):
     invoice = SalesInvoice.objects.create(
         invoice_number=next_number("INV", SalesInvoice, "invoice_number"),
@@ -56,6 +151,7 @@ def create_invoice_from_order(order):
     )
     order.status = SalesOrder.Status.INVOICED
     order.save(update_fields=["status", "updated_at"])
+    generate_invoice_receipt(invoice)
     return invoice
 
 
@@ -64,6 +160,7 @@ def create_invoice_from_order_with_issuer(order, issued_by=''):
     if issued_by:
         invoice.issued_by = issued_by
         invoice.save(update_fields=["issued_by"])
+        generate_invoice_receipt(invoice)
     return invoice
 
 
@@ -300,49 +397,15 @@ class SalesInvoiceReceiptView(APIView):
 
     def get(self, request, pk):
         invoice = get_object_or_404(SalesInvoice, pk=pk)
-        # generate PDF using reportlab
         try:
-            from reportlab.lib.pagesizes import A4
-            from reportlab.pdfgen import canvas
-            from io import BytesIO
+            if invoice.receipt_file and invoice.receipt_file.storage.exists(invoice.receipt_file.name):
+                return FileResponse(invoice.receipt_file.open('rb'), content_type='application/pdf', filename=f"{invoice.invoice_number}.pdf")
 
-            buffer = BytesIO()
-            c = canvas.Canvas(buffer, pagesize=A4)
-            width, height = A4
-            c.setFont("Helvetica-Bold", 14)
-            c.drawString(40, height - 60, f"Invoice: {invoice.invoice_number}")
-            c.setFont("Helvetica", 10)
-            c.drawString(40, height - 80, f"Order: {invoice.order.order_number}")
-            c.drawString(40, height - 95, f"Customer: {invoice.customer_name}")
-            c.drawString(40, height - 110, f"Issued by: {invoice.issued_by}")
-            y = height - 140
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(40, y, "Item")
-            c.drawString(300, y, "Qty")
-            c.drawString(360, y, "Price")
-            c.drawString(440, y, "Total")
-            c.setFont("Helvetica", 10)
-            y -= 18
-            for item in invoice.order.items.all():
-                c.drawString(40, y, str(item.product.name)[:40])
-                c.drawString(300, y, str(item.quantity))
-                c.drawString(360, y, f"{item.unit_price}")
-                c.drawString(440, y, f"{item.line_total}")
-                y -= 16
-                if y < 80:
-                    c.showPage()
-                    y = height - 60
-            y -= 10
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(360, y, "Grand total:")
-            c.drawString(460, y, str(invoice.grand_total))
-            c.showPage()
-            c.save()
-            buffer.seek(0)
-            response = Response(buffer.getvalue(), content_type="application/pdf")
-            response['Content-Disposition'] = f'attachment; filename="{invoice.invoice_number}.pdf"'
-            return response
-        except Exception as exc:
+            if not invoice.receipt_file:
+                generate_invoice_receipt(invoice)
+
+            return FileResponse(invoice.receipt_file.open('rb'), content_type='application/pdf', filename=f"{invoice.invoice_number}.pdf")
+        except Exception:
             return Response({"detail": "Failed to generate receipt."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

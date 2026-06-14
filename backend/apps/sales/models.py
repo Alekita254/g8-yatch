@@ -149,6 +149,7 @@ class SalesInvoice(models.Model):
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     paid_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     balance_due = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    receipt_file = models.FileField(upload_to='receipts/', null=True, blank=True)
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.UNPAID)
     etims_status = models.CharField(max_length=30, choices=EtimsStatus.choices, default=EtimsStatus.PENDING_SYNC)
     fiscal_payload = models.JSONField(default=dict, blank=True)

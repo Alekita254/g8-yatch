@@ -18,6 +18,8 @@ export default function VisitDetailPage() {
   const auth = useAuth();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutInvoiceId, setCheckoutInvoiceId] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [viewingInvoiceId, setViewingInvoiceId] = useState(null);
   const [tab, setTab] = useState('overview'); // overview | orders | invoices | related
   const [relatedVisits, setRelatedVisits] = useState([]);
 
@@ -131,6 +133,55 @@ export default function VisitDetailPage() {
       toast.error(err.response?.data?.detail || 'Could not collect payment');
     } finally {
       setWorking('');
+    }
+  };
+
+  const downloadInvoiceReceipt = async (invoice) => {
+    try {
+      setWorking(`receipt-${invoice.id}`);
+      const response = await api.get(`/api/sales/invoices/${invoice.id}/receipt/`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${invoice.invoice_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Receipt downloaded');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not download receipt');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const openInvoiceDocument = async (invoice) => {
+    try {
+      setPreviewLoading(true);
+      setViewingInvoiceId(invoice.id);
+      const response = await api.get(`/api/sales/invoices/${invoice.id}/receipt/`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const newWindow = window.open(url, '_blank');
+      if (!newWindow) {
+        toast.error('Please allow pop-ups to view the PDF');
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 60000);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not load invoice document');
+    } finally {
+      setPreviewLoading(false);
+      setViewingInvoiceId(null);
     }
   };
 
@@ -258,7 +309,24 @@ export default function VisitDetailPage() {
                                   </button>
                                 ) : null}
                                 {order.invoice && (
-                                  <a href={`/api/sales/invoices/${order.invoice.id}/receipt/`} target="_blank" rel="noreferrer" className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text">Receipt</a>
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => openInvoiceDocument(order.invoice)}
+                                      disabled={previewLoading && viewingInvoiceId === order.invoice.id}
+                                      className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
+                                    >
+                                      {previewLoading && viewingInvoiceId === order.invoice.id ? 'Loading...' : 'View'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => downloadInvoiceReceipt(order.invoice)}
+                                      disabled={working === `receipt-${order.invoice.id}`}
+                                      className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
+                                    >
+                                      {working === `receipt-${order.invoice.id}` ? 'Downloading...' : 'Download'}
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </td>
@@ -300,7 +368,22 @@ export default function VisitDetailPage() {
                           {working === `invoice-${inv.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />} Collect payment
                         </button>
                       )}
-                      <a href={`/api/sales/invoices/${inv.id}/receipt/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text">Download PDF</a>
+                      <button
+                        type="button"
+                        onClick={() => openInvoiceDocument(inv)}
+                        disabled={previewLoading && viewingInvoiceId === inv.id}
+                        className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                      >
+                        {previewLoading && viewingInvoiceId === inv.id ? 'Loading...' : 'View document'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadInvoiceReceipt(inv)}
+                        disabled={working === `receipt-${inv.id}`}
+                        className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                      >
+                        {working === `receipt-${inv.id}` ? 'Downloading...' : 'Download PDF'}
+                      </button>
                     </div>
                   </div>
                 </div>

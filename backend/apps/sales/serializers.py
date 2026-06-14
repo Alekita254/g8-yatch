@@ -81,6 +81,7 @@ class SalesOrderSerializer(serializers.ModelSerializer):
             "paid_total": obj.invoice.paid_total,
             "balance_due": obj.invoice.balance_due,
             "status": obj.invoice.status,
+            "receipt_url": obj.invoice.receipt_file.url if obj.invoice.receipt_file else None,
         }
 
 
@@ -109,6 +110,7 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
     branch_name = serializers.CharField(source="branch.name", read_only=True)
     order_number = serializers.CharField(source="order.order_number", read_only=True)
     issued_by = serializers.CharField(read_only=True)
+    receipt_url = serializers.SerializerMethodField()
 
     class Meta:
         model = SalesInvoice
@@ -131,10 +133,18 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
             "etims_status",
             "fiscal_payload",
             "synced_at",
+            "receipt_url",
             "payments",
             "created_at",
         ]
         read_only_fields = ["invoice_number", "paid_total", "balance_due", "status", "created_at"]
+
+    def get_receipt_url(self, obj):
+        if not obj.receipt_file:
+            return None
+        request = self.context.get("request")
+        url = obj.receipt_file.url
+        return request.build_absolute_uri(url) if request else url
 
 
 class GuestVisitSerializer(serializers.ModelSerializer):
