@@ -94,14 +94,14 @@ export default function AdminTopbar({ userName, onMenuClick, navigationOpen = fa
   const pageTitle = breadcrumbs[breadcrumbs.length - 1]?.label || 'Workspace';
 
   return (
-    <header className="sticky top-0 z-10 border-b border-[#d7b56d]/20 bg-[#172326]/95 text-white backdrop-blur-xl">
+    <header className="sticky top-0 z-10 border-b border-shell-border bg-shell-bg/95 text-shell-text backdrop-blur-xl transition-colors duration-300">
       <div className="px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <nav className="mb-2 flex flex-wrap items-center gap-1 text-xs font-bold uppercase tracking-[0.14em] text-white/55">
+            <nav className="mb-2 flex flex-wrap items-center gap-1 text-xs font-bold uppercase tracking-[0.14em] text-shell-muted">
               <Link
                 to="/home"
-                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 transition hover:bg-white/10 hover:text-white"
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 transition hover:bg-shell-elevated hover:text-shell-text"
               >
                 <Home className="h-3.5 w-3.5" />
                 Home
@@ -110,16 +110,16 @@ export default function AdminTopbar({ userName, onMenuClick, navigationOpen = fa
                 const last = index === breadcrumbs.length - 1;
                 return (
                   <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
-                    <ChevronRight className="h-3.5 w-3.5 text-white/35" />
+                    <ChevronRight className="h-3.5 w-3.5 text-shell-muted" />
                     {crumb.path && !last ? (
                       <Link
                         to={crumb.path}
-                        className="rounded-md px-1.5 py-1 transition hover:bg-white/10 hover:text-white"
+                        className="rounded-md px-1.5 py-1 transition hover:bg-shell-elevated hover:text-shell-text"
                       >
                         {crumb.label}
                       </Link>
                     ) : (
-                      <span className="rounded-md px-1.5 py-1 text-[#d7b56d]">{crumb.label}</span>
+                      <span className="rounded-md px-1.5 py-1 text-shell-accent">{crumb.label}</span>
                     )}
                   </span>
                 );
@@ -129,42 +129,42 @@ export default function AdminTopbar({ userName, onMenuClick, navigationOpen = fa
               <button
                 type="button"
                 onClick={onMenuClick}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white/70 transition hover:text-white lg:hidden"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-shell-border bg-shell-elevated text-shell-muted transition hover:text-shell-text lg:hidden"
                 aria-label="Open navigation"
                 aria-expanded={navigationOpen}
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7b56d]/25 bg-[#d7b56d]/12 text-[#d7b56d]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-brand-300 bg-brand-100 text-brand-700 dark:border-brand-400/25 dark:bg-brand-400/12 dark:text-brand-400">
                 <ShipWheel className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-black text-white sm:text-2xl">{pageTitle}</h1>
-                <p className="hidden text-sm text-white/58 sm:block">G8 Yacht Villa operations control</p>
+                <h1 className="truncate text-xl font-black text-shell-text sm:text-2xl">{pageTitle}</h1>
+                <p className="hidden text-sm text-shell-muted sm:block">G8 Yacht Villa operations control</p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <ThemeToggle inverse />
+            <ThemeToggle />
             <div className="relative hidden md:block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shell-muted" />
               <input
                 type="search"
                 placeholder="Search setup..."
-                className="h-10 w-64 rounded-lg border border-white/10 bg-white/8 pl-9 pr-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-[#d7b56d]/40 focus:ring-2 focus:ring-[#d7b56d]/25"
+                className="h-10 w-64 rounded-lg border border-shell-border bg-shell-elevated pl-9 pr-3 text-sm text-shell-text placeholder:text-shell-muted outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-400/25"
               />
             </div>
             <button
               type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white/58 transition hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-shell-border bg-shell-elevated text-shell-muted transition hover:text-shell-text"
               title="Notifications"
             >
               <Bell className="h-4 w-4" />
             </button>
-            <div className="hidden rounded-lg border border-white/10 bg-white/8 px-3 py-2 text-right sm:block">
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-white/45">Signed in</p>
-              <p className="max-w-36 truncate text-sm font-bold text-white">{userName || 'Manager'}</p>
+            <div className="hidden rounded-lg border border-shell-border bg-shell-elevated px-3 py-2 text-right sm:block">
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-shell-muted">Signed in</p>
+              <p className="max-w-36 truncate text-sm font-bold text-shell-text">{userName || 'Manager'}</p>
             </div>
           </div>
         </div>

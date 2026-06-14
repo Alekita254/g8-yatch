@@ -23,6 +23,13 @@
   --color-app-text: #172326;
   --color-app-muted: #526065;
 
+  --color-shell-bg: #fffdf8;
+  --color-shell-elevated: #f2ece1;
+  --color-shell-border: #d8d0c1;
+  --color-shell-text: #172326;
+  --color-shell-muted: #617075;
+  --color-shell-accent: #8a6725;
+
   --color-accent: #0d6b67;
   
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -39,6 +46,12 @@
   --color-app-border: #344447;
   --color-app-text: #f8f3e8;
   --color-app-muted: #b4b0a7;
+  --color-shell-bg: #172326;
+  --color-shell-elevated: #203033;
+  --color-shell-border: #344447;
+  --color-shell-text: #ffffff;
+  --color-shell-muted: #aeb9b8;
+  --color-shell-accent: #d7b56d;
 }
 
 /* ── Base Layer ────────────────────────────────────────── */
