@@ -46,13 +46,13 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
   };
 
   return (
-    <ModalLayer label="Checkout guest stay" onClose={onClose}>
+    <ModalLayer label="Checkout guest visit" onClose={onClose}>
       <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-app-border bg-app-card shadow-2xl">
         <div className="border-b border-app-border bg-app-elevated px-5 py-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-500">Checkout</p>
-              <h2 className="mt-2 text-2xl font-black text-app-text">Guest stay payment</h2>
+              <h2 className="mt-2 text-2xl font-black text-app-text">Guest visit payment</h2>
               <p className="mt-1 text-sm text-app-muted">{visit.visit_number} · {visit.guest_name || 'Walk-in guest'}</p>
             </div>
             <div className="inline-flex items-center gap-2 rounded-full bg-app-card px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-app-muted shadow-sm">
@@ -89,7 +89,7 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
 
           {!hasCheckoutRequest && invoices.length === 0 ? (
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700">
-              This stay has no checkout invoice yet. Request checkout to generate the bill before collecting payment.
+              This visit has no checkout invoice yet. Request checkout to generate the bill before collecting payment.
             </div>
           ) : null}
 
@@ -129,10 +129,10 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
               </div>
 
               {dueInvoices.length === 0 ? (
-                <div className="rounded-2xl border border-app-border bg-app-card p-4 text-sm text-app-muted">There is no outstanding amount to collect on this stay.</div>
+                <div className="rounded-2xl border border-app-border bg-app-card p-4 text-sm text-app-muted">There is no outstanding amount to collect on this visit.</div>
               ) : (
                 <div className="rounded-2xl border border-app-border bg-app-card p-4 text-sm text-app-muted">
-                  The selected invoice has {money(selectedInvoice?.balance_due)} due. Submit payment to close the balance.
+                  The selected invoice has {money(selectedInvoice?.balance_due)} due. Submit payment to settle the visit.
                 </div>
               )}
             </div>

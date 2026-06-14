@@ -9,7 +9,7 @@ import useDesktopViewport from '../hooks/useDesktopViewport';
 
 const navItems = [
   { name: 'Dashboard', path: '/frontdesk', icon: LayoutDashboard },
-  { name: 'Live Visits', path: '/frontdesk/visits', icon: UsersRound },
+  { name: 'Live Service', path: '/frontdesk/visits', icon: UsersRound },
   { name: 'Service Points', path: '/frontdesk/service-points', icon: MapPin },
   { name: 'Guests & Customers', path: '/frontdesk/business-partners', icon: BriefcaseBusiness },
   { name: 'Room Types', path: '/frontdesk/room-types', icon: Layers },
@@ -22,7 +22,7 @@ const navItems = [
 const routeLabels = {
   '/frontdesk': 'Frontdesk Dashboard',
   '/frontdesk/service-points': 'Service Points',
-  '/frontdesk/visits': 'Live Guest Visits',
+  '/frontdesk/visits': 'Restaurant & Bar Visits',
   '/frontdesk/business-partners': 'Guests & Customers',
   '/frontdesk/room-types': 'Room Types',
   '/frontdesk/rooms': 'Rooms',
@@ -38,6 +38,9 @@ export default function FrontdeskShell() {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const isDesktop = useDesktopViewport();
   const navigationHidden = !isDesktop && !navigationOpen;
+  const routeLabel = location.pathname.startsWith('/frontdesk/visits/')
+    ? 'Visit Detail'
+    : routeLabels[location.pathname] || 'Frontdesk';
 
   if (profile.auth.isLoading || profile.loading) {
     return <div className="flex min-h-screen items-center justify-center bg-app-bg"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
@@ -93,7 +96,7 @@ export default function FrontdeskShell() {
             <nav className="mb-2 flex flex-wrap items-center gap-1 text-xs font-bold uppercase tracking-[0.14em] text-white/55">
               <Link to="/home" className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 transition hover:bg-white/10 hover:text-white"><Home className="h-3.5 w-3.5" />Home</Link>
               <ChevronRight className="h-3.5 w-3.5 text-white/35" />
-              <span className="rounded-md px-1.5 py-1 text-[#d7b56d]">{routeLabels[location.pathname] || 'Frontdesk'}</span>
+              <span className="rounded-md px-1.5 py-1 text-[#d7b56d]">{routeLabel}</span>
             </nav>
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => setNavigationOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white/70 lg:hidden" aria-label="Open navigation" aria-expanded={navigationOpen}>
@@ -103,7 +106,7 @@ export default function FrontdeskShell() {
                 <Bell className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-black text-white sm:text-2xl">{routeLabels[location.pathname] || 'Frontdesk'}</h1>
+                <h1 className="truncate text-xl font-black text-white sm:text-2xl">{routeLabel}</h1>
                 <p className="hidden text-sm text-white/58 sm:block">Follow each guest from arrival through service, payment, and departure</p>
               </div>
               <ThemeToggle inverse className="ml-auto" />

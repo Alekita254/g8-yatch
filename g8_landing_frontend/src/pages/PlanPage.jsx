@@ -1,4 +1,4 @@
-import { BellRing, CalendarDays, CheckCircle2, Clock3, MapPin, Minus, Plus, ReceiptText, ShoppingBag, Star, Trash2 } from 'lucide-react'
+import { BellRing, CalendarDays, CheckCircle2, Clock3, MapPin, Minus, Plus, ReceiptText, RotateCcw, ShoppingBag, Star, Trash2, UserPlus, Utensils } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -40,6 +40,8 @@ export default function PlanPage() {
   const [visitStatus, setVisitStatus] = useState('')
   const [feedback, setFeedback] = useState({ rating: 5, comment: '' })
   const [feedbackStatus, setFeedbackStatus] = useState('')
+  const [signup, setSignup] = useState({ name: '', phone: '', email: '' })
+  const [signupStatus, setSignupStatus] = useState('')
 
   useEffect(() => {
     if (!visit?.token) return undefined
@@ -145,7 +147,24 @@ export default function PlanPage() {
     }
   }
 
+  const requestClientAccount = (event) => {
+    event.preventDefault()
+    const interest = {
+      ...signup,
+      visitNumber: visit?.visit_number || '',
+      requestedAt: new Date().toISOString(),
+    }
+    try {
+      const existing = JSON.parse(window.localStorage.getItem('g8_client_account_interest') || '[]')
+      window.localStorage.setItem('g8_client_account_interest', JSON.stringify([...existing, interest]))
+      setSignupStatus('saved')
+    } catch {
+      setSignupStatus('error')
+    }
+  }
+
   const hasPlan = foodItems.length > 0 || activities.length > 0
+  const journeyStep = !visit ? 1 : foodItems.length ? 3 : visit.orders?.length ? 4 : 2
 
   return (
     <main>
@@ -169,26 +188,43 @@ export default function PlanPage() {
 
       <section className="page-shell py-14 sm:py-20">
         <SectionHeading
-          eyebrow="Your visit"
+          eyebrow="Self service"
           title={visit ? `Visit ${visit.visit_number}` : 'Start with where you are seated.'}
-          text={visit ? 'Your arrival, orders, service, bill and feedback now stay together in one journey.' : 'A name and phone are optional. Your table and private visit code are enough to serve and track this visit.'}
+          text={visit ? 'Every waiter call and every new order stays attached to this one visit until you checkout.' : 'Confirm your table once, then call a waiter, browse the menu, order as many times as you need and track everything here.'}
         />
 
+        <JourneySteps currentStep={journeyStep} />
+
         {visit ? (
-          <VisitJourney visit={visit} onCheckout={checkoutVisit} busy={visitStatus === 'checking-out'} />
+          <>
+            <VisitJourney visit={visit} onCheckout={checkoutVisit} busy={visitStatus === 'checking-out'} />
+            {visit.status === 'ACTIVE' && (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button type="button" onClick={alertWaiter} disabled={waiterStatus === 'sending'} className="touch-button bg-sand text-ink disabled:opacity-50 dark:bg-white/10 dark:text-white">
+                  <BellRing className="h-4 w-4" /> {waiterStatus === 'sending' ? 'Notifying waiter...' : 'Notify a waiter'}
+                </button>
+                <Link to="/menu" className="touch-button bg-lake text-white">
+                  <Utensils className="h-4 w-4" /> {visit.orders?.length ? 'Order more food' : 'See the food menu'}
+                </Link>
+              </div>
+            )}
+            {waiterStatus === 'sent' && <p role="status" aria-live="polite" className="mt-3 flex items-center gap-2 rounded-xl bg-lake/10 p-3 text-sm font-bold text-lake"><CheckCircle2 className="h-5 w-5" /> Your waiter call is now tracked on this visit.</p>}
+            {waiterStatus === 'error' && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">The waiter alert could not be sent. Please try again.</p>}
+          </>
         ) : (
           <form onSubmit={beginVisit} className="mt-8 rounded-[2rem] border border-lake/20 bg-lake/5 p-5 dark:bg-white/5 sm:p-7">
             <div className="flex items-start gap-4">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-lake text-white"><MapPin className="h-5 w-5" /></span>
               <div>
-                <h2 className="text-2xl font-extrabold text-ink dark:text-white">I have arrived</h2>
-                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">Tell us where you are. Add your name or phone only when you want a more personal service or receipt follow-up.</p>
+                <p className="eyebrow text-lake">Step 1</p>
+                <h2 className="mt-2 text-2xl font-extrabold text-ink dark:text-white">Tell us where you are seated</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">We create one private visit for your table. You can then call a waiter or go straight to the menu.</p>
               </div>
             </div>
             <GuestFields guest={guest} setGuest={setGuest} arrival />
             {visitStatus === 'error' && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">We could not start your visit. Please try again.</p>}
             <button disabled={!guest.tableNumber || visitStatus === 'starting'} className="touch-button mt-5 w-full bg-lake text-white disabled:opacity-50">
-              {visitStatus === 'starting' ? 'Starting your visit...' : 'Confirm arrival'}
+              {visitStatus === 'starting' ? 'Starting your visit...' : 'Confirm table and continue'}
             </button>
           </form>
         )}
@@ -208,8 +244,9 @@ export default function PlanPage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <Link to="/menu" className="rounded-[1.75rem] bg-lake p-6 text-white">
               <ShoppingBag className="h-7 w-7 text-sun" />
-              <h2 className="mt-5 text-2xl font-extrabold">Choose food</h2>
-              <p className="mt-2 text-white/70">Browse the visual menu and build an order.</p>
+              <p className="eyebrow mt-5 text-sun">Step 2</p>
+              <h2 className="mt-2 text-2xl font-extrabold">Choose your food</h2>
+              <p className="mt-2 text-white/70">Browse the visual menu and build your first or next order.</p>
             </Link>
             <Link to="/experiences" className="rounded-[1.75rem] bg-ink p-6 text-white">
               <CalendarDays className="h-7 w-7 text-sun" />
@@ -225,8 +262,8 @@ export default function PlanPage() {
               <form onSubmit={placeOrder} className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#10252b] sm:p-7">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="eyebrow text-lake">Food order</p>
-                    <h2 className="mt-2 text-2xl font-extrabold text-ink dark:text-white">{foodCount} item{foodCount === 1 ? '' : 's'}</h2>
+                    <p className="eyebrow text-lake">Step 3 · Send your order</p>
+                    <h2 className="mt-2 text-2xl font-extrabold text-ink dark:text-white">{foodCount} item{foodCount === 1 ? '' : 's'} for order {(visit?.orders?.length || 0) + 1}</h2>
                   </div>
                   <strong className="text-lg text-lake">{money(foodTotal)}</strong>
                 </div>
@@ -246,13 +283,16 @@ export default function PlanPage() {
                     </div>
                   ))}
                 </div>
-                <GuestFields guest={guest} setGuest={setGuest} />
+                <label className="mt-5 block text-sm font-bold text-ink dark:text-slate-100">
+                  Note for this order optional
+                  <textarea value={guest.notes} onChange={(event) => setGuest({ ...guest, notes: event.target.value })} rows="3" placeholder="Allergies, no onions, bring drinks first..." className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-lake" />
+                </label>
                 {orderStatus && orderStatus !== 'sending' && (
                   <p className={`mt-4 rounded-xl p-3 text-sm font-bold ${orderStatus.startsWith('Order ') ? 'bg-lake/10 text-lake' : 'bg-red-50 text-red-700'}`}>{orderStatus}</p>
                 )}
                 {!visit && <p className="mt-4 rounded-xl bg-sand p-3 text-sm font-bold text-ink">Confirm your arrival above before sending this order.</p>}
                 <button disabled={!visit || orderStatus === 'sending'} className="touch-button mt-5 w-full bg-lake text-white disabled:opacity-60">
-                  {orderStatus === 'sending' ? 'Sending order...' : `Send food order · ${money(foodTotal)}`}
+                  {orderStatus === 'sending' ? 'Sending order...' : `Place order ${(visit?.orders?.length || 0) + 1} · ${money(foodTotal)}`}
                 </button>
               </form>
             )}
@@ -332,6 +372,15 @@ export default function PlanPage() {
                   {feedbackStatus === 'sending' ? 'Sending...' : 'Send feedback'}
                 </button>
               </form>
+            )}
+
+            {visit && (feedbackStatus === 'sent' || visit.status === 'CLOSED') && (
+              <ClientSignupPrompt
+                signup={signup}
+                setSignup={setSignup}
+                status={signupStatus}
+                onSubmit={requestClientAccount}
+              />
             )}
           </aside>
         </div>

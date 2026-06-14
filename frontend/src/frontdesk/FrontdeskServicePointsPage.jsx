@@ -454,8 +454,8 @@ export default function FrontdeskServicePointsPage() {
                 {receipt.change > 0 ? <span className="font-black text-emerald-700">Change: {money(receipt.change)}</span> : null}
               </div>
               {receipt.visitId && !receipt.paid ? (
-                <Link to="/frontdesk/visits" className="mt-4 inline-flex min-h-10 items-center rounded-md bg-emerald-600 px-4 text-sm font-bold text-white">
-                  Follow this stay in Guest Stays
+                <Link to={`/frontdesk/visits/${receipt.visitId}`} className="mt-4 inline-flex min-h-10 items-center rounded-md bg-emerald-600 px-4 text-sm font-bold text-white">
+                  Follow this guest visit
                 </Link>
               ) : null}
             </div>

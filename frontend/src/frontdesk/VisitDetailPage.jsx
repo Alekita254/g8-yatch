@@ -71,7 +71,7 @@ export default function VisitDetailPage() {
     try {
       setWorking('ack');
       await api.post(`/api/sales/visits/${id}/waiter-acknowledge/`);
-      toast.success('You are assigned to this stay');
+      toast.success('You are assigned to this visit');
       await load();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not acknowledge the waiter request');
@@ -98,7 +98,7 @@ export default function VisitDetailPage() {
       await load();
       closeCheckout();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not checkout the stay');
+      toast.error(err.response?.data?.detail || 'Could not checkout the visit');
     } finally {
       setWorking('');
     }
@@ -442,7 +442,7 @@ export default function VisitDetailPage() {
                   <p className="mt-2 text-xl font-black text-app-text">{money(totalBalance)}</p>
                 </div>
               </div>
-              {invoices.length === 0 ? <div className="text-sm text-app-muted">No invoices for this stay.</div> : invoices.map((inv) => (
+              {invoices.length === 0 ? <div className="text-sm text-app-muted">No invoices for this visit.</div> : invoices.map((inv) => (
                 <div key={inv.id} className="rounded-lg border bg-app-elevated p-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -480,7 +480,7 @@ export default function VisitDetailPage() {
 
           {tab === 'related' && (
             <div className="mt-4 space-y-3">
-              {relatedVisits.length === 0 ? <div className="text-sm text-app-muted">No related stays found.</div> : relatedVisits.map((rv) => (
+              {relatedVisits.length === 0 ? <div className="text-sm text-app-muted">No related visits found.</div> : relatedVisits.map((rv) => (
                 <div key={rv.id} className="rounded-lg border bg-app-elevated p-3 flex items-center justify-between">
                   <div>
                     <p className="font-black">{rv.visit_number} · {rv.service_area} {rv.table_name}</p>

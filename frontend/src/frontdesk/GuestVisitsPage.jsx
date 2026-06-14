@@ -14,6 +14,29 @@ const filters = [
   ['PAYMENT', 'Checkout'],
 ];
 
+function visitStage(visit) {
+  if (visit.status === 'CLOSED') return 'Paid and closed';
+  if (visit.status === 'CHECKOUT_REQUESTED') return 'Checkout';
+  if (visit.orders.some((order) => order.status === 'READY')) return 'Ready to serve';
+  if (visit.orders.some((order) => order.status === 'PREPARING')) return 'Preparing';
+  if (visit.orders.some((order) => order.status === 'SENT')) return 'Order received';
+  if (visit.orders.some((order) => ['SERVED', 'INVOICED'].includes(order.status))) return 'Guest dining';
+  if (visit.waiter_acknowledged_at) return 'Waiter responding';
+  if (visit.waiter_requested_at) return 'Waiter requested';
+  return 'Arrived';
+}
+
+function nextAction(visit) {
+  if (visit.status === 'CLOSED') return 'Review receipt';
+  if (visit.status === 'CHECKOUT_REQUESTED') return 'Collect payment';
+  if (visit.waiter_requested_at && !visit.waiter_acknowledged_at) return 'Acknowledge guest';
+  if (visit.orders.some((order) => order.status === 'READY')) return 'Serve order';
+  if (visit.orders.some((order) => order.status === 'PREPARING')) return 'Monitor kitchen';
+  if (visit.orders.some((order) => order.status === 'SENT')) return 'Start preparation';
+  if (visit.orders.some((order) => order.status === 'SERVED')) return 'Check on guest';
+  return 'Welcome guest';
+}
+
 function visitPriority(visit) {
   if (visit.status === 'CHECKOUT_REQUESTED') return 0;
   if (visit.waiter_requested_at && !visit.waiter_acknowledged_at) return 1;
@@ -53,7 +76,7 @@ export default function GuestVisitsPage() {
       setVisits(mode === 'HISTORY' ? all.filter((v) => v.status === 'CLOSED') : all.filter((v) => v.status !== 'CLOSED'));
       setPaymentMethods((methodsResponse.data.results || []).filter((method) => method.is_active && !method.requires_room_verification));
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to load guest stays');
+      toast.error(err.response?.data?.detail || 'Failed to load guest visits');
     } finally {
       setLoading(false);
     }
@@ -80,7 +103,7 @@ export default function GuestVisitsPage() {
     try {
       setWorking('checkout');
       await api.post(`/api/sales/visits/${visit.id}/checkout/`);
-      toast.success('Checkout requested for this stay');
+      toast.success('Checkout requested for this visit');
       await load();
       closeCheckout();
     } catch (err) {
@@ -133,8 +156,8 @@ export default function GuestVisitsPage() {
     <div className="space-y-6">
       <section className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="flex items-center gap-3 text-2xl font-black text-app-text"><UsersRound className="h-6 w-6 text-brand-500" /> Guest Stays</h2>
-          <p className="mt-1 text-sm text-app-muted">Start at the top. Stays needing action are shown first and refresh every five seconds.</p>
+          <h2 className="flex items-center gap-3 text-2xl font-black text-app-text"><UsersRound className="h-6 w-6 text-brand-500" /> Restaurant & Bar Visits</h2>
+          <p className="mt-1 text-sm text-app-muted">QR and POS visits appear here. The most urgent staff action is always shown first.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex rounded-md border border-app-border bg-app-card p-1">
@@ -148,7 +171,7 @@ export default function GuestVisitsPage() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <SummaryCard label={mode === 'HISTORY' ? 'Past stays' : 'Active stays'} value={visits.length} icon={UsersRound} />
+        <SummaryCard label={mode === 'HISTORY' ? 'Past visits' : 'Active visits'} value={visits.length} icon={UsersRound} />
         <SummaryCard label="Need attention" value={attentionCount} icon={BellRing} urgent={attentionCount > 0} />
         <SummaryCard label="Checkout requests" value={checkoutCount} icon={ReceiptText} urgent={checkoutCount > 0} />
       </section>
@@ -167,8 +190,10 @@ export default function GuestVisitsPage() {
             <tr className="bg-app-elevated">
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Visit</th>
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Guest</th>
-              <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Table</th>
-              <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Status</th>
+              <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Service point</th>
+              <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Journey stage</th>
+              <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Next action</th>
+              <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Balance</th>
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Arrived</th>
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Actions</th>
             </tr>
@@ -178,21 +203,21 @@ export default function GuestVisitsPage() {
               <tr key={visit.id} className="border-t hover:bg-app-elevated">
                 <td className="px-4 py-3"><Link to={`/frontdesk/visits/${visit.id}`} className="font-black text-app-text">{visit.visit_number}</Link></td>
                 <td className="px-4 py-3 text-sm text-app-muted">{visit.guest_name || 'Walk-in'}</td>
-                <td className="px-4 py-3 text-sm text-app-muted">{visit.service_area} · {visit.table_name}</td>
-                <td className="px-4 py-3 text-sm"><span className="rounded-full bg-brand-500/10 px-3 py-1 text-xs font-black text-brand-600">{visit.status.replaceAll('_', ' ')}</span></td>
+                <td className="px-4 py-3 text-sm text-app-muted">{visit.service_area}{visit.table_name ? ` · ${visit.table_name}` : ''}</td>
+                <td className="px-4 py-3 text-sm"><span className="rounded-full bg-brand-500/10 px-3 py-1 text-xs font-black text-brand-600">{visitStage(visit)}</span></td>
+                <td className="px-4 py-3 text-sm font-bold text-app-text">{nextAction(visit)}</td>
+                <td className="px-4 py-3 text-sm font-black text-app-text">KES {Number(visit.total_due || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
                 <td className="px-4 py-3 text-sm text-app-muted">{new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex flex-wrap gap-2">
-                    <Link to={`/frontdesk/visits/${visit.id}`} className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-2 text-xs font-bold text-white">Open</Link>
-                    {visit.status !== 'CLOSED' && (
-                      visit.status === 'CHECKOUT_REQUESTED' ? (
-                        <span className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-700">Checkout requested</span>
-                      ) : (
-                        <button type="button" disabled={working === 'checkout'} onClick={() => openCheckout(visit)} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
-                          {working === 'checkout' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />} Checkout
-                        </button>
-                      )
-                    )}
+                    <Link to={`/frontdesk/visits/${visit.id}`} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-brand-600 px-3 text-xs font-bold text-white">
+                      {visit.status === 'CLOSED' ? 'Review visit' : 'Open journey'}
+                    </Link>
+                    {visit.status === 'CHECKOUT_REQUESTED' ? (
+                      <button type="button" disabled={working === 'checkout'} onClick={() => openCheckout(visit)} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-600 px-3 text-xs font-bold text-white disabled:opacity-50">
+                        <ReceiptText className="h-4 w-4" /> Collect payment
+                      </button>
+                    ) : null}
                   </div>
                 </td>
               </tr>
@@ -202,7 +227,7 @@ export default function GuestVisitsPage() {
       </div>
 
       {visibleVisits.length === 0 ? (
-        <div className="rounded-lg border border-app-border bg-app-card p-10 text-center text-sm font-bold text-app-muted">No {mode === 'HISTORY' ? 'past' : 'active'} guest stays.</div>
+        <div className="rounded-lg border border-app-border bg-app-card p-10 text-center text-sm font-bold text-app-muted">No {mode === 'HISTORY' ? 'past' : 'active'} restaurant or bar visits.</div>
       ) : null}
       <VisitCheckoutModal
         visit={checkoutTarget}
