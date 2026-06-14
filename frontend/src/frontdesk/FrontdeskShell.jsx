@@ -9,8 +9,8 @@ import useDesktopViewport from '../hooks/useDesktopViewport';
 
 const navItems = [
   { name: 'Dashboard', path: '/frontdesk', icon: LayoutDashboard },
-  { name: 'Service Points', path: '/frontdesk/service-points', icon: MapPin },
   { name: 'Live Visits', path: '/frontdesk/visits', icon: UsersRound },
+  { name: 'Service Points', path: '/frontdesk/service-points', icon: MapPin },
   { name: 'Guests & Customers', path: '/frontdesk/business-partners', icon: BriefcaseBusiness },
   { name: 'Room Types', path: '/frontdesk/room-types', icon: Layers },
   { name: 'Rooms', path: '/frontdesk/rooms', icon: BedDouble },
@@ -104,7 +104,7 @@ export default function FrontdeskShell() {
               </div>
               <div className="min-w-0">
                 <h1 className="truncate text-xl font-black text-white sm:text-2xl">{routeLabels[location.pathname] || 'Frontdesk'}</h1>
-                <p className="hidden text-sm text-white/58 sm:block">Rooms, reservations, in-house guests, folios, and requests</p>
+                <p className="hidden text-sm text-white/58 sm:block">Follow each guest from arrival through service, payment, and departure</p>
               </div>
               <ThemeToggle inverse className="ml-auto" />
             </div>

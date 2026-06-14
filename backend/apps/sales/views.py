@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsPosManager
+from apps.users.models import ServicePoint
 from apps.pagination import paginated_response
 
 from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, GuestVisit, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
@@ -58,6 +59,31 @@ def create_invoice_from_order(order):
     return invoice
 
 
+def find_or_create_visit(*, service_point, table_name, customer_name=""):
+    normalized_table = table_name.strip()
+    if not service_point or not normalized_table:
+        return None
+
+    visit = GuestVisit.objects.filter(
+        service_point=service_point,
+        table_name__iexact=normalized_table,
+        status__in=[GuestVisit.Status.ACTIVE, GuestVisit.Status.CHECKOUT_REQUESTED],
+    ).first()
+    if visit:
+        if customer_name and not visit.guest_name:
+            visit.guest_name = customer_name
+            visit.save(update_fields=["guest_name", "updated_at"])
+        return visit
+
+    return GuestVisit.objects.create(
+        visit_number=next_number("VIS", GuestVisit, "visit_number"),
+        service_point=service_point,
+        service_area=service_point.get_kind_display(),
+        table_name=normalized_table,
+        guest_name=customer_name,
+    )
+
+
 class ListCreateMixin(APIView):
     permission_classes = [IsPosManager]
     model = None
@@ -81,6 +107,14 @@ class SalesOrderListCreateView(ListCreateMixin):
     def post(self, request):
         data = request.data.copy()
         data["order_number"] = next_number("SO", SalesOrder, "order_number")
+        if not data.get("visit") and data.get("service_point") and str(data.get("table_name", "")).strip():
+            service_point = get_object_or_404(ServicePoint, pk=data["service_point"])
+            visit = find_or_create_visit(
+                service_point=service_point,
+                table_name=str(data.get("table_name", "")),
+                customer_name=str(data.get("customer_name", "")).strip(),
+            )
+            data["visit"] = visit.pk
         serializer = self.serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
         order = serializer.save(

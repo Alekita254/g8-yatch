@@ -10,18 +10,20 @@ export default function useFrontdeskData() {
     reservations: [],
     folios: [],
     requests: [],
+    visits: [],
   });
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [partners, rooms, reservations, folios, requests] = await Promise.all([
+      const [partners, rooms, reservations, folios, requests, visits] = await Promise.all([
         api.get('/api/business-partners/', { params: { page_size: 100 } }),
         api.get('/api/rooms/', { params: { page_size: 100 } }),
         api.get('/api/reservations/', { params: { page_size: 100 } }),
         api.get('/api/folios/', { params: { page_size: 100 } }),
         api.get('/api/concierge/requests/', { params: { page_size: 100 } }),
+        api.get('/api/sales/visits/', { params: { page_size: 100 } }),
       ]);
       setData({
         partners: partners.data.results || [],
@@ -29,6 +31,7 @@ export default function useFrontdeskData() {
         reservations: reservations.data.results || [],
         folios: folios.data.results || [],
         requests: requests.data.results || [],
+        visits: visits.data.results || [],
       });
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to load frontdesk data');

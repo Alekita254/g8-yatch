@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Banknote, BellRing, CheckCircle2, Clock3, Loader2, ReceiptText, RefreshCw, UsersRound } from 'lucide-react';
+import { Banknote, BellRing, CheckCircle2, Circle, Clock3, Loader2, MapPin, ReceiptText, RefreshCw, Utensils, UsersRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import api from '../api';
@@ -10,6 +10,49 @@ const nextStatus = {
   PREPARING: ['READY', 'Mark ready'],
   READY: ['SERVED', 'Mark served'],
 };
+const filters = [
+  ['ALL', 'All active'],
+  ['ATTENTION', 'Needs attention'],
+  ['SERVICE', 'In service'],
+  ['PAYMENT', 'Checkout'],
+];
+
+function visitPriority(visit) {
+  if (visit.status === 'CHECKOUT_REQUESTED') return 0;
+  if (visit.waiter_requested_at && !visit.waiter_acknowledged_at) return 1;
+  if (visit.orders.some((order) => order.status === 'READY')) return 2;
+  return 3;
+}
+
+function visitMatchesFilter(visit, filter) {
+  if (filter === 'ATTENTION') {
+    return visit.status === 'CHECKOUT_REQUESTED'
+      || (visit.waiter_requested_at && !visit.waiter_acknowledged_at)
+      || visit.orders.some((order) => order.status === 'READY');
+  }
+  if (filter === 'SERVICE') return visit.status === 'ACTIVE';
+  if (filter === 'PAYMENT') return visit.status === 'CHECKOUT_REQUESTED';
+  return true;
+}
+
+function currentJourneyStep(visit) {
+  if (visit.status === 'CLOSED') return 5;
+  if (visit.status === 'CHECKOUT_REQUESTED') return 4;
+  if (visit.orders.some((order) => order.status === 'SERVED' || order.status === 'INVOICED')) return 3;
+  if (visit.orders.length) return 2;
+  if (visit.waiter_acknowledged_at) return 1;
+  return 0;
+}
+
+function nextActionFor(visit) {
+  if (visit.status === 'CHECKOUT_REQUESTED') return ['Collect payment', 'The guest has requested the bill.'];
+  if (visit.waiter_requested_at && !visit.waiter_acknowledged_at) return ['Acknowledge waiter call', 'The guest is waiting for someone to respond.'];
+  if (visit.orders.some((order) => order.status === 'READY')) return ['Deliver ready order', 'Food or drinks are ready for the table.'];
+  if (visit.orders.some((order) => order.status === 'PREPARING')) return ['Monitor preparation', 'The order is currently being prepared.'];
+  if (visit.orders.some((order) => order.status === 'SENT')) return ['Start preparing', 'The kitchen or bar has received the order.'];
+  if (visit.orders.some((order) => order.status === 'SERVED')) return ['Guest dining', 'Wait for another request or checkout.'];
+  return ['Welcome the guest', 'No order or waiter request has been made yet.'];
+}
 
 export default function GuestVisitsPage() {
   const [visits, setVisits] = useState([]);
@@ -17,6 +60,7 @@ export default function GuestVisitsPage() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState('');
   const [payments, setPayments] = useState({});
+  const [filter, setFilter] = useState('ALL');
 
   const load = useCallback(async () => {
     try {
@@ -35,7 +79,7 @@ export default function GuestVisitsPage() {
 
   useEffect(() => {
     load();
-    const interval = window.setInterval(load, 15000);
+    const interval = window.setInterval(load, 5000);
     return () => window.clearInterval(interval);
   }, [load]);
 
@@ -97,27 +141,54 @@ export default function GuestVisitsPage() {
     return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
   }
 
+  const visibleVisits = visits
+    .filter((visit) => visitMatchesFilter(visit, filter))
+    .sort((left, right) => visitPriority(left) - visitPriority(right));
+  const attentionCount = visits.filter((visit) => visitMatchesFilter(visit, 'ATTENTION')).length;
+  const checkoutCount = visits.filter((visit) => visit.status === 'CHECKOUT_REQUESTED').length;
+
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="flex items-center gap-3 text-2xl font-black text-app-text"><UsersRound className="h-6 w-6 text-brand-500" /> Live Guest Visits</h2>
-          <p className="mt-1 text-sm text-app-muted">Track arrival, table service, preparation, billing and payment as one journey.</p>
+          <p className="mt-1 text-sm text-app-muted">Start at the top. Visits needing action are shown first and refresh every five seconds.</p>
         </div>
         <button type="button" onClick={load} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text hover:bg-app-elevated">
           <RefreshCw className="h-4 w-4" /> Refresh
         </button>
       </section>
 
-      {visits.length === 0 ? (
+      <section className="grid gap-3 sm:grid-cols-3">
+        <SummaryCard label="Active visits" value={visits.length} icon={UsersRound} />
+        <SummaryCard label="Need attention" value={attentionCount} icon={BellRing} urgent={attentionCount > 0} />
+        <SummaryCard label="Checkout requests" value={checkoutCount} icon={ReceiptText} urgent={checkoutCount > 0} />
+      </section>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {filters.map(([value, label]) => (
+          <button key={value} type="button" onClick={() => setFilter(value)} className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-bold transition ${filter === value ? 'bg-brand-600 text-white' : 'border border-app-border bg-app-card text-app-muted hover:text-app-text'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {visibleVisits.length === 0 ? (
         <div className="rounded-lg border border-app-border bg-app-card p-10 text-center text-sm font-bold text-app-muted">No active guest visits.</div>
-      ) : visits.map((visit) => (
-        <article key={visit.id} className="rounded-lg border border-app-border bg-app-card p-5 sm:p-6">
+      ) : visibleVisits.map((visit) => {
+        const [nextAction, actionDetail] = nextActionFor(visit);
+        return (
+        <article key={visit.id} className={`overflow-hidden rounded-lg border bg-app-card ${visitPriority(visit) < 3 ? 'border-amber-500/60' : 'border-app-border'}`}>
+          <div className={`px-5 py-3 text-sm sm:px-6 ${visitPriority(visit) < 3 ? 'bg-amber-500/12' : 'bg-app-elevated'}`}>
+            <p className="font-black text-app-text">Next: {nextAction}</p>
+            <p className="mt-0.5 text-xs text-app-muted">{actionDetail}</p>
+          </div>
+          <div className="p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-500">{visit.visit_number}</p>
               <h3 className="mt-2 text-xl font-black text-app-text">{visit.service_area}, {visit.table_name}</h3>
-              <p className="mt-1 text-sm text-app-muted">{visit.guest_name || 'Walk-in guest'}{visit.phone ? ` · ${visit.phone}` : ''}</p>
+              <p className="mt-1 text-sm text-app-muted">{visit.guest_name || 'Walk-in guest'}{visit.phone ? ` · ${visit.phone}` : ''} · {new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {visit.waiter_requested_at && !visit.waiter_acknowledged_at && (
@@ -130,7 +201,16 @@ export default function GuestVisitsPage() {
             </div>
           </div>
 
+          <JourneyTimeline currentStep={currentJourneyStep(visit)} />
+
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            {visit.orders.length === 0 && (
+              <div className="rounded-lg border border-dashed border-app-border bg-app-elevated p-5 text-center lg:col-span-2">
+                <MapPin className="mx-auto h-6 w-6 text-brand-500" />
+                <p className="mt-3 font-black text-app-text">Guest has arrived</p>
+                <p className="mt-1 text-sm text-app-muted">No food, drink, waiter, or checkout request yet.</p>
+              </div>
+            )}
             {visit.orders.map((order) => (
               <div key={order.id} className="rounded-lg bg-app-elevated p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -167,8 +247,58 @@ export default function GuestVisitsPage() {
               </div>
             ))}
           </div>
+          {visit.feedback_rating && (
+            <p className="mt-4 rounded-md bg-brand-500/10 p-3 text-sm font-bold text-app-text">
+              Guest feedback: {visit.feedback_rating}/5{visit.feedback_comment ? ` · ${visit.feedback_comment}` : ''}
+            </p>
+          )}
+          </div>
         </article>
-      ))}
+      )})}
+    </div>
+  );
+}
+
+function JourneyTimeline({ currentStep }) {
+  const steps = [
+    ['Arrived', MapPin],
+    ['Waiter', BellRing],
+    ['Ordered', Utensils],
+    ['Served', CheckCircle2],
+    ['Checkout', ReceiptText],
+    ['Paid', Banknote],
+  ];
+
+  return (
+    <div className="mt-6 overflow-x-auto pb-2">
+      <div className="flex min-w-[620px] items-start">
+        {steps.map(([label, Icon], index) => {
+          const complete = index <= currentStep;
+          return (
+            <div key={label} className="relative flex flex-1 flex-col items-center text-center">
+              {index > 0 && <span className={`absolute right-1/2 top-5 h-0.5 w-full ${index <= currentStep ? 'bg-brand-500' : 'bg-app-border'}`} />}
+              <span className={`relative z-[1] flex h-10 w-10 items-center justify-center rounded-full border-2 ${complete ? 'border-brand-500 bg-brand-500 text-white' : 'border-app-border bg-app-card text-app-muted'}`}>
+                {complete ? <Icon className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
+              </span>
+              <span className={`mt-2 text-xs font-black uppercase ${complete ? 'text-app-text' : 'text-app-muted'}`}>{label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, icon: Icon, urgent = false }) {
+  return (
+    <div className={`rounded-lg border p-4 ${urgent ? 'border-amber-500/50 bg-amber-500/10' : 'border-app-border bg-app-card'}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-2xl font-black text-app-text">{value}</p>
+          <p className="mt-1 text-xs font-bold uppercase text-app-muted">{label}</p>
+        </div>
+        <Icon className={`h-6 w-6 ${urgent ? 'text-amber-600' : 'text-brand-500'}`} />
+      </div>
     </div>
   );
 }

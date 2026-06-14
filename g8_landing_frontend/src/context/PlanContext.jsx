@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { useMockData } from '../api/client'
 import { PlanContext } from './planContext'
 
 const STORAGE_KEY = 'g8_visit_plan'
+const visitMode = useMockData ? 'mock' : 'live'
 
 function readStoredPlan() {
   try {
@@ -10,10 +12,11 @@ function readStoredPlan() {
     return {
       foodItems: Array.isArray(stored?.foodItems) ? stored.foodItems : [],
       activities: Array.isArray(stored?.activities) ? stored.activities : [],
-      visit: stored?.visit || null,
+      visit: stored?.visitMode === visitMode ? stored?.visit || null : null,
+      visitMode,
     }
   } catch {
-    return { foodItems: [], activities: [], visit: null }
+    return { foodItems: [], activities: [], visit: null, visitMode }
   }
 }
 

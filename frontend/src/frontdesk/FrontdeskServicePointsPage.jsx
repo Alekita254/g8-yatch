@@ -174,7 +174,7 @@ export default function FrontdeskServicePointsPage() {
     try {
       setSaving(true);
       const order = await createOrder();
-      setReceipt({ orderNumber: order.order_number, total: subtotal, paid: false });
+      setReceipt({ orderNumber: order.order_number, visitId: order.visit, total: subtotal, paid: false });
       resetSale();
       toast.success('Order sent to service');
     } catch (err) {
@@ -453,6 +453,11 @@ export default function FrontdeskServicePointsPage() {
                 {receipt.paymentMethod ? <span className="font-bold text-app-text">Method: {receipt.paymentMethod}</span> : null}
                 {receipt.change > 0 ? <span className="font-black text-emerald-700">Change: {money(receipt.change)}</span> : null}
               </div>
+              {receipt.visitId && !receipt.paid ? (
+                <Link to="/frontdesk/visits" className="mt-4 inline-flex min-h-10 items-center rounded-md bg-emerald-600 px-4 text-sm font-bold text-white">
+                  Follow this visit in Live Visits
+                </Link>
+              ) : null}
             </div>
           </div>
         </section>
