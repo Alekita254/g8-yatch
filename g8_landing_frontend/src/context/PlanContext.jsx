@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { PlanContext } from './planContext'
 
@@ -10,14 +10,17 @@ function readStoredPlan() {
     return {
       foodItems: Array.isArray(stored?.foodItems) ? stored.foodItems : [],
       activities: Array.isArray(stored?.activities) ? stored.activities : [],
+      visit: stored?.visit || null,
     }
   } catch {
-    return { foodItems: [], activities: [] }
+    return { foodItems: [], activities: [], visit: null }
   }
 }
 
 export function PlanProvider({ children }) {
   const [plan, setPlan] = useState(readStoredPlan)
+  const setVisit = useCallback((visit) => setPlan((current) => ({ ...current, visit })), [])
+  const clearVisit = useCallback(() => setPlan((current) => ({ ...current, visit: null })), [])
 
   useEffect(() => {
     try {
@@ -67,6 +70,8 @@ export function PlanProvider({ children }) {
     changeFoodQuantity,
     addActivity,
     removeActivity,
+    setVisit,
+    clearVisit,
     clearFood: () => setPlan((current) => ({ ...current, foodItems: [] })),
     clearActivities: () => setPlan((current) => ({ ...current, activities: [] })),
   }

@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/reservations/', include('apps.reservations.urls')),
     path('api/rooms/', include('apps.rooms.urls')),
     path('api/sales/', include('apps.sales.urls')),
+    path('api/public/', include('apps.sales.public_urls')),
     path('api/taxes/', include('apps.taxes.urls')),
     path('api/users/', include('apps.users.urls')),
 ]

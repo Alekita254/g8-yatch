@@ -1,8 +1,8 @@
-import { BellRing, CalendarDays, CheckCircle2, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { BellRing, CalendarDays, CheckCircle2, Clock3, MapPin, Minus, Plus, ReceiptText, ShoppingBag, Star, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { notifyWaiter, placeHospitalityOrder } from '../api/hospitalityService'
+import { getVisit, notifyWaiter, placeHospitalityOrder, requestVisitCheckout, startVisit, submitVisitFeedback } from '../api/hospitalityService'
 import { submitProposal } from '../api/corporateService'
 import SectionHeading from '../components/SectionHeading'
 import { usePlan } from '../context/planContext'
@@ -23,6 +23,8 @@ export default function PlanPage() {
     foodItems,
     foodTotal,
     removeActivity,
+    setVisit,
+    visit,
   } = usePlan()
   const [guest, setGuest] = useState({
     name: '',
@@ -35,21 +37,55 @@ export default function PlanPage() {
   const [orderStatus, setOrderStatus] = useState('')
   const [activityStatus, setActivityStatus] = useState('')
   const [waiterStatus, setWaiterStatus] = useState('')
+  const [visitStatus, setVisitStatus] = useState('')
+  const [feedback, setFeedback] = useState({ rating: 5, comment: '' })
+  const [feedbackStatus, setFeedbackStatus] = useState('')
+
+  useEffect(() => {
+    if (!visit?.token) return undefined
+    const refresh = async () => {
+      try {
+        const current = await getVisit(visit.token)
+        if (current) setVisit({ ...current, token: visit.token })
+      } catch {
+        // Preserve the last known journey when the network is temporarily unavailable.
+      }
+    }
+    refresh()
+    const interval = window.setInterval(refresh, 12000)
+    return () => window.clearInterval(interval)
+  }, [visit?.token, setVisit])
+
+  const beginVisit = async (event) => {
+    event.preventDefault()
+    setVisitStatus('starting')
+    try {
+      const response = await startVisit({
+        guestName: guest.name,
+        phone: guest.phone,
+        serviceArea: guest.serviceArea,
+        tableNumber: guest.tableNumber,
+      })
+      setVisit(response)
+      setVisitStatus('started')
+    } catch {
+      setVisitStatus('error')
+    }
+  }
 
   const placeOrder = async (event) => {
     event.preventDefault()
     setOrderStatus('sending')
     try {
       const response = await placeHospitalityOrder({
+        visitToken: visit.token,
         items: foodItems,
-        customerName: guest.name,
-        serviceArea: guest.serviceArea,
-        tableNumber: guest.tableNumber,
-        hasArrived: true,
         notes: guest.notes,
       })
       clearFood()
-      setOrderStatus(`Order ${response.order_number} received`)
+      setVisit({ ...response, token: visit.token })
+      const newestOrder = response.orders?.at(-1)
+      setOrderStatus(`Order ${newestOrder?.order_number || ''} received`)
     } catch {
       setOrderStatus('We could not send the order. Please try again.')
     }
@@ -78,15 +114,34 @@ export default function PlanPage() {
   const alertWaiter = async () => {
     setWaiterStatus('sending')
     try {
-      await notifyWaiter({
-        guestName: guest.name,
-        serviceArea: guest.serviceArea,
-        tableNumber: guest.tableNumber,
-        message: guest.notes,
-      })
+      const response = await notifyWaiter(visit.token)
+      setVisit({ ...response, token: visit.token })
       setWaiterStatus('sent')
     } catch {
       setWaiterStatus('error')
+    }
+  }
+
+  const checkoutVisit = async () => {
+    setVisitStatus('checking-out')
+    try {
+      const response = await requestVisitCheckout(visit.token)
+      setVisit({ ...response, token: visit.token })
+      setVisitStatus('checkout-requested')
+    } catch {
+      setVisitStatus('error')
+    }
+  }
+
+  const sendFeedback = async (event) => {
+    event.preventDefault()
+    setFeedbackStatus('sending')
+    try {
+      const response = await submitVisitFeedback(visit.token, feedback)
+      setVisit({ ...response, token: visit.token })
+      setFeedbackStatus('sent')
+    } catch {
+      setFeedbackStatus('error')
     }
   }
 
@@ -115,9 +170,28 @@ export default function PlanPage() {
       <section className="page-shell py-14 sm:py-20">
         <SectionHeading
           eyebrow="Your visit"
-          title={hasPlan ? 'Review and send your requests.' : 'Your plan is ready when you are.'}
-          text={hasPlan ? 'Food orders and activity enquiries are sent separately to the right G8 team.' : 'Add food or activities and they will stay here while you explore.'}
+          title={visit ? `Visit ${visit.visit_number}` : 'Start with where you are seated.'}
+          text={visit ? 'Your arrival, orders, service, bill and feedback now stay together in one journey.' : 'A name and phone are optional. Your table and private visit code are enough to serve and track this visit.'}
         />
+
+        {visit ? (
+          <VisitJourney visit={visit} onCheckout={checkoutVisit} busy={visitStatus === 'checking-out'} />
+        ) : (
+          <form onSubmit={beginVisit} className="mt-8 rounded-[2rem] border border-lake/20 bg-lake/5 p-5 dark:bg-white/5 sm:p-7">
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-lake text-white"><MapPin className="h-5 w-5" /></span>
+              <div>
+                <h2 className="text-2xl font-extrabold text-ink dark:text-white">I have arrived</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">Tell us where you are. Add your name or phone only when you want a more personal service or receipt follow-up.</p>
+              </div>
+            </div>
+            <GuestFields guest={guest} setGuest={setGuest} arrival />
+            {visitStatus === 'error' && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">We could not start your visit. Please try again.</p>}
+            <button disabled={!guest.tableNumber || visitStatus === 'starting'} className="touch-button mt-5 w-full bg-lake text-white disabled:opacity-50">
+              {visitStatus === 'starting' ? 'Starting your visit...' : 'Confirm arrival'}
+            </button>
+          </form>
+        )}
 
         {orderStatus.startsWith('Order ') && (
           <p role="status" aria-live="polite" className="mt-8 flex items-center gap-3 rounded-2xl bg-lake/10 p-4 font-bold text-lake">
@@ -176,8 +250,9 @@ export default function PlanPage() {
                 {orderStatus && orderStatus !== 'sending' && (
                   <p className={`mt-4 rounded-xl p-3 text-sm font-bold ${orderStatus.startsWith('Order ') ? 'bg-lake/10 text-lake' : 'bg-red-50 text-red-700'}`}>{orderStatus}</p>
                 )}
-                <button disabled={orderStatus === 'sending'} className="touch-button mt-5 w-full bg-lake text-white disabled:opacity-60">
-                  {orderStatus === 'sending' ? 'Sending order...' : `Place food order · ${money(foodTotal)}`}
+                {!visit && <p className="mt-4 rounded-xl bg-sand p-3 text-sm font-bold text-ink">Confirm your arrival above before sending this order.</p>}
+                <button disabled={!visit || orderStatus === 'sending'} className="touch-button mt-5 w-full bg-lake text-white disabled:opacity-60">
+                  {orderStatus === 'sending' ? 'Sending order...' : `Send food order · ${money(foodTotal)}`}
                 </button>
               </form>
             )}
@@ -218,17 +293,46 @@ export default function PlanPage() {
             <BellRing className="h-8 w-8 text-lake" />
             <h2 className="mt-5 text-2xl font-extrabold text-ink dark:text-white">Need a waiter?</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Tell the team where you are seated and they will come to you.</p>
-            <GuestFields guest={guest} setGuest={setGuest} waiterOnly />
+            {visit ? (
+              <p className="mt-5 rounded-2xl bg-white/70 p-4 text-sm font-bold text-ink dark:bg-white/5 dark:text-white">
+                {visit.service_area}, {visit.table_name}
+              </p>
+            ) : <GuestFields guest={guest} setGuest={setGuest} waiterOnly />}
             {waiterStatus === 'sent' && <p role="status" aria-live="polite" className="mt-4 flex items-center gap-2 text-sm font-bold text-lake"><CheckCircle2 className="h-5 w-5" /> Waiter notified.</p>}
             {waiterStatus === 'error' && <p role="alert" className="mt-4 text-sm font-bold text-red-700">The alert could not be sent. Please try again.</p>}
             <button
               type="button"
-              disabled={!guest.tableNumber || waiterStatus === 'sending'}
+              disabled={!visit || waiterStatus === 'sending'}
               onClick={alertWaiter}
               className="touch-button mt-5 w-full bg-lake text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <BellRing className="h-4 w-4" /> {waiterStatus === 'sending' ? 'Notifying...' : 'Notify a waiter'}
             </button>
+
+            {visit && (
+              <form onSubmit={sendFeedback} className="mt-7 border-t border-ink/10 pt-7 dark:border-white/10">
+                <Star className="h-7 w-7 text-copper" />
+                <h2 className="mt-4 text-xl font-extrabold text-ink dark:text-white">How was your visit?</h2>
+                <label className="mt-4 block text-sm font-bold text-ink dark:text-slate-100">
+                  Rating
+                  <select value={feedback.rating} onChange={(event) => setFeedback({ ...feedback, rating: Number(event.target.value) })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3">
+                    <option value="5">5 - Excellent</option>
+                    <option value="4">4 - Very good</option>
+                    <option value="3">3 - Good</option>
+                    <option value="2">2 - Could be better</option>
+                    <option value="1">1 - Poor</option>
+                  </select>
+                </label>
+                <label className="mt-4 block text-sm font-bold text-ink dark:text-slate-100">
+                  Comment optional
+                  <textarea value={feedback.comment} onChange={(event) => setFeedback({ ...feedback, comment: event.target.value })} rows="3" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3" />
+                </label>
+                {feedbackStatus === 'sent' && <p className="mt-3 text-sm font-bold text-lake">Thank you. Your feedback is saved with this visit.</p>}
+                <button disabled={feedbackStatus === 'sending'} className="touch-button mt-4 w-full bg-ink text-white disabled:opacity-50">
+                  {feedbackStatus === 'sending' ? 'Sending...' : 'Send feedback'}
+                </button>
+              </form>
+            )}
           </aside>
         </div>
       </section>
@@ -236,10 +340,78 @@ export default function PlanPage() {
   )
 }
 
-function GuestFields({ guest, setGuest, waiterOnly = false }) {
+function VisitJourney({ visit, onCheckout, busy }) {
+  const statusLabels = {
+    SENT: 'Received',
+    PREPARING: 'Being prepared',
+    READY: 'Ready',
+    SERVED: 'Served',
+    INVOICED: 'Added to bill',
+    CANCELLED: 'Cancelled',
+  }
+  const due = Number(visit.total_due || 0)
+
+  return (
+    <section className="mt-8 rounded-[2rem] bg-ink p-5 text-white sm:p-7">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow text-sun">Live visit</p>
+          <h2 className="mt-2 text-2xl font-extrabold">{visit.service_area}, {visit.table_name}</h2>
+          <p className="mt-1 text-sm text-white/60">
+            {visit.guest_name || 'Walk-in guest'} · arrived {visit.arrived_at
+              ? new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : 'just now'}
+          </p>
+        </div>
+        <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-bold uppercase tracking-wider">{visit.status.replaceAll('_', ' ')}</span>
+      </div>
+
+      <div className="mt-6 space-y-3">
+        {visit.orders?.length ? visit.orders.map((order) => (
+          <article key={order.id} className="rounded-2xl bg-white/8 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-extrabold">{order.order_number}</p>
+                <p className="mt-1 flex items-center gap-2 text-sm text-white/65"><Clock3 className="h-4 w-4" /> {statusLabels[order.status] || order.status}</p>
+              </div>
+              <strong className="text-sun">{money(order.grand_total)}</strong>
+            </div>
+          </article>
+        )) : (
+          <p className="rounded-2xl bg-white/8 p-4 text-sm text-white/65">You are checked in. Choose from the menu or notify a waiter when ready.</p>
+        )}
+      </div>
+
+      {visit.waiter_acknowledged_at && (
+        <p className="mt-5 flex items-center gap-2 rounded-2xl bg-emerald-500/15 p-4 text-sm font-bold text-emerald-200">
+          <CheckCircle2 className="h-5 w-5" /> A waiter has received your call and is on the way.
+        </p>
+      )}
+
+      {visit.status === 'CLOSED' ? (
+        <div className="mt-5 rounded-2xl bg-emerald-400 p-4 text-ink">
+          <p className="flex items-center gap-2 font-extrabold"><CheckCircle2 className="h-5 w-5" /> Paid and complete</p>
+          <p className="mt-1 text-sm">Thank you for visiting G8. Your invoice references are {visit.orders.map((order) => order.invoice?.invoice_number).filter(Boolean).join(', ')}.</p>
+        </div>
+      ) : visit.status === 'CHECKOUT_REQUESTED' ? (
+        <div className="mt-5 rounded-2xl bg-sun p-4 text-ink">
+          <p className="flex items-center gap-2 font-extrabold"><ReceiptText className="h-5 w-5" /> Checkout requested</p>
+          <p className="mt-1 text-sm">Amount due: <strong>{money(due)}</strong>. A waiter or cashier will collect payment and provide your receipt.</p>
+        </div>
+      ) : visit.orders?.length ? (
+        <button type="button" onClick={onCheckout} disabled={busy} className="touch-button mt-5 w-full bg-sun text-ink disabled:opacity-50">
+          <ReceiptText className="h-4 w-4" /> {busy ? 'Preparing your bill...' : 'Request bill and checkout'}
+        </button>
+      ) : null}
+    </section>
+  )
+}
+
+function GuestFields({ guest, setGuest, waiterOnly = false, arrival = false }) {
   return (
     <div className="mt-5 space-y-4 border-t border-slate-100 pt-5 dark:border-white/10">
-      {!waiterOnly && <Field label="Your name" value={guest.name} onChange={(event) => setGuest({ ...guest, name: event.target.value })} required />}
+      {!waiterOnly && <Field label={`Your name${arrival ? ' optional' : ''}`} value={guest.name} onChange={(event) => setGuest({ ...guest, name: event.target.value })} required={!arrival} />}
+      {arrival && <Field label="Phone number optional" type="tel" value={guest.phone} onChange={(event) => setGuest({ ...guest, phone: event.target.value })} />}
       <label className="block text-sm font-bold text-ink dark:text-slate-100">
         Where are you seated?
         <select value={guest.serviceArea} onChange={(event) => setGuest({ ...guest, serviceArea: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal outline-none focus:border-lake">

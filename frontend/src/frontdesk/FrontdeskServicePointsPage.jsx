@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Banknote, ConciergeBell, Loader2, Martini, Minus, Plus, ReceiptText, ShoppingCart, Utensils } from 'lucide-react';
+import { ArrowLeft, Banknote, CheckCircle2, ConciergeBell, CreditCard, Loader2, Martini, Minus, Plus, ReceiptText, ShoppingCart, Utensils } from 'lucide-react';
 
 import api from '../api';
 import FrontdeskPosPage from './FrontdeskPosPage';
@@ -32,11 +32,14 @@ export default function FrontdeskServicePointsPage() {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPointId, setSelectedPointId] = useState('');
   const [cart, setCart] = useState([]);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [receipt, setReceipt] = useState(null);
   const [sale, setSale] = useState({
     table_name: '',
     customer_name: '',
     payment_method: '',
     reference: '',
+    amount_received: '',
   });
 
   useEffect(() => {
@@ -52,7 +55,8 @@ export default function FrontdeskServicePointsPage() {
         setServicePoints((pointsResponse.data.results || []).filter((point) => point.is_active));
         setProducts((productsResponse.data.results || []).filter((product) => product.is_active && product.is_sellable));
         setPricelists((pricelistsResponse.data.results || []).filter((pricelist) => pricelist.is_active));
-        setPaymentMethods((paymentMethodsResponse.data.results || []).filter((method) => method.is_active));
+        setPaymentMethods((paymentMethodsResponse.data.results || [])
+          .filter((method) => method.is_active && !method.requires_room_verification));
       } catch (err) {
         toast.error(err.response?.data?.detail || 'Failed to load service point POS data');
       } finally {
@@ -105,11 +109,17 @@ export default function FrontdeskServicePointsPage() {
   }, [saleItems]);
 
   const subtotal = cart.reduce((sum, line) => sum + lineTotal(line), 0);
+  const selectedPaymentMethod = paymentMethods.find((method) => String(method.id) === String(sale.payment_method));
+  const isCashPayment = selectedPaymentMethod?.method_type === 'CASH';
+  const amountReceived = Number(sale.amount_received || 0);
+  const changeDue = isCashPayment ? Math.max(amountReceived - subtotal, 0) : 0;
 
   const selectPoint = (point) => {
     setSelectedPointId(point.id);
     setCart([]);
-    setSale({ table_name: '', customer_name: '', payment_method: '', reference: '' });
+    setCheckoutOpen(false);
+    setReceipt(null);
+    setSale({ table_name: '', customer_name: '', payment_method: '', reference: '', amount_received: '' });
   };
 
   const addItem = (item) => {
@@ -128,49 +138,91 @@ export default function FrontdeskServicePointsPage() {
       .filter((line) => line.quantity > 0));
   };
 
-  const checkout = async (event) => {
-    event.preventDefault();
+  const resetSale = () => {
+    setCart([]);
+    setCheckoutOpen(false);
+    setSale({ table_name: '', customer_name: '', payment_method: '', reference: '', amount_received: '' });
+  };
+
+  const createOrder = async () => {
+    const orderResponse = await api.post('/api/sales/orders/', {
+      service_point: selectedPoint.id,
+      table_name: sale.table_name,
+      customer_name: sale.customer_name,
+      subtotal: subtotal.toFixed(2),
+      tax_total: '0.00',
+      discount_total: '0.00',
+      grand_total: subtotal.toFixed(2),
+      notes: `${selectedPoint.name} POS sale`,
+      items: cart.map((line) => ({
+        product: line.product,
+        service_point: selectedPoint.id,
+        quantity: String(line.quantity),
+        unit_price: Number(line.price).toFixed(2),
+        tax_total: '0.00',
+        discount_total: '0.00',
+        line_total: lineTotal(line).toFixed(2),
+      })),
+    });
+    await api.post(`/api/sales/orders/${orderResponse.data.id}/send/`);
+    return orderResponse.data;
+  };
+
+  const sendOrder = async () => {
     if (!selectedPoint || cart.length === 0) return;
 
     try {
       setSaving(true);
-      const orderResponse = await api.post('/api/sales/orders/', {
-        service_point: selectedPoint.id,
-        table_name: sale.table_name,
-        customer_name: sale.customer_name,
-        subtotal: subtotal.toFixed(2),
-        tax_total: '0.00',
-        discount_total: '0.00',
-        grand_total: subtotal.toFixed(2),
-        notes: `${selectedPoint.name} POS sale`,
-        items: cart.map((line) => ({
-          product: line.product,
-          service_point: selectedPoint.id,
-          quantity: String(line.quantity),
-          unit_price: Number(line.price).toFixed(2),
-          tax_total: '0.00',
-          discount_total: '0.00',
-          line_total: lineTotal(line).toFixed(2),
-        })),
-      });
-
-      if (sale.payment_method) {
-        const invoiceResponse = await api.post(`/api/sales/orders/${orderResponse.data.id}/invoice/`);
-        await api.post('/api/sales/payments/', {
-          invoice: invoiceResponse.data.id,
-          payment_method: sale.payment_method,
-          amount: subtotal.toFixed(2),
-          reference: sale.reference,
-        });
-        toast.success('Sale invoiced and paid');
-      } else {
-        toast.success('Sales order created');
-      }
-
-      setCart([]);
-      setSale({ table_name: '', customer_name: '', payment_method: '', reference: '' });
+      const order = await createOrder();
+      setReceipt({ orderNumber: order.order_number, total: subtotal, paid: false });
+      resetSale();
+      toast.success('Order sent to service');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to complete sale');
+      toast.error(err.response?.data?.detail || 'Failed to send order');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const checkout = async (event) => {
+    event.preventDefault();
+    if (!selectedPoint || cart.length === 0 || !selectedPaymentMethod) return;
+    if (selectedPaymentMethod.requires_reference && !sale.reference.trim()) {
+      toast.error(`${selectedPaymentMethod.name} requires a payment reference`);
+      return;
+    }
+    if (selectedPaymentMethod.requires_customer && !sale.customer_name.trim()) {
+      toast.error(`${selectedPaymentMethod.name} requires a customer name`);
+      return;
+    }
+    if (isCashPayment && amountReceived < subtotal) {
+      toast.error('Cash received cannot be less than the amount due');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const order = await createOrder();
+      const invoiceResponse = await api.post(`/api/sales/orders/${order.id}/invoice/`);
+      await api.post('/api/sales/payments/', {
+        invoice: invoiceResponse.data.id,
+        payment_method: selectedPaymentMethod.id,
+        amount: subtotal.toFixed(2),
+        reference: sale.reference.trim(),
+      });
+      setReceipt({
+        orderNumber: order.order_number,
+        invoiceNumber: invoiceResponse.data.invoice_number,
+        paymentMethod: selectedPaymentMethod.name,
+        total: subtotal,
+        amountReceived: isCashPayment ? amountReceived : subtotal,
+        change: changeDue,
+        paid: true,
+      });
+      resetSale();
+      toast.success('Payment collected and invoice closed');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to complete checkout');
     } finally {
       setSaving(false);
     }
@@ -232,7 +284,7 @@ export default function FrontdeskServicePointsPage() {
               <p className="text-sm text-app-muted">Hotel folio posting for room charges, payments, and adjustments.</p>
             </div>
           </div>
-          <button type="button" onClick={() => setSelectedPointId('')} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated">
+          <button type="button" onClick={() => selectPoint({ id: '' })} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated">
             <ArrowLeft className="h-4 w-4" />
             Service Points
           </button>
@@ -255,7 +307,7 @@ export default function FrontdeskServicePointsPage() {
             <p className="text-sm text-app-muted">{selectedPoint.kind_display || selectedPoint.kind} product checkout.</p>
           </div>
         </div>
-        <button type="button" onClick={() => setSelectedPointId('')} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated">
+        <button type="button" onClick={() => selectPoint({ id: '' })} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated">
           <ArrowLeft className="h-4 w-4" />
           Service Points
         </button>
@@ -284,7 +336,7 @@ export default function FrontdeskServicePointsPage() {
           ))}
         </section>
 
-        <form onSubmit={checkout} className="rounded-lg border border-app-border bg-app-card p-5">
+        <form onSubmit={checkout} className="rounded-lg border border-app-border bg-app-card p-5 xl:sticky xl:top-5 xl:self-start">
           <div className="flex items-center gap-3">
             <ReceiptText className="h-5 w-5 text-brand-500" />
             <h3 className="text-xl font-black text-app-text">Current Sale</h3>
@@ -324,31 +376,87 @@ export default function FrontdeskServicePointsPage() {
               <span className="text-xs font-bold uppercase text-app-muted">Customer</span>
               <input value={sale.customer_name} onChange={(event) => setSale((current) => ({ ...current, customer_name: event.target.value }))} placeholder="Walk-in guest" className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
             </label>
-            <label className="space-y-2">
-              <span className="text-xs font-bold uppercase text-app-muted">Settle now</span>
-              <select value={sale.payment_method} onChange={(event) => setSale((current) => ({ ...current, payment_method: event.target.value }))} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
-                <option value="">Create order only</option>
-                {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
-              </select>
-            </label>
-            {sale.payment_method ? (
-              <label className="space-y-2">
-                <span className="text-xs font-bold uppercase text-app-muted">Payment reference</span>
-                <input value={sale.reference} onChange={(event) => setSale((current) => ({ ...current, reference: event.target.value }))} placeholder="Receipt, M-Pesa, approval ref..." className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-              </label>
-            ) : null}
           </div>
 
           <div className="mt-6 flex items-center justify-between border-t border-app-border pt-4">
             <span className="text-sm font-black uppercase text-app-muted">Total</span>
             <span className="text-2xl font-black text-app-text">{money(subtotal)}</span>
           </div>
-          <button type="submit" disabled={saving || cart.length === 0} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
-            Complete Sale
-          </button>
+
+          {!checkoutOpen ? (
+            <div className="mt-5 grid gap-3">
+              <button type="button" onClick={() => setCheckoutOpen(true)} disabled={saving || cart.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50">
+                <CreditCard className="h-4 w-4" />
+                Checkout and collect payment
+              </button>
+              <button type="button" onClick={sendOrder} disabled={saving || cart.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-app-border px-4 py-3 text-sm font-bold text-app-text transition hover:bg-app-elevated disabled:opacity-50">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Utensils className="h-4 w-4" />}
+                Send order without payment
+              </button>
+              <p className="text-center text-xs leading-5 text-app-muted">Use checkout for walk-in payments. Send without payment when the guest will settle later.</p>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-4 rounded-lg border border-brand-500/30 bg-brand-500/5 p-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-600">Collect payment</p>
+                <p className="mt-1 text-sm text-app-muted">Choose how the guest is paying before closing the invoice.</p>
+              </div>
+              <label className="block space-y-2">
+                <span className="text-xs font-bold uppercase text-app-muted">Payment method</span>
+                <select required value={sale.payment_method} onChange={(event) => setSale((current) => ({ ...current, payment_method: event.target.value, reference: '', amount_received: '' }))} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                  <option value="">Select payment method</option>
+                  {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
+                </select>
+              </label>
+              {isCashPayment ? (
+                <label className="block space-y-2">
+                  <span className="text-xs font-bold uppercase text-app-muted">Cash received</span>
+                  <input required min={subtotal} step="0.01" type="number" inputMode="decimal" value={sale.amount_received} onChange={(event) => setSale((current) => ({ ...current, amount_received: event.target.value }))} placeholder={subtotal.toFixed(2)} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+                </label>
+              ) : null}
+              {selectedPaymentMethod?.requires_reference ? (
+                <label className="block space-y-2">
+                  <span className="text-xs font-bold uppercase text-app-muted">Payment reference</span>
+                  <input required value={sale.reference} onChange={(event) => setSale((current) => ({ ...current, reference: event.target.value }))} placeholder="M-Pesa code, card approval, bank ref..." className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+                </label>
+              ) : null}
+              {isCashPayment && amountReceived >= subtotal ? (
+                <div className="flex items-center justify-between rounded-md bg-app-elevated p-3">
+                  <span className="text-sm font-bold text-app-muted">Change to return</span>
+                  <span className="text-lg font-black text-app-text">{money(changeDue)}</span>
+                </div>
+              ) : null}
+              <button type="submit" disabled={saving || !selectedPaymentMethod} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
+                Collect {money(subtotal)}
+              </button>
+              <button type="button" onClick={() => setCheckoutOpen(false)} disabled={saving} className="w-full rounded-md px-4 py-2 text-sm font-bold text-app-muted transition hover:bg-app-elevated hover:text-app-text">
+                Back to order
+              </button>
+            </div>
+          )}
         </form>
       </div>
+
+      {receipt ? (
+        <section className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-5">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
+            <div className="min-w-0">
+              <h3 className="text-lg font-black text-app-text">{receipt.paid ? 'Payment received' : 'Order sent'}</h3>
+              <p className="mt-1 text-sm text-app-muted">
+                Order {receipt.orderNumber}
+                {receipt.invoiceNumber ? ` · Invoice ${receipt.invoiceNumber}` : ''}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <span className="font-bold text-app-text">Total: {money(receipt.total)}</span>
+                {receipt.paymentMethod ? <span className="font-bold text-app-text">Method: {receipt.paymentMethod}</span> : null}
+                {receipt.change > 0 ? <span className="font-black text-emerald-700">Change: {money(receipt.change)}</span> : null}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

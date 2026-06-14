@@ -55,7 +55,7 @@ export default function SiteHeader() {
           </button>
           <Link to="/plan" onClick={() => setOpen(false)} className="relative flex h-11 min-w-11 items-center justify-center rounded-full border border-white/15 px-3" aria-label={`My G8 Plan, ${planCount} selected`}>
             <ClipboardList className="h-5 w-5" />
-            <span className="ml-2 hidden text-sm font-bold sm:inline">My Plan</span>
+            <span className="ml-2 hidden text-sm font-bold sm:inline">My Visit</span>
             {planCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-sun px-1 text-[10px] font-extrabold text-ink">{planCount}</span>}
           </Link>
           <button
@@ -88,7 +88,7 @@ export default function SiteHeader() {
             onClick={() => setOpen(false)}
             className={({ isActive }) => `flex min-h-12 items-center rounded-xl px-4 text-sm font-bold ${isActive ? 'bg-white/10 text-sun' : 'text-white/70'}`}
           >
-            My G8 Plan {planCount > 0 ? `(${planCount})` : ''}
+            My Visit {planCount > 0 ? `(${planCount})` : ''}
           </NavLink>
         </nav>
       )}

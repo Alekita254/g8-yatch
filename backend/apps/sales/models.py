@@ -1,14 +1,62 @@
+import uuid
+
 from django.db import models
+
+
+class GuestVisit(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        CHECKOUT_REQUESTED = "CHECKOUT_REQUESTED", "Checkout requested"
+        CLOSED = "CLOSED", "Closed"
+
+    visit_number = models.CharField(max_length=40, unique=True)
+    public_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    service_point = models.ForeignKey(
+        "users.ServicePoint",
+        related_name="guest_visits",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
+    service_area = models.CharField(max_length=80)
+    table_name = models.CharField(max_length=80)
+    guest_name = models.CharField(max_length=160, blank=True)
+    phone = models.CharField(max_length=40, blank=True)
+    status = models.CharField(max_length=30, choices=Status.choices, default=Status.ACTIVE)
+    waiter_requested_at = models.DateTimeField(null=True, blank=True)
+    waiter_acknowledged_at = models.DateTimeField(null=True, blank=True)
+    checkout_requested_at = models.DateTimeField(null=True, blank=True)
+    feedback_rating = models.PositiveSmallIntegerField(null=True, blank=True)
+    feedback_comment = models.TextField(blank=True)
+    arrived_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-arrived_at"]
+
+    def __str__(self):
+        return f"{self.visit_number} - {self.service_area} {self.table_name}"
 
 
 class SalesOrder(models.Model):
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
-        SENT = "SENT", "Sent"
+        SENT = "SENT", "Received"
+        PREPARING = "PREPARING", "Preparing"
+        READY = "READY", "Ready"
+        SERVED = "SERVED", "Served"
         INVOICED = "INVOICED", "Invoiced"
         CANCELLED = "CANCELLED", "Cancelled"
 
     order_number = models.CharField(max_length=40, unique=True)
+    visit = models.ForeignKey(
+        GuestVisit,
+        related_name="orders",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
     branch = models.ForeignKey(
         "organisation.Branch",
         related_name="sales_orders",

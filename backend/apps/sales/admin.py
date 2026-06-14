@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
+from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, GuestVisit, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
+
+
+@admin.register(GuestVisit)
+class GuestVisitAdmin(admin.ModelAdmin):
+    list_display = ("visit_number", "service_area", "table_name", "guest_name", "status", "arrived_at")
+    list_filter = ("status", "service_area")
+    search_fields = ("visit_number", "guest_name", "phone", "table_name")
 
 
 class SalesOrderItemInline(admin.TabularInline):
@@ -10,7 +17,7 @@ class SalesOrderItemInline(admin.TabularInline):
 
 @admin.register(SalesOrder)
 class SalesOrderAdmin(admin.ModelAdmin):
-    list_display = ("order_number", "status", "service_point", "table_name", "customer_name", "grand_total", "created_at")
+    list_display = ("order_number", "visit", "status", "service_point", "table_name", "customer_name", "grand_total", "created_at")
     list_filter = ("status", "service_point")
     search_fields = ("order_number", "customer_name", "table_name")
     inlines = [SalesOrderItemInline]

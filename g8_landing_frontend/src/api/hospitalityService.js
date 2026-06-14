@@ -2,6 +2,17 @@ import { menuItems, rooms } from '../data/mockData'
 import apiClient, { useMockData } from './client'
 
 const wait = (value) => new Promise((resolve) => window.setTimeout(() => resolve(value), 450))
+const mockVisits = new Map()
+
+function mockVisit(token) {
+  return mockVisits.get(token) || JSON.parse(window.localStorage.getItem(`g8_mock_visit_${token}`) || 'null')
+}
+
+function saveMockVisit(visit) {
+  mockVisits.set(visit.token, visit)
+  window.localStorage.setItem(`g8_mock_visit_${visit.token}`, JSON.stringify(visit))
+  return visit
+}
 
 export async function getRooms() {
   if (useMockData) return wait(rooms)
@@ -11,28 +22,46 @@ export async function getRooms() {
 
 export async function getMenu() {
   if (useMockData) return wait(menuItems)
-  const [pricelistResponse, productResponse] = await Promise.all([
-    apiClient.get('/api/products/sales-pricelists/', { params: { page_size: 100 } }),
-    apiClient.get('/api/products/items/', { params: { page_size: 100 } }),
-  ])
-  const pricelists = pricelistResponse.data.results || pricelistResponse.data
-  const products = productResponse.data.results || productResponse.data
-  const productsById = new Map(products.map((product) => [product.id, product]))
   const preferredCode = import.meta.env.VITE_MENU_PRICELIST_CODE || 'standard-menu'
-  const pricelist = pricelists.find((list) => list.code === preferredCode && list.is_active)
-    || pricelists.find((list) => list.is_active)
+  const { data } = await apiClient.get('/api/public/menu/', { params: { pricelist: preferredCode } })
+  return data.map((item) => ({
+    ...item,
+    price: Number(item.price),
+    category: menuCategory(item.category),
+    image: foodImage(item.category),
+  }))
+}
 
-  return (pricelist?.items || []).map((item) => {
-    const product = productsById.get(item.product) || {}
-    return {
-      id: item.product,
-      name: item.product_name || product.name || 'Menu item',
-      description: product.description || '',
-      price: Number(item.price),
-      category: menuCategory(product.category_name),
-      image: product.image_url || foodImage(product.category_name),
-    }
-  })
+export async function startVisit({ guestName, phone, serviceArea, tableNumber }) {
+  const payload = {
+    guest_name: guestName,
+    phone,
+    service_area: serviceArea,
+    table_name: tableNumber,
+  }
+  if (useMockData) {
+    const token = crypto.randomUUID()
+    return wait(saveMockVisit({
+      token,
+      visit_number: `VIS-${Date.now()}`,
+      ...payload,
+      status: 'ACTIVE',
+      orders: [],
+      total_due: '0.00',
+      waiter_requested_at: null,
+      waiter_acknowledged_at: null,
+      checkout_requested_at: null,
+      feedback_rating: null,
+    }))
+  }
+  const { data } = await apiClient.post('/api/public/visits/', payload)
+  return data
+}
+
+export async function getVisit(token) {
+  if (useMockData) return wait(mockVisit(token))
+  const { data } = await apiClient.get(`/api/public/visits/${token}/`)
+  return data
 }
 
 function menuCategory(categoryName = '') {
@@ -50,58 +79,65 @@ function foodImage(categoryName = '') {
 }
 
 export async function placeHospitalityOrder({
+  visitToken,
   items,
-  customerName,
-  serviceArea,
-  tableNumber,
-  hasArrived,
   notes,
 }) {
-  const location = `${serviceArea} ${tableNumber}`.trim()
-  const orderNotes = [
-    hasArrived ? 'Guest has arrived - alert a waiter' : 'Guest has not arrived yet',
-    notes ? `Guest note: ${notes}` : '',
-  ].filter(Boolean).join('. ')
   const payload = {
-    customer_name: customerName || 'Guest order',
-    location,
-    notes: orderNotes,
-    source: 'G8 landing page',
+    notes,
     items: items.map((item) => ({
       product_id: item.id,
       quantity: item.quantity,
     })),
   }
-  if (useMockData) return wait({ id: Date.now(), order_number: `WEB-${Date.now()}`, ...payload })
-  const endpoint = import.meta.env.VITE_PUBLIC_FOOD_ORDERS_ENDPOINT
-  if (!endpoint) throw new Error('VITE_PUBLIC_FOOD_ORDERS_ENDPOINT is not configured')
-  const { data } = await apiClient.post(endpoint, payload)
-
-  const waiterAlertEndpoint = import.meta.env.VITE_WAITER_ALERT_ENDPOINT
-  if (hasArrived && waiterAlertEndpoint) {
-    apiClient.post(waiterAlertEndpoint, {
-      order_id: data.id,
-      order_number: data.order_number,
-      guest_name: customerName,
-      location,
-      message: notes,
-    }).catch(() => undefined)
+  if (useMockData) {
+    const visit = mockVisit(visitToken)
+    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    visit.orders.push({
+      id: Date.now(),
+      order_number: `WEB-${Date.now()}`,
+      status: 'SENT',
+      grand_total: total.toFixed(2),
+      items: items.map((item) => ({ ...item, product_name: item.name })),
+    })
+    return wait(saveMockVisit(visit))
   }
-
+  const { data } = await apiClient.post(`/api/public/visits/${visitToken}/orders/`, payload)
   return data
 }
 
-export async function notifyWaiter({ guestName, serviceArea, tableNumber, message }) {
-  const payload = {
-    guest_name: guestName || 'Guest',
-    location: `${serviceArea} ${tableNumber}`.trim(),
-    message: message || 'Guest is ready for service',
-    source: 'G8 visit planner',
+export async function notifyWaiter(visitToken) {
+  if (useMockData) {
+    const visit = mockVisit(visitToken)
+    visit.waiter_requested_at = new Date().toISOString()
+    visit.waiter_acknowledged_at = null
+    return wait(saveMockVisit(visit))
   }
-  if (useMockData) return wait({ id: Date.now(), status: 'sent', ...payload })
-  const endpoint = import.meta.env.VITE_WAITER_ALERT_ENDPOINT
-  if (!endpoint) throw new Error('VITE_WAITER_ALERT_ENDPOINT is not configured')
-  const { data } = await apiClient.post(endpoint, payload)
+  const { data } = await apiClient.post(`/api/public/visits/${visitToken}/waiter/`)
+  return data
+}
+
+export async function requestVisitCheckout(visitToken) {
+  if (useMockData) {
+    const visit = mockVisit(visitToken)
+    visit.status = 'CHECKOUT_REQUESTED'
+    visit.checkout_requested_at = new Date().toISOString()
+    visit.total_due = visit.orders.reduce((sum, order) => sum + Number(order.grand_total), 0).toFixed(2)
+    visit.orders = visit.orders.map((order) => ({ ...order, status: 'INVOICED' }))
+    return wait(saveMockVisit(visit))
+  }
+  const { data } = await apiClient.post(`/api/public/visits/${visitToken}/checkout/`)
+  return data
+}
+
+export async function submitVisitFeedback(visitToken, payload) {
+  if (useMockData) {
+    const visit = mockVisit(visitToken)
+    visit.feedback_rating = payload.rating
+    visit.feedback_comment = payload.comment
+    return wait(saveMockVisit(visit))
+  }
+  const { data } = await apiClient.post(`/api/public/visits/${visitToken}/feedback/`, payload)
   return data
 }
 

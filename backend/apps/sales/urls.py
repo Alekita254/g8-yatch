@@ -3,19 +3,25 @@ from django.urls import path
 from .views import (
     CustomerPaymentRunApplyView,
     CustomerPaymentRunListCreateView,
+    GuestVisitListView,
+    GuestVisitWaiterAcknowledgeView,
     SalesInvoiceCreateFromOrderView,
     SalesInvoiceListView,
     SalesOrderDetailView,
     SalesOrderItemVoidView,
     SalesOrderListCreateView,
     SalesOrderSendView,
+    SalesOrderStatusView,
     SalesPaymentListCreateView,
 )
 
 urlpatterns = [
+    path("visits/", GuestVisitListView.as_view(), name="guest-visits"),
+    path("visits/<int:pk>/waiter-acknowledge/", GuestVisitWaiterAcknowledgeView.as_view(), name="guest-visit-waiter-acknowledge"),
     path("orders/", SalesOrderListCreateView.as_view(), name="sales-orders"),
     path("orders/<int:pk>/", SalesOrderDetailView.as_view(), name="sales-order-detail"),
     path("orders/<int:pk>/send/", SalesOrderSendView.as_view(), name="sales-order-send"),
+    path("orders/<int:pk>/status/", SalesOrderStatusView.as_view(), name="sales-order-status"),
     path("orders/<int:pk>/items/<int:item_id>/void/", SalesOrderItemVoidView.as_view(), name="sales-order-item-void"),
     path("orders/<int:order_id>/invoice/", SalesInvoiceCreateFromOrderView.as_view(), name="sales-order-invoice"),
     path("invoices/", SalesInvoiceListView.as_view(), name="sales-invoices"),

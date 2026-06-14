@@ -10,13 +10,52 @@ from rest_framework.views import APIView
 from apps.users.permissions import IsPosManager
 from apps.pagination import paginated_response
 
-from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
-from .serializers import CustomerPaymentRunSerializer, SalesInvoiceSerializer, SalesOrderItemSerializer, SalesOrderSerializer, SalesPaymentSerializer
+from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, GuestVisit, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
+from .serializers import CustomerPaymentRunSerializer, GuestVisitSerializer, SalesInvoiceSerializer, SalesOrderItemSerializer, SalesOrderSerializer, SalesPaymentSerializer
 
 
 def next_number(prefix, model, field):
     count = model.objects.count() + 1
     return f"{prefix}-{timezone.now():%Y%m%d}-{count:05d}"
+
+
+def build_fiscal_payload(order):
+    items = order.items.exclude(status=SalesOrderItem.Status.VOIDED).values(
+        "product_id",
+        "quantity",
+        "unit_price",
+        "line_total",
+    )
+    return {
+        "order_number": order.order_number,
+        "items": [
+            {
+                "product_id": item["product_id"],
+                "quantity": str(item["quantity"]),
+                "unit_price": str(item["unit_price"]),
+                "line_total": str(item["line_total"]),
+            }
+            for item in items
+        ],
+    }
+
+
+def create_invoice_from_order(order):
+    invoice = SalesInvoice.objects.create(
+        invoice_number=next_number("INV", SalesInvoice, "invoice_number"),
+        order=order,
+        branch=order.branch,
+        customer_name=order.customer_name,
+        subtotal=order.subtotal,
+        tax_total=order.tax_total,
+        discount_total=order.discount_total,
+        grand_total=order.grand_total,
+        balance_due=order.grand_total,
+        fiscal_payload=build_fiscal_payload(order),
+    )
+    order.status = SalesOrder.Status.INVOICED
+    order.save(update_fields=["status", "updated_at"])
+    return invoice
 
 
 class ListCreateMixin(APIView):
@@ -111,24 +150,51 @@ class SalesInvoiceCreateFromOrderView(APIView):
         if order.status == SalesOrder.Status.INVOICED:
             return Response({"detail": "Order is already invoiced."}, status=status.HTTP_400_BAD_REQUEST)
 
-        invoice = SalesInvoice.objects.create(
-            invoice_number=next_number("INV", SalesInvoice, "invoice_number"),
-            order=order,
-            branch=order.branch,
-            customer_name=order.customer_name,
-            subtotal=order.subtotal,
-            tax_total=order.tax_total,
-            discount_total=order.discount_total,
-            grand_total=order.grand_total,
-            balance_due=order.grand_total,
-            fiscal_payload={
-                "order_number": order.order_number,
-                "items": list(order.items.exclude(status=SalesOrderItem.Status.VOIDED).values("product_id", "quantity", "unit_price", "line_total")),
-            },
-        )
-        order.status = SalesOrder.Status.INVOICED
-        order.save(update_fields=["status", "updated_at"])
+        invoice = create_invoice_from_order(order)
         return Response(SalesInvoiceSerializer(invoice).data, status=status.HTTP_201_CREATED)
+
+
+class GuestVisitListView(ListCreateMixin):
+    model = GuestVisit
+    serializer_class = GuestVisitSerializer
+
+    def get_queryset(self):
+        return GuestVisit.objects.select_related("service_point").prefetch_related(
+            "orders__items__product",
+            "orders__invoice__payments",
+        )
+
+
+class GuestVisitWaiterAcknowledgeView(APIView):
+    permission_classes = [IsPosManager]
+
+    def post(self, request, pk):
+        visit = get_object_or_404(GuestVisit, pk=pk)
+        visit.waiter_acknowledged_at = timezone.now()
+        visit.save(update_fields=["waiter_acknowledged_at", "updated_at"])
+        return Response(GuestVisitSerializer(visit).data)
+
+
+class SalesOrderStatusView(APIView):
+    permission_classes = [IsPosManager]
+    transitions = {
+        SalesOrder.Status.SENT: {SalesOrder.Status.PREPARING, SalesOrder.Status.CANCELLED},
+        SalesOrder.Status.PREPARING: {SalesOrder.Status.READY, SalesOrder.Status.CANCELLED},
+        SalesOrder.Status.READY: {SalesOrder.Status.SERVED},
+        SalesOrder.Status.SERVED: set(),
+    }
+
+    def post(self, request, pk):
+        order = get_object_or_404(SalesOrder, pk=pk)
+        next_status = request.data.get("status")
+        if next_status not in self.transitions.get(order.status, set()):
+            return Response(
+                {"detail": f"Order cannot move from {order.status} to {next_status}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        order.status = next_status
+        order.save(update_fields=["status", "updated_at"])
+        return Response(SalesOrderSerializer(order).data)
 
 
 class SalesPaymentListCreateView(ListCreateMixin):
@@ -149,6 +215,14 @@ class SalesPaymentListCreateView(ListCreateMixin):
         invoice.balance_due = max(invoice.grand_total - cleared_total, Decimal("0"))
         invoice.status = SalesInvoice.Status.CLOSED if invoice.balance_due <= 0 else SalesInvoice.Status.PARTIALLY_PAID
         invoice.save(update_fields=["paid_total", "balance_due", "status"])
+        if invoice.status == SalesInvoice.Status.CLOSED and invoice.order.visit_id:
+            visit = invoice.order.visit
+            outstanding = visit.orders.filter(invoice__balance_due__gt=0).exists()
+            uninvoiced = visit.orders.exclude(status__in=[SalesOrder.Status.INVOICED, SalesOrder.Status.CANCELLED]).exists()
+            if not outstanding and not uninvoiced:
+                visit.status = GuestVisit.Status.CLOSED
+                visit.closed_at = timezone.now()
+                visit.save(update_fields=["status", "closed_at", "updated_at"])
         return Response(self.serializer_class(payment).data, status=status.HTTP_201_CREATED)
 
 
