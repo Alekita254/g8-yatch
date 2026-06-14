@@ -48,8 +48,8 @@ export default function ModalLayer({ children, label, onClose, className = '' })
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 ${className}`}>
-      <button type="button" className="absolute inset-0 cursor-default" onClick={onClose} aria-label="Close dialog" />
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={labelId} className="relative contents">
+      <button type="button" className="absolute inset-0 cursor-default z-0" onClick={onClose} aria-label="Close dialog" />
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={labelId} className="relative z-10">
         <span id={labelId} className="sr-only">{label}</span>
         {children}
       </div>
