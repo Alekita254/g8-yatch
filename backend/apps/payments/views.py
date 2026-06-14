@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.users.permissions import IsPosManager
+from apps.users.permissions import IsPosManagerOrReadOnly
 from apps.pagination import paginated_response
 
 from .models import BankAccount, PaymentMethod, PaymentRoutingRule
@@ -11,7 +11,7 @@ from .serializers import BankAccountSerializer, PaymentMethodSerializer, Payment
 
 
 class ListCreateMixin(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsPosManagerOrReadOnly]
     model = None
     serializer_class = None
 
@@ -30,7 +30,7 @@ class ListCreateMixin(APIView):
 
 
 class DetailMixin(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsPosManagerOrReadOnly]
     model = None
     serializer_class = None
 

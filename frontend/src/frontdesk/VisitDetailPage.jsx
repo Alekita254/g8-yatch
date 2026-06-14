@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from 'react-oidc-context';
 import { useParams, Link } from 'react-router-dom';
 import { Banknote, CheckCircle2, Clock3, Loader2, MapPin, ReceiptText, Utensils, BellRing } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
+import VisitCheckoutModal from './VisitCheckoutModal';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -13,29 +15,25 @@ export default function VisitDetailPage() {
   const [working, setWorking] = useState('');
   const [payments, setPayments] = useState({});
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const auth = useAuth();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutInvoiceId, setCheckoutInvoiceId] = useState(null);
   const [tab, setTab] = useState('overview'); // overview | orders | invoices | related
   const [relatedVisits, setRelatedVisits] = useState([]);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [visitResponse, methodsResponse] = await Promise.all([
+      const [visitResponse, methodsResponse, listResponse] = await Promise.all([
         api.get(`/api/sales/visits/${id}/`),
         api.get('/api/payments/methods/', { params: { page_size: 100 } }),
         api.get('/api/sales/visits/', { params: { page_size: 200 } }),
       ]);
       setVisit(visitResponse.data);
       setPaymentMethods((methodsResponse.data.results || []).filter((m) => m.is_active && !m.requires_room_verification));
-      // related visits: same table or same guest
-      const all = (arguments[1] || {}).data || [];
-      try {
-        const listResp = await api.get('/api/sales/visits/', { params: { page_size: 200 } });
-        const list = listResp.data.results || [];
-        const related = list.filter((v) => (v.id !== Number(id)) && (v.table_name === visitResponse.data.table_name || (visitResponse.data.guest_name && v.guest_name === visitResponse.data.guest_name)));
-        setRelatedVisits(related.slice(0, 10));
-      } catch (e) {
-        // ignore related fetch errors
-      }
+      const list = listResponse.data.results || [];
+      const related = list.filter((v) => (v.id !== Number(id)) && (v.table_name === visitResponse.data.table_name || (visitResponse.data.guest_name && v.guest_name === visitResponse.data.guest_name)));
+      setRelatedVisits(related.slice(0, 10));
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to load visit');
     } finally {
@@ -43,7 +41,10 @@ export default function VisitDetailPage() {
     }
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (auth.isLoading || !auth.isAuthenticated) return;
+    load();
+  }, [auth.isLoading, auth.isAuthenticated, load]);
 
   const acknowledgeWaiter = async () => {
     try {
@@ -53,6 +54,30 @@ export default function VisitDetailPage() {
       await load();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not acknowledge the waiter request');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const openCheckout = (invoiceId = null) => {
+    setCheckoutInvoiceId(invoiceId);
+    setCheckoutOpen(true);
+  };
+
+  const closeCheckout = () => {
+    setCheckoutInvoiceId(null);
+    setCheckoutOpen(false);
+  };
+
+  const submitCheckout = async () => {
+    try {
+      setWorking('checkout');
+      await api.post(`/api/sales/visits/${id}/checkout/`);
+      toast.success('Checkout requested and invoices issued');
+      await load();
+      closeCheckout();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not checkout the stay');
     } finally {
       setWorking('');
     }
@@ -77,25 +102,45 @@ export default function VisitDetailPage() {
     }
   };
 
-  const collectPayment = async (invoice) => {
+  const collectPayment = async (invoice, amount, paymentMethod, reference) => {
     const entry = payments[invoice.id] || {};
-    if (!entry.method) { toast.error('Choose a payment method'); return; }
-    const method = paymentMethods.find((m) => String(m.id) === String(entry.method));
-    if (method?.requires_reference && !entry.reference?.trim()) { toast.error(`${method.name} requires a reference`); return; }
+    if (!paymentMethod) paymentMethod = entry.method;
+    if (!reference) reference = entry.reference;
+    if (amount == null) amount = entry.amount || invoice.balance_due;
+
+    const method = paymentMethods.find((m) => String(m.id) === String(paymentMethod));
+    if (!method) {
+      toast.error('Choose a payment method');
+      return;
+    }
+    if (method.requires_reference && !reference?.trim()) {
+      toast.error(`${method.name} requires a reference`);
+      return;
+    }
     try {
       setWorking(`invoice-${invoice.id}`);
-      await api.post('/api/sales/payments/', { invoice: invoice.id, payment_method: entry.method, amount: invoice.balance_due, reference: entry.reference || '' });
+      await api.post('/api/sales/payments/', {
+        invoice: invoice.id,
+        payment_method: paymentMethod,
+        amount: amount || invoice.balance_due,
+        reference: reference || '',
+      });
       toast.success('Payment collected and visit updated');
       await load();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not collect payment');
-    } finally { setWorking(''); }
+    } finally {
+      setWorking('');
+    }
   };
 
   if (loading) return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
   if (!visit) return <div className="text-center text-app-muted">Visit not found</div>;
 
   const invoices = visit.orders.map((o) => o.invoice).filter(Boolean);
+  const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + Number(inv.grand_total || 0), 0);
+  const totalPaid = invoices.reduce((sum, inv) => sum + Number(inv.paid_total || 0), 0);
+  const totalBalance = invoices.reduce((sum, inv) => sum + Number(inv.balance_due || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -111,10 +156,13 @@ export default function VisitDetailPage() {
           <div className="flex items-center gap-3">
             <Link to="/frontdesk/visits" className="rounded-md px-3 py-2 text-sm font-bold text-app-text border border-app-border">Back</Link>
             {visit.waiter_requested_at && !visit.waiter_acknowledged_at ? (
-              <button type="button" onClick={acknowledgeWaiter} disabled={working === 'ack'} className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2 text-sm font-bold text-amber-700">
+              <button type="button" onClick={acknowledgeWaiter} disabled={working === 'ack' || working === 'checkout'} className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2 text-sm font-bold text-amber-700">
                 {working === 'ack' ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />} Acknowledge
               </button>
             ) : null}
+            <button type="button" onClick={openCheckout} disabled={working === 'checkout' || visit.status === 'CLOSED'} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-bold text-white">
+              {working === 'checkout' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />} Checkout
+            </button>
           </div>
         </div>
 
@@ -131,6 +179,21 @@ export default function VisitDetailPage() {
           <div className="rounded-md border border-app-border bg-app-elevated px-4 py-3">
             <p className="text-xs font-black uppercase text-app-muted">Arrived</p>
             <p className="mt-1 font-bold text-app-text">{new Date(visit.arrived_at).toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
+            <p className="text-xs font-black uppercase text-app-muted">Total billed</p>
+            <p className="mt-2 text-xl font-black text-app-text">{money(totalInvoiceAmount)}</p>
+          </div>
+          <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
+            <p className="text-xs font-black uppercase text-app-muted">Amount collected</p>
+            <p className="mt-2 text-xl font-black text-app-text">{money(totalPaid)}</p>
+          </div>
+          <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
+            <p className="text-xs font-black uppercase text-app-muted">Balance remaining</p>
+            <p className="mt-2 text-xl font-black text-app-text">{money(totalBalance)}</p>
           </div>
         </div>
       </div>
@@ -150,52 +213,94 @@ export default function VisitDetailPage() {
           )}
 
           {tab === 'orders' && (
-            <div className="grid gap-4 lg:grid-cols-2 mt-4">
+            <div className="mt-4">
               {visit.orders.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-app-border bg-app-elevated p-5 lg:col-span-2">
+                <div className="rounded-lg border border-dashed border-app-border bg-app-elevated p-5">
                   <MapPin className="mx-auto h-6 w-6 text-brand-500" />
                   <p className="mt-3 font-black text-app-text">Guest has arrived</p>
                   <p className="mt-1 text-sm text-app-muted">No orders yet.</p>
                 </div>
-              ) : visit.orders.map((order) => (
-                <div key={order.id} className="rounded-lg bg-app-elevated p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-black text-app-text">{order.order_number}</p>
-                      <p className="mt-1 flex items-center gap-2 text-sm font-bold text-app-muted"><Clock3 className="h-4 w-4" /> {order.status}</p>
-                    </div>
-                    <strong className="text-brand-600">{money(order.grand_total)}</strong>
-                  </div>
-                  <div className="mt-3 space-y-1 text-sm text-app-muted">
-                    {order.items.map((item) => <p key={item.id}>{Number(item.quantity)} × {item.product_name}</p>)}
-                  </div>
-                  <div className="mt-4">
-                    {order.status === 'SENT' && <button type="button" onClick={() => progressOrder(order)} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white">Start preparing</button>}
-                    {order.status === 'PREPARING' && <button type="button" onClick={() => progressOrder(order)} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white">Mark ready</button>}
-                    {order.status === 'READY' && <button type="button" onClick={() => progressOrder(order)} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white">Mark served</button>}
-                  </div>
+              ) : (
+                <div className="overflow-x-auto rounded-md border border-app-border bg-app-card">
+                  <table className="w-full table-auto text-left">
+                    <thead>
+                      <tr className="bg-app-elevated">
+                        <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Order</th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Status</th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Foods</th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Total</th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Invoice</th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visit.orders.map((order) => (
+                          <tr key={`order-${order.id}`} className="border-t hover:bg-app-elevated">
+                            <td className="px-4 py-3 font-black">{order.order_number}</td>
+                            <td className="px-4 py-3 text-sm text-app-muted">{order.status}</td>
+                            <td className="px-4 py-3 text-sm text-app-text">
+                              <div className="space-y-1">
+                                {order.items.map((item) => (
+                                  <div key={item.id} className="flex items-center justify-between gap-3 rounded-md bg-app-elevated px-2 py-1 text-sm">
+                                    <span>{item.quantity}× {item.product_name}</span>
+                                    <span className="font-black">{item.line_total ? money(item.line_total) : ''}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm font-black">{money(order.grand_total)}</td>
+                            <td className="px-4 py-3 text-sm">{order.invoice ? order.invoice.invoice_number : '-'}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="inline-flex flex-wrap gap-2">
+                                {['SENT', 'PREPARING', 'READY'].includes(order.status) ? (
+                                  <button type="button" onClick={() => progressOrder(order)} disabled={working === `order-${order.id}`} className="rounded-md bg-brand-600 px-3 py-2 text-xs font-bold text-white">
+                                    {order.status === 'SENT' ? 'Start' : order.status === 'PREPARING' ? 'Ready' : 'Serve'}
+                                  </button>
+                                ) : null}
+                                {order.invoice && (
+                                  <a href={`/api/sales/invoices/${order.invoice.id}/receipt/`} target="_blank" rel="noreferrer" className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text">Receipt</a>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
+              )}
             </div>
           )}
 
           {tab === 'invoices' && (
             <div className="mt-4 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
+                  <p className="text-xs font-black uppercase text-app-muted">Amount billed</p>
+                  <p className="mt-2 text-xl font-black text-app-text">{money(totalInvoiceAmount)}</p>
+                </div>
+                <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
+                  <p className="text-xs font-black uppercase text-app-muted">Collected</p>
+                  <p className="mt-2 text-xl font-black text-app-text">{money(totalPaid)}</p>
+                </div>
+                <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
+                  <p className="text-xs font-black uppercase text-app-muted">Remaining balance</p>
+                  <p className="mt-2 text-xl font-black text-app-text">{money(totalBalance)}</p>
+                </div>
+              </div>
               {invoices.length === 0 ? <div className="text-sm text-app-muted">No invoices for this stay.</div> : invoices.map((inv) => (
                 <div key={inv.id} className="rounded-lg border bg-app-elevated p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-black">{inv.invoice_number}</p>
-                      <p className="text-sm text-app-muted">Total: {money(inv.grand_total)}</p>
+                      <p className="text-sm text-app-muted">Total: {money(inv.grand_total)} · Paid: {money(inv.paid_total)} · Due: {money(inv.balance_due)}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <p className="font-black">Due: {money(inv.balance_due)}</p>
-                        {inv.balance_due > 0 && (
-                          <button type="button" onClick={() => collectPayment(inv)} disabled={working === `invoice-${inv.id}`} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-bold text-white">
-                            {working === `invoice-${inv.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />} Collect
-                          </button>
-                        )}
-                        <a href={`/api/sales/invoices/${inv.id}/receipt/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text">Download PDF</a>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {inv.balance_due > 0 && (
+                        <button type="button" onClick={() => openCheckout(inv.id)} disabled={working === `invoice-${inv.id}`} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
+                          {working === `invoice-${inv.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />} Collect payment
+                        </button>
+                      )}
+                      <a href={`/api/sales/invoices/${inv.id}/receipt/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text">Download PDF</a>
                     </div>
                   </div>
                 </div>
@@ -218,6 +323,16 @@ export default function VisitDetailPage() {
           )}
         </div>
       </div>
+      <VisitCheckoutModal
+        visit={visit}
+        open={checkoutOpen}
+        initialInvoiceId={checkoutInvoiceId}
+        onClose={closeCheckout}
+        onRequestCheckout={submitCheckout}
+        onCollectPayment={collectPayment}
+        paymentMethods={paymentMethods}
+        working={working}
+      />
     </div>
   );
 }

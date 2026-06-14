@@ -4,10 +4,10 @@ from django.db import models, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.users.permissions import IsPosManager
 from apps.users.models import ServicePoint
 from apps.pagination import paginated_response
 
@@ -93,7 +93,7 @@ def find_or_create_visit(*, service_point, table_name, customer_name=""):
 
 
 class ListCreateMixin(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
     model = None
     serializer_class = None
 
@@ -134,7 +134,7 @@ class SalesOrderListCreateView(ListCreateMixin):
 
 
 class SalesOrderDetailView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, pk):
         order = get_object_or_404(SalesOrder, pk=pk)
@@ -147,7 +147,7 @@ class SalesOrderDetailView(APIView):
 
 
 class SalesOrderSendView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         order = get_object_or_404(SalesOrder, pk=pk)
@@ -164,7 +164,7 @@ class SalesOrderSendView(APIView):
 
 
 class SalesOrderItemVoidView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk, item_id):
         item = get_object_or_404(SalesOrderItem, pk=item_id, order_id=pk)
@@ -185,7 +185,7 @@ class SalesInvoiceListView(ListCreateMixin):
 
 
 class SalesInvoiceCreateFromOrderView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request, order_id):
@@ -209,7 +209,7 @@ class GuestVisitListView(ListCreateMixin):
 
 
 class GuestVisitWaiterAcknowledgeView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         visit = get_object_or_404(GuestVisit, pk=pk)
@@ -220,7 +220,7 @@ class GuestVisitWaiterAcknowledgeView(APIView):
 
 
 class GuestVisitDetailView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         visit = get_object_or_404(GuestVisit, pk=pk)
@@ -228,7 +228,7 @@ class GuestVisitDetailView(APIView):
 
 
 class SalesOrderStatusView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
     transitions = {
         SalesOrder.Status.SENT: {SalesOrder.Status.PREPARING, SalesOrder.Status.CANCELLED},
         SalesOrder.Status.PREPARING: {SalesOrder.Status.READY, SalesOrder.Status.CANCELLED},
@@ -279,7 +279,7 @@ class SalesPaymentListCreateView(ListCreateMixin):
 
 
 class GuestVisitCheckoutAuthView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request, pk):
@@ -296,7 +296,7 @@ class GuestVisitCheckoutAuthView(APIView):
 
 
 class SalesInvoiceReceiptView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         invoice = get_object_or_404(SalesInvoice, pk=pk)
@@ -360,7 +360,7 @@ class CustomerPaymentRunListCreateView(ListCreateMixin):
 
 
 class CustomerPaymentRunApplyView(APIView):
-    permission_classes = [IsPosManager]
+    permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request, pk):

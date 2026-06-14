@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from 'react-oidc-context';
 import { Link } from 'react-router-dom';
 import { Banknote, BellRing, CheckCircle2, Circle, Clock3, Loader2, MapPin, ReceiptText, RefreshCw, Utensils, UsersRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import api from '../api';
+import VisitCheckoutModal from './VisitCheckoutModal';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const nextStatus = {
@@ -61,6 +63,9 @@ export default function GuestVisitsPage() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState('');
   const [payments, setPayments] = useState({});
+  const auth = useAuth();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutTarget, setCheckoutTarget] = useState(null);
   const [filter, setFilter] = useState('ALL');
   const [mode, setMode] = useState('LIVE'); // LIVE or HISTORY
 
@@ -81,10 +86,11 @@ export default function GuestVisitsPage() {
   }, [mode]);
 
   useEffect(() => {
+    if (auth.isLoading || !auth.isAuthenticated) return;
     load();
     const interval = window.setInterval(load, 5000);
     return () => window.clearInterval(interval);
-  }, [load]);
+  }, [auth.isLoading, auth.isAuthenticated, load]);
 
   const progressOrder = async (order) => {
     const transition = nextStatus[order.status];
@@ -112,14 +118,42 @@ export default function GuestVisitsPage() {
     }
   };
 
-  const collectPayment = async (invoice) => {
+  const openCheckout = (visit) => {
+    setCheckoutTarget(visit);
+    setCheckoutOpen(true);
+  };
+
+  const closeCheckout = () => {
+    setCheckoutTarget(null);
+    setCheckoutOpen(false);
+  };
+
+  const requestCheckout = async (visit) => {
+    try {
+      setWorking('checkout');
+      await api.post(`/api/sales/visits/${visit.id}/checkout/`);
+      toast.success('Checkout requested for this stay');
+      await load();
+      closeCheckout();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not request checkout');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const collectPayment = async (invoice, amount, paymentMethod, reference) => {
     const entry = payments[invoice.id] || {};
-    if (!entry.method) {
+    if (!paymentMethod) paymentMethod = entry.method;
+    if (!reference) reference = entry.reference;
+    if (amount == null) amount = entry.amount || invoice.balance_due;
+
+    const method = paymentMethods.find((item) => String(item.id) === String(paymentMethod));
+    if (!method) {
       toast.error('Choose a payment method');
       return;
     }
-    const method = paymentMethods.find((item) => String(item.id) === String(entry.method));
-    if (method?.requires_reference && !entry.reference?.trim()) {
+    if (method.requires_reference && !reference?.trim()) {
       toast.error(`${method.name} requires a reference`);
       return;
     }
@@ -127,9 +161,9 @@ export default function GuestVisitsPage() {
       setWorking(`invoice-${invoice.id}`);
       await api.post('/api/sales/payments/', {
         invoice: invoice.id,
-        payment_method: entry.method,
-        amount: invoice.balance_due,
-        reference: entry.reference || '',
+        payment_method: paymentMethod,
+        amount: amount || invoice.balance_due,
+        reference: reference || '',
       });
       toast.success('Payment collected and visit updated');
       await load();
@@ -202,7 +236,20 @@ export default function GuestVisitsPage() {
                 <td className="px-4 py-3 text-sm text-app-muted">{visit.service_area} · {visit.table_name}</td>
                 <td className="px-4 py-3 text-sm"><span className="rounded-full bg-brand-500/10 px-3 py-1 text-xs font-black text-brand-600">{visit.status.replaceAll('_', ' ')}</span></td>
                 <td className="px-4 py-3 text-sm text-app-muted">{new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                <td className="px-4 py-3 text-sm"><Link to={`/frontdesk/visits/${visit.id}`} className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-2 text-xs font-bold text-white">Open</Link></td>
+                <td className="px-4 py-3 text-sm">
+                  <div className="flex flex-wrap gap-2">
+                    <Link to={`/frontdesk/visits/${visit.id}`} className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-2 text-xs font-bold text-white">Open</Link>
+                    {visit.status !== 'CLOSED' && (
+                      visit.status === 'CHECKOUT_REQUESTED' ? (
+                        <span className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-700">Checkout requested</span>
+                      ) : (
+                        <button type="button" disabled={working === 'checkout'} onClick={() => openCheckout(visit)} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+                          {working === 'checkout' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />} Checkout
+                        </button>
+                      )
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -291,6 +338,15 @@ export default function GuestVisitsPage() {
           </div>
         </article>
       )})}
+      <VisitCheckoutModal
+        visit={checkoutTarget}
+        open={checkoutOpen}
+        onClose={closeCheckout}
+        onRequestCheckout={requestCheckout}
+        onCollectPayment={collectPayment}
+        paymentMethods={paymentMethods}
+        working={working}
+      />
     </div>
   );
 }

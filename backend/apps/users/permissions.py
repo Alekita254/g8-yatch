@@ -1,4 +1,4 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
 class HasRealmRole(BasePermission):
@@ -15,3 +15,12 @@ class HasRealmRole(BasePermission):
 
 class IsPosManager(HasRealmRole):
     required_roles = {"POS_MANAGER"}
+
+
+class IsPosManagerOrReadOnly(HasRealmRole):
+    required_roles = {"POS_MANAGER"}
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return super().has_permission(request, view)
