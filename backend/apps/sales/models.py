@@ -152,6 +152,7 @@ class SalesInvoice(models.Model):
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.UNPAID)
     etims_status = models.CharField(max_length=30, choices=EtimsStatus.choices, default=EtimsStatus.PENDING_SYNC)
     fiscal_payload = models.JSONField(default=dict, blank=True)
+    issued_by = models.CharField(max_length=255, blank=True)
     synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

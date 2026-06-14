@@ -189,12 +189,13 @@ export default function VisitDetailPage() {
                       <p className="text-sm text-app-muted">Total: {money(inv.grand_total)}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <p className="font-black">Due: {money(inv.balance_due)}</p>
-                      {inv.balance_due > 0 && (
-                        <button type="button" onClick={() => collectPayment(inv)} disabled={working === `invoice-${inv.id}`} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-bold text-white">
-                          {working === `invoice-${inv.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />} Collect
-                        </button>
-                      )}
+                        <p className="font-black">Due: {money(inv.balance_due)}</p>
+                        {inv.balance_due > 0 && (
+                          <button type="button" onClick={() => collectPayment(inv)} disabled={working === `invoice-${inv.id}`} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-bold text-white">
+                            {working === `invoice-${inv.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />} Collect
+                          </button>
+                        )}
+                        <a href={`/api/sales/invoices/${inv.id}/receipt/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text">Download PDF</a>
                     </div>
                   </div>
                 </div>

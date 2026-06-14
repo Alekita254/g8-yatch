@@ -59,6 +59,14 @@ def create_invoice_from_order(order):
     return invoice
 
 
+def create_invoice_from_order_with_issuer(order, issued_by=''):
+    invoice = create_invoice_from_order(order)
+    if issued_by:
+        invoice.issued_by = issued_by
+        invoice.save(update_fields=["issued_by"])
+    return invoice
+
+
 def find_or_create_visit(*, service_point, table_name, customer_name=""):
     normalized_table = table_name.strip()
     if not service_point or not normalized_table:
@@ -268,6 +276,74 @@ class SalesPaymentListCreateView(ListCreateMixin):
                 visit.closed_at = timezone.now()
                 visit.save(update_fields=["status", "closed_at", "updated_at"])
         return Response(self.serializer_class(payment).data, status=status.HTTP_201_CREATED)
+
+
+class GuestVisitCheckoutAuthView(APIView):
+    permission_classes = [IsPosManager]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        visit = get_object_or_404(GuestVisit, pk=pk)
+        if visit.status == GuestVisit.Status.CLOSED:
+            return Response({"detail": "This stay is already paid and closed."}, status=status.HTTP_400_BAD_REQUEST)
+        for order in visit.orders.exclude(status=SalesOrder.Status.CANCELLED):
+            if not hasattr(order, "invoice"):
+                create_invoice_from_order_with_issuer(order, issued_by=getattr(request.user, "keycloak_sub", "") or "")
+        visit.status = GuestVisit.Status.CHECKOUT_REQUESTED
+        visit.checkout_requested_at = timezone.now()
+        visit.save(update_fields=["status", "checkout_requested_at", "updated_at"])
+        return Response(GuestVisitSerializer(visit).data)
+
+
+class SalesInvoiceReceiptView(APIView):
+    permission_classes = [IsPosManager]
+
+    def get(self, request, pk):
+        invoice = get_object_or_404(SalesInvoice, pk=pk)
+        # generate PDF using reportlab
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+            from io import BytesIO
+
+            buffer = BytesIO()
+            c = canvas.Canvas(buffer, pagesize=A4)
+            width, height = A4
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(40, height - 60, f"Invoice: {invoice.invoice_number}")
+            c.setFont("Helvetica", 10)
+            c.drawString(40, height - 80, f"Order: {invoice.order.order_number}")
+            c.drawString(40, height - 95, f"Customer: {invoice.customer_name}")
+            c.drawString(40, height - 110, f"Issued by: {invoice.issued_by}")
+            y = height - 140
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(40, y, "Item")
+            c.drawString(300, y, "Qty")
+            c.drawString(360, y, "Price")
+            c.drawString(440, y, "Total")
+            c.setFont("Helvetica", 10)
+            y -= 18
+            for item in invoice.order.items.all():
+                c.drawString(40, y, str(item.product.name)[:40])
+                c.drawString(300, y, str(item.quantity))
+                c.drawString(360, y, f"{item.unit_price}")
+                c.drawString(440, y, f"{item.line_total}")
+                y -= 16
+                if y < 80:
+                    c.showPage()
+                    y = height - 60
+            y -= 10
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(360, y, "Grand total:")
+            c.drawString(460, y, str(invoice.grand_total))
+            c.showPage()
+            c.save()
+            buffer.seek(0)
+            response = Response(buffer.getvalue(), content_type="application/pdf")
+            response['Content-Disposition'] = f'attachment; filename="{invoice.invoice_number}.pdf"'
+            return response
+        except Exception as exc:
+            return Response({"detail": "Failed to generate receipt."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CustomerPaymentRunListCreateView(ListCreateMixin):

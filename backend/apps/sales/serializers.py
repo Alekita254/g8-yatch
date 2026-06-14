@@ -108,6 +108,7 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
     payments = SalesPaymentSerializer(many=True, read_only=True)
     branch_name = serializers.CharField(source="branch.name", read_only=True)
     order_number = serializers.CharField(source="order.order_number", read_only=True)
+    issued_by = serializers.CharField(read_only=True)
 
     class Meta:
         model = SalesInvoice
@@ -119,6 +120,7 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
             "branch",
             "branch_name",
             "customer_name",
+            "issued_by",
             "subtotal",
             "tax_total",
             "discount_total",
