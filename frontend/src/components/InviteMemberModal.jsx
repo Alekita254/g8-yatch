@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Loader2, Send, X } from 'lucide-react';
+import ModalLayer from './ModalLayer';
 
 const ROLE_OPTIONS = [
   { value: 'COMPANY', label: 'Company Staff (Viewer)' },
@@ -19,7 +20,7 @@ export default function InviteMemberModal({ isOpen, onClose, onInvite, isLoading
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <ModalLayer label="Invite member" onClose={onClose}>
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-2xl border border-app-border bg-app-card p-8 space-y-6 shadow-2xl"
@@ -91,6 +92,6 @@ export default function InviteMemberModal({ isOpen, onClose, onInvite, isLoading
           </button>
         </div>
       </form>
-    </div>
+    </ModalLayer>
   );
 }

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Check, Loader2, Search, ShieldCheck, X } from 'lucide-react';
+import ModalLayer from './ModalLayer';
 
 export default function UserRoleModal({
   isOpen,
@@ -9,15 +10,8 @@ export default function UserRoleModal({
   onSave,
   isSaving,
 }) {
-  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [selectedRoles, setSelectedRoles] = useState(() => user?.realm_roles || []);
   const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    if (user) {
-      setSelectedRoles(user.realm_roles || []);
-      setQuery('');
-    }
-  }, [user]);
 
   const filteredRoles = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -40,7 +34,7 @@ export default function UserRoleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
+    <ModalLayer label={`Manage roles for ${userName}`} onClose={onClose}>
       <div className="w-full max-w-2xl overflow-hidden rounded-lg border border-app-border bg-app-card shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-app-border bg-app-elevated px-6 py-5">
           <div>
@@ -136,6 +130,6 @@ export default function UserRoleModal({
           </div>
         </div>
       </div>
-    </div>
+    </ModalLayer>
   );
 }

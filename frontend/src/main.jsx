@@ -7,7 +7,7 @@ import App from './App.jsx';
 import ThemeProvider from './context/ThemeProvider.jsx';
 import './index.css';
 
-const onSigninCallback = (_user) => {
+const onSigninCallback = () => {
   window.history.replaceState(
     {},
     document.title,

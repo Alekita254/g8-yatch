@@ -5,6 +5,7 @@ import { Anchor, Bell, BedDouble, BriefcaseBusiness, CalendarDays, ChevronRight,
 
 import useProfile from '../hooks/useProfile';
 import ThemeToggle from '../components/ThemeToggle';
+import useDesktopViewport from '../hooks/useDesktopViewport';
 
 const navItems = [
   { name: 'Dashboard', path: '/frontdesk', icon: LayoutDashboard },
@@ -33,6 +34,8 @@ export default function FrontdeskShell() {
   const auth = useAuth();
   const location = useLocation();
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const isDesktop = useDesktopViewport();
+  const navigationHidden = !isDesktop && !navigationOpen;
 
   if (profile.auth.isLoading || profile.loading) {
     return <div className="flex min-h-screen items-center justify-center bg-app-bg"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
@@ -43,7 +46,7 @@ export default function FrontdeskShell() {
   return (
     <div className="flex min-h-screen bg-app-bg text-app-text">
       {navigationOpen && <button type="button" className="fixed inset-0 z-30 bg-black/55 lg:hidden" onClick={() => setNavigationOpen(false)} aria-label="Close navigation" />}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-72 shrink-0 flex-col border-r border-[#d7b56d]/20 bg-[#172326] text-white shadow-2xl shadow-black/15 transition-transform duration-300 lg:static lg:h-screen lg:translate-x-0 ${navigationOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside inert={navigationHidden} aria-hidden={navigationHidden} className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-72 shrink-0 flex-col border-r border-[#d7b56d]/20 bg-[#172326] text-white shadow-2xl shadow-black/15 transition-transform duration-300 lg:static lg:h-screen lg:translate-x-0 ${navigationOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-20 items-center justify-between border-b border-white/10 px-5 sm:px-8">
           <Link to="/home" className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d7b56d] text-[#172326]">
@@ -91,7 +94,7 @@ export default function FrontdeskShell() {
               <span className="rounded-md px-1.5 py-1 text-[#d7b56d]">{routeLabels[location.pathname] || 'Frontdesk'}</span>
             </nav>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setNavigationOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white/70 lg:hidden" aria-label="Open navigation">
+              <button type="button" onClick={() => setNavigationOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white/70 lg:hidden" aria-label="Open navigation" aria-expanded={navigationOpen}>
                 <Menu className="h-5 w-5" />
               </button>
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#d7b56d]/25 bg-[#d7b56d]/12 text-[#d7b56d]">

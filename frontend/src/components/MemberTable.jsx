@@ -1,4 +1,3 @@
-import React from 'react';
 import { Edit2 } from 'lucide-react';
 
 const ROLE_OPTIONS = [

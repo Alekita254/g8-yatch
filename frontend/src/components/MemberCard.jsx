@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * MemberCard renders a single organization member as a card.

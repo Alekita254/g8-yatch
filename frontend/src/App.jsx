@@ -25,6 +25,7 @@ import {
 
 import AdminTopbar from './components/AdminTopbar';
 import Sidebar from './components/Sidebar';
+import ThemeToggle from './components/ThemeToggle';
 import BankAccountsPage from './pages/BankAccountsPage';
 import BranchesPage from './pages/BranchesPage';
 import DashboardOverview from './pages/DashboardOverview';
@@ -95,7 +96,7 @@ function LoginPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f7f4ee] text-[#172326]">
+    <main className="min-h-screen bg-app-bg text-app-text transition-colors duration-300">
       <section className="relative min-h-[92svh] overflow-hidden">
         <img
           src={heroImageUrl}
@@ -104,24 +105,27 @@ function LoginPage() {
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,18,22,0.78),rgba(8,18,22,0.44)_45%,rgba(8,18,22,0.08))]" />
         <div className="absolute inset-x-0 top-0 z-10">
-          <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
+          <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-5 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 text-white">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/25 bg-white/10 backdrop-blur">
                 <Anchor className="h-5 w-5 text-[#d7b56d]" />
               </div>
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.22em]">G8 Yacht Villa</p>
-                <p className="text-xs text-white/70">Hotel operations system</p>
+                <p className="hidden text-xs text-white/70 sm:block">Hotel operations system</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => auth.signinRedirect()}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#d7b56d] px-4 py-2.5 text-sm font-black text-[#172326] shadow-lg shadow-black/20 transition hover:bg-[#efcf83]"
-            >
-              <LogIn className="h-4 w-4" />
-              Sign in
-            </button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle inverse />
+              <button
+                type="button"
+                onClick={() => auth.signinRedirect()}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#d7b56d] px-4 py-2.5 text-sm font-black text-[#172326] shadow-lg shadow-black/20 transition hover:bg-[#efcf83]"
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign in</span>
+              </button>
+            </div>
           </nav>
         </div>
 
@@ -171,34 +175,34 @@ function LoginPage() {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31]">Guest luxury, operational discipline</p>
-            <h2 className="mt-3 text-3xl font-black text-[#172326] sm:text-4xl">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31] dark:text-brand-300">Guest luxury, operational discipline</p>
+            <h2 className="mt-3 text-3xl font-black text-app-text sm:text-4xl">
               Built for the rhythm of a villa hotel.
             </h2>
           </div>
-          <p className="text-sm font-medium leading-7 text-[#526065]">
+          <p className="text-sm font-medium leading-7 text-app-muted">
             G8 Yacht Villa connects the quiet front-of-house details with the hard operational work behind them: dining service, stock control, role approvals, maintenance, and metal fabrication requests.
           </p>
         </div>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {services.map((service) => (
-            <article key={service.title} className="rounded-lg border border-[#d8d0c1] bg-white p-5 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#e8f1ef] text-[#0d6b67]">
+            <article key={service.title} className="rounded-lg border border-app-border bg-app-card p-5 shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#e8f1ef] text-[#0d6b67] dark:bg-accent/20 dark:text-teal-300">
                 <service.icon className="h-5 w-5" />
               </div>
-              <h3 className="mt-5 text-lg font-black text-[#172326]">{service.title}</h3>
-              <p className="mt-3 text-sm leading-6 text-[#526065]">{service.text}</p>
+              <h3 className="mt-5 text-lg font-black text-app-text">{service.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-app-muted">{service.text}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="bg-[#ebe3d4] px-6 py-16 lg:px-8">
+      <section className="bg-app-elevated px-6 py-16 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-3">
           <div className="lg:col-span-1">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31]">Signature metal works</p>
-            <h2 className="mt-3 text-3xl font-black text-[#172326]">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31] dark:text-brand-300">Signature metal works</p>
+            <h2 className="mt-3 text-3xl font-black text-app-text">
               Stainless steel, brass, and workshop requests.
             </h2>
           </div>
@@ -208,10 +212,10 @@ function LoginPage() {
               ['Marine steel', 'Railings, dock hardware, ladder repairs, and corrosion-aware maintenance.'],
               ['Custom jobs', 'Fabrication requests, estimates, approvals, and completion logs.'],
             ].map(([title, text]) => (
-              <article key={title} className="rounded-lg border border-[#c8b98f] bg-[#f9f6ef] p-5">
+              <article key={title} className="rounded-lg border border-app-border bg-app-card p-5">
                 <div className="h-1.5 w-20 rounded-full bg-[linear-gradient(90deg,#9c7a34,#f1d58a,#8f9493)]" />
-                <h3 className="mt-5 text-base font-black text-[#172326]">{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-[#526065]">{text}</p>
+                <h3 className="mt-5 text-base font-black text-app-text">{title}</h3>
+                <p className="mt-3 text-sm leading-6 text-app-muted">{text}</p>
               </article>
             ))}
           </div>
@@ -224,10 +228,10 @@ function LoginPage() {
           [Martini, 'Service Points', 'Know which bar, terrace, pool, or restaurant terminal performed every sensitive action.'],
           [ShieldCheck, 'Secure Roles', 'Keycloak login, realm roles, terminal context, and clear business permissions.'],
         ].map(([Icon, title, text]) => (
-          <article key={title} className="rounded-lg border border-[#d8d0c1] bg-white p-6">
-            <Icon className="h-6 w-6 text-[#0d6b67]" />
-            <h3 className="mt-4 text-xl font-black text-[#172326]">{title}</h3>
-            <p className="mt-3 text-sm leading-6 text-[#526065]">{text}</p>
+          <article key={title} className="rounded-lg border border-app-border bg-app-card p-6">
+            <Icon className="h-6 w-6 text-[#0d6b67] dark:text-teal-300" />
+            <h3 className="mt-4 text-xl font-black text-app-text">{title}</h3>
+            <p className="mt-3 text-sm leading-6 text-app-muted">{text}</p>
           </article>
         ))}
       </section>
@@ -263,8 +267,8 @@ function AppChooserPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f7f4ee] text-[#172326]">
-      <section className="border-b border-[#d8d0c1] bg-white">
+    <main className="min-h-screen bg-app-bg text-app-text transition-colors duration-300">
+      <section className="border-b border-app-border bg-app-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#172326] text-[#d7b56d]">
@@ -272,28 +276,31 @@ function AppChooserPage() {
             </div>
             <div>
               <p className="text-sm font-black uppercase tracking-[0.2em]">G8 Yacht Villa</p>
-              <p className="text-xs text-[#526065]">Choose your workspace</p>
+              <p className="text-xs text-app-muted">Choose your workspace</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => profile.auth.signoutRedirect()}
-            className="rounded-lg border border-[#d8d0c1] px-4 py-2 text-sm font-bold text-[#172326] transition hover:bg-[#f1ece3]"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => profile.auth.signoutRedirect()}
+              className="rounded-lg border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
         <div className="max-w-3xl">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31]">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31] dark:text-brand-300">
             Welcome back
           </p>
           <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
             Select the app you want to use.
           </h1>
-          <p className="mt-4 text-sm font-medium leading-7 text-[#526065]">
+          <p className="mt-4 text-sm font-medium leading-7 text-app-muted">
             Start in the workspace that matches your shift. Your Keycloak roles will still control what actions are available inside each app.
           </p>
         </div>
@@ -303,14 +310,14 @@ function AppChooserPage() {
             <Link
               key={app.title}
               to={app.path}
-              className="group rounded-lg border border-[#d8d0c1] bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-[#d7b56d] hover:shadow-xl hover:shadow-[#172326]/10"
+              className="group rounded-lg border border-app-border bg-app-card p-6 shadow-sm transition hover:-translate-y-1 hover:border-[#d7b56d] hover:shadow-xl hover:shadow-[#172326]/10"
             >
               <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${app.accent}`}>
                 <app.icon className="h-6 w-6" />
               </div>
-              <h2 className="mt-6 text-2xl font-black text-[#172326]">{app.title}</h2>
-              <p className="mt-3 min-h-20 text-sm leading-6 text-[#526065]">{app.description}</p>
-              <span className="mt-6 inline-flex text-sm font-black text-[#0d6b67] transition group-hover:translate-x-1">
+              <h2 className="mt-6 text-2xl font-black text-app-text">{app.title}</h2>
+              <p className="mt-3 min-h-20 text-sm leading-6 text-app-muted">{app.description}</p>
+              <span className="mt-6 inline-flex text-sm font-black text-[#0d6b67] transition group-hover:translate-x-1 dark:text-teal-300">
                 Open app
               </span>
             </Link>
@@ -354,7 +361,7 @@ function DashboardShell() {
         onClose={() => setNavigationOpen(false)}
       />
       <main className="h-dvh min-w-0 flex-1 overflow-y-auto">
-        <AdminTopbar userName={profile.userName} onMenuClick={() => setNavigationOpen(true)} />
+        <AdminTopbar userName={profile.userName} onMenuClick={() => setNavigationOpen(true)} navigationOpen={navigationOpen} />
         <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           <Outlet
             context={{

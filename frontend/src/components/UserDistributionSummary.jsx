@@ -1,4 +1,3 @@
-import React from 'react';
 import { Users, UserCheck, UserX, Loader2, AlertCircle } from 'lucide-react';
 import StatCard from './StatCard';
 import useUserDistribution from '../hooks/useUserDistribution';

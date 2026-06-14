@@ -1,4 +1,5 @@
 import { Loader2, MapPin, Save, X } from 'lucide-react';
+import ModalLayer from './ModalLayer';
 
 const KIND_OPTIONS = [
   ['POS_TERMINAL', 'POS Terminal'],
@@ -20,7 +21,7 @@ export default function ServicePointFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
+    <ModalLayer label="Add service point" onClose={onClose}>
       <form onSubmit={onSubmit} className="w-full max-w-2xl overflow-hidden rounded-lg border border-app-border bg-app-card shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-app-border bg-app-elevated px-6 py-5">
           <div>
@@ -112,6 +113,6 @@ export default function ServicePointFormModal({
           </button>
         </div>
       </form>
-    </div>
+    </ModalLayer>
   );
 }

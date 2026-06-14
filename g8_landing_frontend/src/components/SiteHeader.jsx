@@ -63,6 +63,8 @@ export default function SiteHeader() {
             className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 lg:hidden"
             onClick={() => setOpen((value) => !value)}
             aria-label="Toggle navigation"
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -70,7 +72,7 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <nav className="border-t border-white/10 px-4 pb-4 pt-2 lg:hidden">
+        <nav id="mobile-navigation" className="border-t border-white/10 px-4 pb-4 pt-2 lg:hidden">
           {links.map(([label, path]) => (
             <NavLink
               key={path}

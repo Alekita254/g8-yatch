@@ -1,4 +1,3 @@
-import React from 'react';
 import { RefreshCw, WifiOff, Zap } from 'lucide-react';
 import NetworkErrorIllustration from '../components/NetworkErrorIllustration';
 

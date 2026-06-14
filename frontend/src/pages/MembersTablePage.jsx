@@ -133,6 +133,7 @@ export default function MembersTablePage() {
 
       {/* Role Edit Modal */}
       <MemberRoleModal
+        key={selectedMember?.id || 'closed-member-role-modal'}
         isOpen={isModalOpen}
         member={selectedMember}
         onClose={handleCloseModal}

@@ -1,4 +1,5 @@
 import { Loader2, Package, RefreshCw, Save, Tags, Truck, X } from 'lucide-react';
+import ModalLayer from './ModalLayer';
 
 const units = ['EACH', 'KG', 'G', 'L', 'ML', 'HOUR'];
 const packageTypes = [
@@ -35,7 +36,7 @@ export default function ProductFormModal({
   const inventoryPreview = `${form.quantity || 0} ${packageLabel.toLowerCase()}${Number(form.quantity) === 1 ? '' : 's'} x ${form.pack_size || 0} ${form.unit}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
+    <ModalLayer label={isEditing ? 'Edit product' : 'Add product'} onClose={onClose}>
       <form onSubmit={onSubmit} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-app-border bg-app-card shadow-2xl">
         <div className="flex items-start justify-between border-b border-app-border bg-app-elevated px-6 py-5">
           <div>
@@ -179,6 +180,6 @@ export default function ProductFormModal({
           </button>
         </div>
       </form>
-    </div>
+    </ModalLayer>
   );
 }

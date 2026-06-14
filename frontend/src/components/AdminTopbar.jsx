@@ -88,7 +88,7 @@ function breadcrumbFor(pathname) {
   ];
 }
 
-export default function AdminTopbar({ userName, onMenuClick }) {
+export default function AdminTopbar({ userName, onMenuClick, navigationOpen = false }) {
   const location = useLocation();
   const breadcrumbs = breadcrumbFor(location.pathname);
   const pageTitle = breadcrumbs[breadcrumbs.length - 1]?.label || 'Workspace';
@@ -131,6 +131,7 @@ export default function AdminTopbar({ userName, onMenuClick }) {
                 onClick={onMenuClick}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white/70 transition hover:text-white lg:hidden"
                 aria-label="Open navigation"
+                aria-expanded={navigationOpen}
               >
                 <Menu className="h-5 w-5" />
               </button>

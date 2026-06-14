@@ -20,7 +20,11 @@ export function PlanProvider({ children }) {
   const [plan, setPlan] = useState(readStoredPlan)
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(plan))
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(plan))
+    } catch {
+      // Keep the plan usable for the current session when storage is unavailable.
+    }
   }, [plan])
 
   const changeFoodQuantity = (item, delta) => {

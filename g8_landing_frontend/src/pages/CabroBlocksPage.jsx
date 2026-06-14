@@ -41,13 +41,13 @@ export default function CabroBlocksPage() {
     try {
       const payload = {
         customer_name: customer.name,
-        table_name: customer.delivery_location,
-        subtotal: calculation.total,
-        tax_total: 0,
-        discount_total: 0,
-        grand_total: calculation.total,
-        notes: `Cabro enquiry: ${calculation.requiredArea.toFixed(1)} sqm, ${calculation.packs} packs. Phone: ${customer.phone}`,
-        items: [{ product: selected.id, quantity: calculation.packs, unit_price: selected.pricePerSqm, tax_total: 0, discount_total: 0, line_total: calculation.total }],
+        phone: customer.phone,
+        delivery_location: customer.delivery_location,
+        product_id: selected.id,
+        required_area_sqm: Number(calculation.requiredArea.toFixed(1)),
+        estimated_packs: calculation.packs,
+        coverage_per_pack_sqm: selected.coveragePerPack,
+        source: 'G8 landing page',
       }
       await submitCabroOrder(payload)
       setStatus('success')

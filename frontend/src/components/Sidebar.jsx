@@ -1,5 +1,6 @@
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
+import useDesktopViewport from '../hooks/useDesktopViewport';
 import { 
   Anchor,
   BadgePercent,
@@ -83,6 +84,8 @@ export default function Sidebar({ djangoUser, isOpen = false, onClose }) {
   const auth = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
+  const isDesktop = useDesktopViewport();
+  const navigationHidden = !isDesktop && !isOpen;
 
   // Extract initials and name from loaded SSO context
   const userName = djangoUser?.first_name 
@@ -91,7 +94,7 @@ export default function Sidebar({ djangoUser, isOpen = false, onClose }) {
   const userInitials = userName ? userName.substring(0, 2).toUpperCase() : "US";
 
   return (
-    <aside className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-72 shrink-0 flex-col border-r border-[#d7b56d]/20 bg-[#172326] text-white shadow-2xl shadow-black/15 transition-transform duration-300 lg:static lg:h-screen lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+    <aside inert={navigationHidden} aria-hidden={navigationHidden} className={`fixed inset-y-0 left-0 z-40 flex h-dvh w-72 shrink-0 flex-col border-r border-[#d7b56d]/20 bg-[#172326] text-white shadow-2xl shadow-black/15 transition-transform duration-300 lg:static lg:h-screen lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       {/* Logo */}
       <div className="flex h-20 items-center justify-between border-b border-white/10 px-5 sm:px-8">
         <Link to="/home" className="flex items-center gap-3 group cursor-pointer">

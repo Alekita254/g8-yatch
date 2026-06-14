@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
+import ModalLayer from './ModalLayer';
 
 const ROLE_OPTIONS = [
   { value: 'ADMIN', label: 'Admin' },
@@ -10,12 +11,6 @@ const ROLE_OPTIONS = [
 export default function MemberRoleModal({ isOpen, member, onClose, onSave, isLoading }) {
   const [selectedRole, setSelectedRole] = useState(member?.role || 'NORMAL');
 
-  useEffect(() => {
-    if (member) {
-      setSelectedRole(member.role || 'NORMAL');
-    }
-  }, [member]);
-
   if (!isOpen || !member) return null;
 
   const handleSave = () => {
@@ -23,7 +18,7 @@ export default function MemberRoleModal({ isOpen, member, onClose, onSave, isLoa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <ModalLayer label="Update member role" onClose={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-app-card border border-app-border p-8 space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black text-app-text">Update Member Role</h2>
@@ -81,6 +76,6 @@ export default function MemberRoleModal({ isOpen, member, onClose, onSave, isLoa
           </button>
         </div>
       </div>
-    </div>
+    </ModalLayer>
   );
 }

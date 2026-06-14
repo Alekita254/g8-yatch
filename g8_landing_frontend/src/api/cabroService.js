@@ -13,7 +13,8 @@ export async function submitCabroOrder(payload) {
   if (useMockData) {
     return new Promise((resolve) => window.setTimeout(() => resolve({ id: Date.now(), order_number: `CAB-${Date.now()}`, ...payload }), 650))
   }
-  const endpoint = import.meta.env.VITE_CABRO_ORDERS_ENDPOINT || '/api/sales/orders/'
+  const endpoint = import.meta.env.VITE_PUBLIC_CABRO_ENQUIRIES_ENDPOINT
+  if (!endpoint) throw new Error('VITE_PUBLIC_CABRO_ENQUIRIES_ENDPOINT is not configured')
   const { data } = await apiClient.post(endpoint, payload)
   return data
 }

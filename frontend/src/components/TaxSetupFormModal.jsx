@@ -1,4 +1,5 @@
 import { Loader2, Save, X } from 'lucide-react';
+import ModalLayer from './ModalLayer';
 
 export default function TaxSetupFormModal({
   isOpen,
@@ -16,7 +17,7 @@ export default function TaxSetupFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
+    <ModalLayer label={isEditing ? `Edit ${title}` : `Create ${title}`} onClose={onClose}>
       <form onSubmit={onSubmit} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-app-border bg-app-card shadow-2xl">
         <div className="flex items-start justify-between border-b border-app-border bg-app-elevated px-6 py-5">
           <div>
@@ -102,6 +103,6 @@ export default function TaxSetupFormModal({
           </button>
         </div>
       </form>
-    </div>
+    </ModalLayer>
   );
 }

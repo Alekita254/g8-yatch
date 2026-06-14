@@ -120,12 +120,12 @@ export default function PlanPage() {
         />
 
         {orderStatus.startsWith('Order ') && (
-          <p className="mt-8 flex items-center gap-3 rounded-2xl bg-lake/10 p-4 font-bold text-lake">
+          <p role="status" aria-live="polite" className="mt-8 flex items-center gap-3 rounded-2xl bg-lake/10 p-4 font-bold text-lake">
             <CheckCircle2 className="h-5 w-5 shrink-0" /> {orderStatus}
           </p>
         )}
         {activityStatus === 'success' && (
-          <p className="mt-4 flex items-center gap-3 rounded-2xl bg-lake/10 p-4 font-bold text-lake">
+          <p role="status" aria-live="polite" className="mt-4 flex items-center gap-3 rounded-2xl bg-lake/10 p-4 font-bold text-lake">
             <CheckCircle2 className="h-5 w-5 shrink-0" /> Your activity request has been received.
           </p>
         )}
@@ -219,8 +219,8 @@ export default function PlanPage() {
             <h2 className="mt-5 text-2xl font-extrabold text-ink dark:text-white">Need a waiter?</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Tell the team where you are seated and they will come to you.</p>
             <GuestFields guest={guest} setGuest={setGuest} waiterOnly />
-            {waiterStatus === 'sent' && <p className="mt-4 flex items-center gap-2 text-sm font-bold text-lake"><CheckCircle2 className="h-5 w-5" /> Waiter notified.</p>}
-            {waiterStatus === 'error' && <p className="mt-4 text-sm font-bold text-red-700">The alert could not be sent. Please try again.</p>}
+            {waiterStatus === 'sent' && <p role="status" aria-live="polite" className="mt-4 flex items-center gap-2 text-sm font-bold text-lake"><CheckCircle2 className="h-5 w-5" /> Waiter notified.</p>}
+            {waiterStatus === 'error' && <p role="alert" className="mt-4 text-sm font-bold text-red-700">The alert could not be sent. Please try again.</p>}
             <button
               type="button"
               disabled={!guest.tableNumber || waiterStatus === 'sending'}

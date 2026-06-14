@@ -364,6 +364,7 @@ export default function UsersDashboard({ embedded = false }) {
       />
 
       <UserRoleModal
+        key={roleModalUser?.id || 'closed-role-modal'}
         isOpen={Boolean(roleModalUser)}
         user={roleModalUser}
         roleOptions={roleOptions}

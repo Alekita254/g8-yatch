@@ -1,4 +1,5 @@
 import { Loader2, ListTree, Save, X } from 'lucide-react';
+import ModalLayer from './ModalLayer';
 
 export default function ProductCategoryFormModal({
   isOpen,
@@ -13,7 +14,7 @@ export default function ProductCategoryFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
+    <ModalLayer label={isEditing ? 'Edit product category' : 'Add product category'} onClose={onClose}>
       <form onSubmit={onSubmit} className="w-full max-w-2xl overflow-hidden rounded-lg border border-app-border bg-app-card shadow-2xl">
         <div className="flex items-start justify-between border-b border-app-border bg-app-elevated px-6 py-5">
           <div>
@@ -76,6 +77,6 @@ export default function ProductCategoryFormModal({
           </button>
         </div>
       </form>
-    </div>
+    </ModalLayer>
   );
 }

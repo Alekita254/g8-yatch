@@ -14,7 +14,12 @@ const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-  const token = window.localStorage.getItem('g8_access_token')
+  let token
+  try {
+    token = window.localStorage.getItem('g8_access_token')
+  } catch {
+    token = null
+  }
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })

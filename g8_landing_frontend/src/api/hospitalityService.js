@@ -57,31 +57,25 @@ export async function placeHospitalityOrder({
   hasArrived,
   notes,
 }) {
-  const subtotal = items.reduce((total, item) => total + item.price * item.quantity, 0)
   const location = `${serviceArea} ${tableNumber}`.trim()
   const orderNotes = [
     hasArrived ? 'Guest has arrived - alert a waiter' : 'Guest has not arrived yet',
     notes ? `Guest note: ${notes}` : '',
   ].filter(Boolean).join('. ')
   const payload = {
-    table_name: location,
     customer_name: customerName || 'Guest order',
-    subtotal,
-    tax_total: 0,
-    discount_total: 0,
-    grand_total: subtotal,
+    location,
     notes: orderNotes,
+    source: 'G8 landing page',
     items: items.map((item) => ({
-      product: item.id,
+      product_id: item.id,
       quantity: item.quantity,
-      unit_price: item.price,
-      tax_total: 0,
-      discount_total: 0,
-      line_total: item.price * item.quantity,
     })),
   }
   if (useMockData) return wait({ id: Date.now(), order_number: `WEB-${Date.now()}`, ...payload })
-  const { data } = await apiClient.post('/api/sales/orders/', payload)
+  const endpoint = import.meta.env.VITE_PUBLIC_FOOD_ORDERS_ENDPOINT
+  if (!endpoint) throw new Error('VITE_PUBLIC_FOOD_ORDERS_ENDPOINT is not configured')
+  const { data } = await apiClient.post(endpoint, payload)
 
   const waiterAlertEndpoint = import.meta.env.VITE_WAITER_ALERT_ENDPOINT
   if (hasArrived && waiterAlertEndpoint) {
