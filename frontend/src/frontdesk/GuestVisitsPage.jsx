@@ -1,18 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { Link } from 'react-router-dom';
-import { Banknote, BellRing, CheckCircle2, Circle, Clock3, Loader2, MapPin, ReceiptText, RefreshCw, Utensils, UsersRound } from 'lucide-react';
+import { BellRing, Loader2, ReceiptText, RefreshCw, UsersRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import api from '../api';
 import VisitCheckoutModal from './VisitCheckoutModal';
 
-const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const nextStatus = {
-  SENT: ['PREPARING', 'Start preparing'],
-  PREPARING: ['READY', 'Mark ready'],
-  READY: ['SERVED', 'Mark served'],
-};
 const filters = [
   ['ALL', 'All active'],
   ['ATTENTION', 'Needs attention'],
@@ -38,31 +32,11 @@ function visitMatchesFilter(visit, filter) {
   return true;
 }
 
-function currentJourneyStep(visit) {
-  if (visit.status === 'CLOSED') return 5;
-  if (visit.status === 'CHECKOUT_REQUESTED') return 4;
-  if (visit.orders.some((order) => order.status === 'SERVED' || order.status === 'INVOICED')) return 3;
-  if (visit.orders.length) return 2;
-  if (visit.waiter_acknowledged_at) return 1;
-  return 0;
-}
-
-function nextActionFor(visit) {
-  if (visit.status === 'CHECKOUT_REQUESTED') return ['Collect payment', 'The guest has requested the bill.'];
-  if (visit.waiter_requested_at && !visit.waiter_acknowledged_at) return ['Acknowledge waiter call', 'The guest is waiting for someone to respond.'];
-  if (visit.orders.some((order) => order.status === 'READY')) return ['Deliver ready order', 'Food or drinks are ready for the table.'];
-  if (visit.orders.some((order) => order.status === 'PREPARING')) return ['Monitor preparation', 'The order is currently being prepared.'];
-  if (visit.orders.some((order) => order.status === 'SENT')) return ['Start preparing', 'The kitchen or bar has received the order.'];
-  if (visit.orders.some((order) => order.status === 'SERVED')) return ['Guest dining', 'Wait for another request or checkout.'];
-  return ['Welcome the guest', 'No order or waiter request has been made yet.'];
-}
-
 export default function GuestVisitsPage() {
   const [visits, setVisits] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState('');
-  const [payments, setPayments] = useState({});
   const auth = useAuth();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutTarget, setCheckoutTarget] = useState(null);
@@ -92,32 +66,6 @@ export default function GuestVisitsPage() {
     return () => window.clearInterval(interval);
   }, [auth.isLoading, auth.isAuthenticated, load]);
 
-  const progressOrder = async (order) => {
-    const transition = nextStatus[order.status];
-    if (!transition) return;
-    try {
-      setWorking(`order-${order.id}`);
-      await api.post(`/api/sales/orders/${order.id}/status/`, { status: transition[0] });
-      await load();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not update the order');
-    } finally {
-      setWorking('');
-    }
-  };
-
-  const acknowledgeWaiter = async (visit) => {
-    try {
-      setWorking(`waiter-${visit.id}`);
-      await api.post(`/api/sales/visits/${visit.id}/waiter-acknowledge/`);
-      await load();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not acknowledge the waiter request');
-    } finally {
-      setWorking('');
-    }
-  };
-
   const openCheckout = (visit) => {
     setCheckoutTarget(visit);
     setCheckoutOpen(true);
@@ -143,10 +91,7 @@ export default function GuestVisitsPage() {
   };
 
   const collectPayment = async (invoice, amount, paymentMethod, reference) => {
-    const entry = payments[invoice.id] || {};
-    if (!paymentMethod) paymentMethod = entry.method;
-    if (!reference) reference = entry.reference;
-    if (amount == null) amount = entry.amount || invoice.balance_due;
+    if (amount == null) amount = invoice.balance_due;
 
     const method = paymentMethods.find((item) => String(item.id) === String(paymentMethod));
     if (!method) {
@@ -258,86 +203,7 @@ export default function GuestVisitsPage() {
 
       {visibleVisits.length === 0 ? (
         <div className="rounded-lg border border-app-border bg-app-card p-10 text-center text-sm font-bold text-app-muted">No {mode === 'HISTORY' ? 'past' : 'active'} guest stays.</div>
-      ) : visibleVisits.map((visit) => {
-        const [nextAction, actionDetail] = nextActionFor(visit);
-        return (
-        <article key={visit.id} className={`overflow-hidden rounded-lg border bg-app-card ${visitPriority(visit) < 3 ? 'border-amber-500/60' : 'border-app-border'}`}>
-          <div className={`px-5 py-3 text-sm sm:px-6 ${visitPriority(visit) < 3 ? 'bg-amber-500/12' : 'bg-app-elevated'}`}>
-            <p className="font-black text-app-text">Next: {nextAction}</p>
-            <p className="mt-0.5 text-xs text-app-muted">{actionDetail}</p>
-          </div>
-          <div className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-500">{visit.visit_number}</p>
-              <h3 className="mt-2 text-xl font-black text-app-text">{visit.service_area}, {visit.table_name}</h3>
-              <p className="mt-1 text-sm text-app-muted">{visit.guest_name || 'Walk-in guest'}{visit.phone ? ` · ${visit.phone}` : ''} · {new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {visit.waiter_requested_at && !visit.waiter_acknowledged_at && (
-                <button type="button" disabled={working === `waiter-${visit.id}`} onClick={() => acknowledgeWaiter(visit)} className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-700 disabled:opacity-50">
-                  <BellRing className="h-4 w-4" /> Acknowledge waiter call
-                </button>
-              )}
-              {visit.waiter_acknowledged_at && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Waiter responding</span>}
-              <span className="rounded-full bg-brand-500/10 px-3 py-2 text-xs font-black text-brand-600">{visit.status.replaceAll('_', ' ')}</span>
-            </div>
-          </div>
-
-          <JourneyTimeline currentStep={currentJourneyStep(visit)} />
-
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            {visit.orders.length === 0 && (
-              <div className="rounded-lg border border-dashed border-app-border bg-app-elevated p-5 text-center lg:col-span-2">
-                <MapPin className="mx-auto h-6 w-6 text-brand-500" />
-                <p className="mt-3 font-black text-app-text">Guest has arrived</p>
-                <p className="mt-1 text-sm text-app-muted">No food, drink, waiter, or checkout request yet.</p>
-              </div>
-            )}
-            {visit.orders.map((order) => (
-              <div key={order.id} className="rounded-lg bg-app-elevated p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-black text-app-text">{order.order_number}</p>
-                    <p className="mt-1 flex items-center gap-2 text-sm font-bold text-app-muted"><Clock3 className="h-4 w-4" /> {order.status}</p>
-                  </div>
-                  <strong className="text-brand-600">{money(order.grand_total)}</strong>
-                </div>
-                <div className="mt-3 space-y-1 text-sm text-app-muted">
-                  {order.items.map((item) => <p key={item.id}>{Number(item.quantity)} × {item.product_name}</p>)}
-                </div>
-                {nextStatus[order.status] && (
-                  <button type="button" disabled={working === `order-${order.id}`} onClick={() => progressOrder(order)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
-                    {working === `order-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    {nextStatus[order.status][1]}
-                  </button>
-                )}
-                {order.invoice?.balance_due > 0 && (
-                  <div className="mt-4 border-t border-app-border pt-4">
-                    <p className="flex items-center justify-between text-sm font-black text-app-text"><span className="flex items-center gap-2"><ReceiptText className="h-4 w-4" /> {order.invoice.invoice_number}</span><span>{money(order.invoice.balance_due)} due</span></p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <select value={payments[order.invoice.id]?.method || ''} onChange={(event) => setPayments((current) => ({ ...current, [order.invoice.id]: { ...current[order.invoice.id], method: event.target.value } }))} className="rounded-md border border-app-border bg-app-card px-3 py-2 text-sm">
-                        <option value="">Payment method</option>
-                        {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
-                      </select>
-                      <input value={payments[order.invoice.id]?.reference || ''} onChange={(event) => setPayments((current) => ({ ...current, [order.invoice.id]: { ...current[order.invoice.id], reference: event.target.value } }))} placeholder="Reference if required" className="rounded-md border border-app-border bg-app-card px-3 py-2 text-sm" />
-                    </div>
-                    <button type="button" disabled={working === `invoice-${order.invoice.id}`} onClick={() => collectPayment(order.invoice)} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
-                      {working === `invoice-${order.invoice.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />} Collect payment
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          {visit.feedback_rating && (
-            <p className="mt-4 rounded-md bg-brand-500/10 p-3 text-sm font-bold text-app-text">
-              Guest feedback: {visit.feedback_rating}/5{visit.feedback_comment ? ` · ${visit.feedback_comment}` : ''}
-            </p>
-          )}
-          </div>
-        </article>
-      )})}
+      ) : null}
       <VisitCheckoutModal
         visit={checkoutTarget}
         open={checkoutOpen}
@@ -347,36 +213,6 @@ export default function GuestVisitsPage() {
         paymentMethods={paymentMethods}
         working={working}
       />
-    </div>
-  );
-}
-
-function JourneyTimeline({ currentStep }) {
-  const steps = [
-    ['Arrived', MapPin],
-    ['Waiter', BellRing],
-    ['Ordered', Utensils],
-    ['Served', CheckCircle2],
-    ['Checkout', ReceiptText],
-    ['Paid', Banknote],
-  ];
-
-  return (
-    <div className="mt-6 overflow-x-auto pb-2">
-      <div className="flex min-w-[620px] items-start">
-        {steps.map(([label, Icon], index) => {
-          const complete = index <= currentStep;
-          return (
-            <div key={label} className="relative flex flex-1 flex-col items-center text-center">
-              {index > 0 && <span className={`absolute right-1/2 top-5 h-0.5 w-full ${index <= currentStep ? 'bg-brand-500' : 'bg-app-border'}`} />}
-              <span className={`relative z-[1] flex h-10 w-10 items-center justify-center rounded-full border-2 ${complete ? 'border-brand-500 bg-brand-500 text-white' : 'border-app-border bg-app-card text-app-muted'}`}>
-                {complete ? <Icon className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
-              </span>
-              <span className={`mt-2 text-xs font-black uppercase ${complete ? 'text-app-text' : 'text-app-muted'}`}>{label}</span>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }

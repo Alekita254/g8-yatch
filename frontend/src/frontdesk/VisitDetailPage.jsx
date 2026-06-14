@@ -1,19 +1,38 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { useParams, Link } from 'react-router-dom';
-import { Banknote, CheckCircle2, Clock3, Loader2, MapPin, ReceiptText, Utensils, BellRing } from 'lucide-react';
+import { Banknote, BellRing, CheckCircle2, Circle, Clock3, Loader2, MapPin, ReceiptText, Utensils } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import VisitCheckoutModal from './VisitCheckoutModal';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+function currentJourneyStep(visit, invoices, totalBalance) {
+  if (visit.status === 'CLOSED' || (invoices.length > 0 && totalBalance <= 0)) return 5;
+  if (visit.status === 'CHECKOUT_REQUESTED' || invoices.length > 0) return 4;
+  if (visit.orders.some((order) => ['SERVED', 'INVOICED'].includes(order.status))) return 3;
+  if (visit.orders.length) return 2;
+  if (visit.waiter_acknowledged_at) return 1;
+  return 0;
+}
+
+function nextActionFor(visit) {
+  if (visit.status === 'CLOSED') return ['Visit complete', 'Payment has been collected and this visit is closed.'];
+  if (visit.status === 'CHECKOUT_REQUESTED') return ['Collect payment', 'The guest has requested the bill.'];
+  if (visit.waiter_requested_at && !visit.waiter_acknowledged_at) return ['Acknowledge the guest', 'The guest is waiting for a waiter at their service point.'];
+  if (visit.orders.some((order) => order.status === 'READY')) return ['Deliver the ready order', 'Food or drinks are ready to be served.'];
+  if (visit.orders.some((order) => order.status === 'PREPARING')) return ['Monitor preparation', 'The kitchen or bar is preparing this order.'];
+  if (visit.orders.some((order) => order.status === 'SENT')) return ['Start preparing the order', 'The kitchen or bar needs to accept this order.'];
+  if (visit.orders.some((order) => order.status === 'SERVED')) return ['Check on the guest', 'Confirm everything is satisfactory before checkout.'];
+  return ['Welcome the guest', 'No order or waiter request has been made yet.'];
+}
+
 export default function VisitDetailPage() {
   const { id } = useParams();
   const [visit, setVisit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState('');
-  const [payments, setPayments] = useState({});
   const [paymentMethods, setPaymentMethods] = useState([]);
   const auth = useAuth();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -105,10 +124,7 @@ export default function VisitDetailPage() {
   };
 
   const collectPayment = async (invoice, amount, paymentMethod, reference) => {
-    const entry = payments[invoice.id] || {};
-    if (!paymentMethod) paymentMethod = entry.method;
-    if (!reference) reference = entry.reference;
-    if (amount == null) amount = entry.amount || invoice.balance_due;
+    if (amount == null) amount = invoice.balance_due;
 
     const method = paymentMethods.find((m) => String(m.id) === String(paymentMethod));
     if (!method) {
@@ -192,6 +208,9 @@ export default function VisitDetailPage() {
   const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + Number(inv.grand_total || 0), 0);
   const totalPaid = invoices.reduce((sum, inv) => sum + Number(inv.paid_total || 0), 0);
   const totalBalance = invoices.reduce((sum, inv) => sum + Number(inv.balance_due || 0), 0);
+  const arrivalTime = visit.arrived_at ? new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+  const [nextActionTitle, nextActionSubtext] = nextActionFor(visit);
+  const journeyStep = currentJourneyStep(visit, invoices, totalBalance);
 
   return (
     <div className="space-y-6">
@@ -260,7 +279,75 @@ export default function VisitDetailPage() {
 
         <div className="mt-4">
           {tab === 'overview' && (
-            <div className="text-sm text-app-muted">Next action: {visit.orders.length ? visit.orders[0].status : 'No orders'}</div>
+            <article className="overflow-hidden rounded-lg border border-app-border bg-app-card">
+              <div className="border-b border-app-border bg-app-elevated px-5 py-4">
+                <p className="font-black text-app-text">Next: {nextActionTitle}</p>
+                <p className="mt-0.5 text-sm text-app-muted">{nextActionSubtext}</p>
+              </div>
+
+              <div className="p-5 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600">{visit.visit_number}</p>
+                    <h2 className="mt-2 text-xl font-black text-app-text">
+                      {visit.service_area}{visit.table_name ? `, ${visit.table_name}` : ''}
+                    </h2>
+                    <p className="mt-1 text-sm text-app-muted">
+                      {visit.guest_name || 'Walk-in guest'}{visit.phone ? ` · ${visit.phone}` : ''} · {arrivalTime}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-brand-500/10 px-3 py-1.5 text-xs font-black text-brand-600">
+                    {visit.status.replaceAll('_', ' ')}
+                  </span>
+                </div>
+
+                <VisitJourneyTimeline currentStep={journeyStep} />
+
+                <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                  {visit.orders.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-app-border bg-app-elevated p-6 text-center lg:col-span-2">
+                      <MapPin className="mx-auto h-6 w-6 text-brand-500" />
+                      <p className="mt-3 font-black text-app-text">Guest has arrived</p>
+                      <p className="mt-1 text-sm text-app-muted">No food, drink, waiter, or checkout request yet.</p>
+                    </div>
+                  ) : visit.orders.map((order) => (
+                    <div key={order.id} className="rounded-lg bg-app-elevated p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black text-app-text">{order.order_number}</p>
+                          <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-app-muted">
+                            <Clock3 className="h-4 w-4" /> {order.status.replaceAll('_', ' ')}
+                          </p>
+                        </div>
+                        <p className="font-black text-brand-600">{money(order.grand_total)}</p>
+                      </div>
+                      <ul className="mt-3 space-y-1 text-sm text-app-muted">
+                        {order.items.map((item) => (
+                          <li key={item.id}>{Number(item.quantity)} × {item.product_name}</li>
+                        ))}
+                      </ul>
+                      {['SENT', 'PREPARING', 'READY'].includes(order.status) ? (
+                        <button type="button" onClick={() => progressOrder(order)} disabled={working === `order-${order.id}`} className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">
+                          {working === `order-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                          {order.status === 'SENT' ? 'Start preparing' : order.status === 'PREPARING' ? 'Mark ready' : 'Mark served'}
+                        </button>
+                      ) : null}
+                      {order.invoice ? (
+                        <p className="mt-4 border-t border-app-border pt-3 text-xs font-bold text-app-muted">
+                          {order.invoice.invoice_number} · {money(order.invoice.balance_due)} due
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+
+                {visit.feedback_rating ? (
+                  <p className="mt-5 rounded-md bg-emerald-500/10 p-4 text-sm font-bold text-emerald-700">
+                    Guest feedback: {visit.feedback_rating}/5{visit.feedback_comment ? ` · ${visit.feedback_comment}` : ''}
+                  </p>
+                ) : null}
+              </div>
+            </article>
           )}
 
           {tab === 'orders' && (
@@ -416,6 +503,38 @@ export default function VisitDetailPage() {
         paymentMethods={paymentMethods}
         working={working}
       />
+    </div>
+  );
+}
+
+function VisitJourneyTimeline({ currentStep }) {
+  const steps = [
+    ['Arrived', MapPin],
+    ['Waiter', BellRing],
+    ['Ordered', Utensils],
+    ['Served', CheckCircle2],
+    ['Checkout', ReceiptText],
+    ['Paid', Banknote],
+  ];
+
+  return (
+    <div className="mt-7 overflow-x-auto pb-2">
+      <div className="flex min-w-[620px] items-start">
+        {steps.map(([label, Icon], index) => {
+          const complete = index <= currentStep;
+          return (
+            <div key={label} className="relative flex flex-1 flex-col items-center text-center">
+              {index > 0 ? (
+                <span className={`absolute right-1/2 top-5 h-0.5 w-full ${complete ? 'bg-brand-500' : 'bg-app-border'}`} />
+              ) : null}
+              <span className={`relative z-[1] flex h-10 w-10 items-center justify-center rounded-full border-2 ${complete ? 'border-brand-500 bg-brand-500 text-white' : 'border-app-border bg-app-card text-app-muted'}`}>
+                {complete ? <Icon className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
+              </span>
+              <span className={`mt-2 text-xs font-black uppercase ${complete ? 'text-app-text' : 'text-app-muted'}`}>{label}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
