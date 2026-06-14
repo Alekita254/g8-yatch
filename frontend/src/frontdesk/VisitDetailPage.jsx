@@ -19,7 +19,7 @@ function downloadReceiptBlob(invoice, blob) {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `${invoice.invoice_number}.pdf`);
+  link.setAttribute('download', `receipt-${invoice.invoice_number}.pdf`);
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -167,7 +167,7 @@ export default function VisitDetailPage() {
         downloadReceiptBlob(invoice, receipt);
         toast.success('Payment collected. Receipt downloaded.');
       } catch {
-        toast.error('Payment was collected, but the receipt could not be downloaded. Use Download PDF to try again.');
+        toast.error('Payment was collected, but the receipt could not be downloaded. Use Download receipt to try again.');
       }
       return true;
     } catch (err) {
@@ -191,7 +191,7 @@ export default function VisitDetailPage() {
     }
   };
 
-  const openInvoiceDocument = async (invoice) => {
+  const openReceiptDocument = async (invoice) => {
     try {
       setPreviewLoading(true);
       setViewingInvoiceId(invoice.id);
@@ -207,7 +207,7 @@ export default function VisitDetailPage() {
         window.URL.revokeObjectURL(url);
       }, 60000);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not load invoice document');
+      toast.error(err.response?.data?.detail || 'Could not load payment receipt');
     } finally {
       setPreviewLoading(false);
       setViewingInvoiceId(null);
@@ -412,7 +412,7 @@ export default function VisitDetailPage() {
                                   <>
                                     <button
                                       type="button"
-                                      onClick={() => openInvoiceDocument(order.invoice)}
+                                      onClick={() => openReceiptDocument(order.invoice)}
                                       disabled={previewLoading && viewingInvoiceId === order.invoice.id}
                                       className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
                                     >
@@ -470,11 +470,11 @@ export default function VisitDetailPage() {
                       )}
                       <button
                         type="button"
-                        onClick={() => openInvoiceDocument(inv)}
+                        onClick={() => openReceiptDocument(inv)}
                         disabled={previewLoading && viewingInvoiceId === inv.id}
                         className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
                       >
-                        {previewLoading && viewingInvoiceId === inv.id ? 'Loading...' : 'View document'}
+                        {previewLoading && viewingInvoiceId === inv.id ? 'Loading...' : 'View receipt'}
                       </button>
                       <button
                         type="button"
@@ -482,7 +482,7 @@ export default function VisitDetailPage() {
                         disabled={working === `receipt-${inv.id}`}
                         className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
                       >
-                        {working === `receipt-${inv.id}` ? 'Downloading...' : 'Download PDF'}
+                        {working === `receipt-${inv.id}` ? 'Downloading...' : 'Download receipt'}
                       </button>
                     </div>
                   </div>

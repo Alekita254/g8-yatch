@@ -22,7 +22,7 @@ async function downloadReceipt(invoice) {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `${invoice.invoice_number}.pdf`);
+  link.setAttribute('download', `receipt-${invoice.invoice_number}.pdf`);
   document.body.appendChild(link);
   link.click();
   link.remove();

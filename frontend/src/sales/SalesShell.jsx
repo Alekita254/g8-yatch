@@ -37,6 +37,13 @@ const routeLabels = {
   '/sales/payment-runs': 'Payment Runs',
 };
 
+function routeLabel(pathname) {
+  if (pathname.startsWith('/sales/orders/')) return 'Order Detail';
+  if (pathname.startsWith('/sales/invoices/')) return 'Invoice Detail';
+  if (pathname.startsWith('/sales/payments/')) return 'Payment Detail';
+  return routeLabels[pathname] || 'Sales';
+}
+
 export default function SalesShell() {
   const profile = useProfile();
   const auth = useAuth();
@@ -80,7 +87,7 @@ export default function SalesShell() {
 
         <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-6 sm:py-8">
           {navItems.map((item) => {
-            const active = location.pathname === item.path;
+            const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
             return (
               <Link
                 key={item.path}
@@ -126,7 +133,7 @@ export default function SalesShell() {
                 Home
               </Link>
               <ChevronRight className="h-3.5 w-3.5 text-shell-muted" />
-              <span className="rounded-md px-1.5 py-1 text-shell-accent">{routeLabels[location.pathname] || 'Sales'}</span>
+              <span className="rounded-md px-1.5 py-1 text-shell-accent">{routeLabel(location.pathname)}</span>
             </nav>
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => setNavigationOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-shell-border bg-shell-elevated text-shell-muted lg:hidden" aria-label="Open navigation" aria-expanded={navigationOpen}>
@@ -136,7 +143,7 @@ export default function SalesShell() {
                 <Utensils className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-black text-shell-text sm:text-2xl">{routeLabels[location.pathname] || 'Sales'}</h1>
+                <h1 className="truncate text-xl font-black text-shell-text sm:text-2xl">{routeLabel(location.pathname)}</h1>
                 <p className="hidden text-sm text-shell-muted sm:block">Orders, invoices, payments, and cashier settlement</p>
               </div>
               <ThemeToggle className="ml-auto" />

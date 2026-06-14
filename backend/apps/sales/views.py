@@ -12,10 +12,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.models import ServicePoint
+from apps.users.models import UserIdentity
 from apps.pagination import paginated_response
 
 from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, GuestVisit, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
-from .serializers import CustomerPaymentRunSerializer, GuestVisitSerializer, SalesInvoiceSerializer, SalesOrderItemSerializer, SalesOrderSerializer, SalesPaymentSerializer
+from .serializers import CustomerPaymentRunSerializer, GuestVisitSerializer, SalesInvoiceDetailSerializer, SalesInvoiceSerializer, SalesOrderItemSerializer, SalesOrderSerializer, SalesPaymentDetailSerializer, SalesPaymentSerializer
 
 
 def next_number(prefix, model, field):
@@ -49,89 +50,139 @@ def generate_receipt_filename(invoice):
     return f"{safe_number}.pdf"
 
 
-def generate_invoice_pdf(invoice):
+def staff_display_name(keycloak_sub):
+    if not keycloak_sub:
+        return ""
+
+    identity = UserIdentity.objects.filter(keycloak_sub=keycloak_sub).first()
+    if not identity:
+        return "Staff member"
+
+    full_name = " ".join(
+        part.strip() for part in (identity.first_name, identity.last_name) if part.strip()
+    )
+    return full_name or identity.username or identity.email or "Staff member"
+
+
+def generate_payment_receipt_pdf(invoice):
     from io import BytesIO
-    from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas
 
+    items = list(
+        invoice.order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product")
+    )
+    payments = list(
+        invoice.payments.filter(status=SalesPayment.Status.CLEARED).select_related("payment_method")
+    )
+    page_width = 80 * mm
+    content_lines = 31 + len(items) + max(len(payments), 1)
+    page_height = max(145 * mm, (content_lines * 4.7 + 18) * mm)
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    margin = 40
-    line_height = 16
+    c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+    margin = 6 * mm
+    right = page_width - margin
+    center = page_width / 2
+    line_height = 4.6 * mm
+    y = page_height - 8 * mm
 
-    c.setFont("Helvetica-Bold", 18)
-    c.drawString(margin, height - margin, "G8 Yacht Villa")
-    c.setFont("Helvetica", 10)
-    c.drawString(margin, height - margin - 22, "Guest stay invoice")
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(width - margin - 220, height - margin, f"Invoice: {invoice.invoice_number}")
-    c.setFont("Helvetica", 10)
-    c.drawString(width - margin - 220, height - margin - 18, f"Order: {invoice.order.order_number}")
-    c.drawString(width - margin - 220, height - margin - 34, f"Date: {invoice.created_at:%Y-%m-%d}")
-
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, height - margin - 60, "Bill to:")
-    c.setFont("Helvetica", 10)
-    c.drawString(margin, height - margin - 76, invoice.customer_name or "Walk-in guest")
-    c.drawString(margin, height - margin - 92, invoice.order.visit.table_name if invoice.order.visit else "")
-    c.drawString(margin, height - margin - 108, invoice.order.visit.service_area if invoice.order.visit else "")
-
-    y = height - margin - 140
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin, y, "Item")
-    c.drawString(margin + 260, y, "Qty")
-    c.drawString(margin + 320, y, "Unit")
-    c.drawString(margin + 410, y, "Total")
-    y -= line_height
-    c.setFont("Helvetica", 10)
-
-    for item in invoice.order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product"):
-        if y < margin + 80:
-            c.showPage()
-            y = height - margin
-        c.drawString(margin, y, str(item.product.name)[:40])
-        c.drawString(margin + 260, y, str(item.quantity))
-        c.drawString(margin + 320, y, f"{item.unit_price}")
-        c.drawRightString(width - margin, y, f"{item.line_total}")
+    def centered(text, font="Helvetica", size=8):
+        nonlocal y
+        c.setFont(font, size)
+        c.drawCentredString(center, y, str(text))
         y -= line_height
 
-    y -= 12
-    c.line(margin, y, width - margin, y)
-    y -= 18
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, y, "Sub total")
-    c.drawRightString(width - margin, y, f"{invoice.subtotal}")
-    y -= line_height
-    c.drawString(margin, y, "Tax")
-    c.drawRightString(width - margin, y, f"{invoice.tax_total}")
-    y -= line_height
-    c.drawString(margin, y, "Discount")
-    c.drawRightString(width - margin, y, f"{invoice.discount_total}")
-    y -= line_height
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y, "Grand total")
-    c.drawRightString(width - margin, y, f"{invoice.grand_total}")
-    y -= 2 * line_height
+    def pair(label, value, font="Helvetica", size=8):
+        nonlocal y
+        c.setFont(font, size)
+        c.drawString(margin, y, str(label))
+        c.drawRightString(right, y, str(value))
+        y -= line_height
 
-    c.setFont("Helvetica", 10)
-    c.drawString(margin, y, f"Paid: {invoice.paid_total}")
-    y -= line_height
-    c.drawString(margin, y, f"Balance due: {invoice.balance_due}")
-    y -= 2 * line_height
-    c.setFont("Helvetica-Oblique", 9)
-    c.drawString(margin, y, "Thank you for staying at G8 Yacht Villa.")
+    def rule():
+        nonlocal y
+        y -= 1 * mm
+        c.setDash(1, 2)
+        c.line(margin, y, right, y)
+        c.setDash()
+        y -= 3.5 * mm
 
-    c.showPage()
+    latest_payment = payments[-1] if payments else None
+    receipt_number = f"RCT-{latest_payment.id:06d}" if latest_payment else invoice.invoice_number
+    receipt_time = latest_payment.created_at if latest_payment else invoice.created_at
+    visit = invoice.order.visit
+
+    centered("G8 YACHT VILLA", "Helvetica-Bold", 13)
+    centered("Embu, Kenya", "Helvetica", 8)
+    centered("PAYMENT RECEIPT" if payments else "UNPAID BILL", "Helvetica-Bold", 10)
+    centered("PAID" if invoice.balance_due <= 0 and payments else invoice.status.replace("_", " "), "Helvetica-Bold", 9)
+    rule()
+
+    pair("Receipt", receipt_number)
+    pair("Date", timezone.localtime(receipt_time).strftime("%d %b %Y  %H:%M"))
+    pair("Invoice", invoice.invoice_number)
+    pair("Order", invoice.order.order_number)
+    if invoice.branch:
+        pair("Branch", invoice.branch.name[:24])
+    if visit:
+        pair("Location", f"{visit.service_area} {visit.table_name}".strip()[:28])
+    pair("Guest", (invoice.customer_name or (visit.guest_name if visit else "") or "Walk-in guest")[:28])
+    rule()
+
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(margin, y, "ITEM")
+    c.drawRightString(right, y, "AMOUNT")
+    y -= line_height
+    for item in items:
+        quantity = f"{item.quantity:g}"
+        c.setFont("Helvetica", 8)
+        c.drawString(margin, y, f"{quantity} x {str(item.product.name)[:24]}")
+        c.drawRightString(right, y, f"{item.line_total:,.2f}")
+        y -= line_height
+
+    rule()
+    pair("Subtotal", f"KES {invoice.subtotal:,.2f}")
+    if invoice.tax_total:
+        pair("Tax", f"KES {invoice.tax_total:,.2f}")
+    if invoice.discount_total:
+        pair("Discount", f"- KES {invoice.discount_total:,.2f}")
+    pair("TOTAL", f"KES {invoice.grand_total:,.2f}", "Helvetica-Bold", 10)
+    rule()
+
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(margin, y, "PAYMENT")
+    c.drawRightString(right, y, "AMOUNT")
+    y -= line_height
+    if payments:
+        for payment in payments:
+            method = payment.payment_method.name
+            reference = f" ({payment.reference})" if payment.reference else ""
+            c.setFont("Helvetica", 8)
+            c.drawString(margin, y, f"{method}{reference}"[:31])
+            c.drawRightString(right, y, f"{payment.amount:,.2f}")
+            y -= line_height
+    else:
+        pair("No payment received", "0.00")
+
+    rule()
+    pair("AMOUNT PAID", f"KES {invoice.paid_total:,.2f}", "Helvetica-Bold", 10)
+    pair("BALANCE", f"KES {invoice.balance_due:,.2f}", "Helvetica-Bold", 9)
+    if latest_payment and latest_payment.received_by:
+        pair("Served by", staff_display_name(latest_payment.received_by)[:24])
+    rule()
+
+    centered("Thank you for visiting G8 Yacht Villa.", "Helvetica-Bold", 8)
+    centered("Please keep this receipt as proof of payment.", "Helvetica", 7)
     c.save()
     buffer.seek(0)
     return buffer
 
 
 def generate_invoice_receipt(invoice):
-    buffer = generate_invoice_pdf(invoice)
+    buffer = generate_payment_receipt_pdf(invoice)
     filename = generate_receipt_filename(invoice)
+    if invoice.receipt_file:
+        invoice.receipt_file.delete(save=False)
     invoice.receipt_file.save(filename, ContentFile(buffer.getvalue()), save=False)
     invoice.save(update_fields=["receipt_file"])
 
@@ -233,6 +284,21 @@ class SalesOrderListCreateView(ListCreateMixin):
 class SalesOrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, pk):
+        order = get_object_or_404(
+            SalesOrder.objects.select_related(
+                "branch",
+                "service_point",
+                "visit",
+                "invoice",
+            ).prefetch_related(
+                "items__product",
+                "items__service_point",
+            ),
+            pk=pk,
+        )
+        return Response(SalesOrderSerializer(order, context={"request": request}).data)
+
     def patch(self, request, pk):
         order = get_object_or_404(SalesOrder, pk=pk)
         if order.status == SalesOrder.Status.INVOICED:
@@ -278,7 +344,36 @@ class SalesInvoiceListView(ListCreateMixin):
     serializer_class = SalesInvoiceSerializer
 
     def get_queryset(self):
-        return SalesInvoice.objects.select_related("order", "branch").prefetch_related("payments")
+        return SalesInvoice.objects.select_related(
+            "branch",
+            "order",
+            "order__service_point",
+            "order__visit",
+        ).prefetch_related(
+            "order__items__product",
+            "order__items__service_point",
+            "payments__payment_method",
+        )
+
+
+class SalesInvoiceDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        invoice = get_object_or_404(
+            SalesInvoice.objects.select_related(
+                "branch",
+                "order",
+                "order__service_point",
+                "order__visit",
+            ).prefetch_related(
+                "order__items__product",
+                "order__items__service_point",
+                "payments__payment_method",
+            ),
+            pk=pk,
+        )
+        return Response(SalesInvoiceDetailSerializer(invoice, context={"request": request}).data)
 
 
 class SalesInvoiceCreateFromOrderView(APIView):
@@ -376,6 +471,23 @@ class SalesPaymentListCreateView(ListCreateMixin):
         return Response(self.serializer_class(payment).data, status=status.HTTP_201_CREATED)
 
 
+class SalesPaymentDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        payment = get_object_or_404(
+            SalesPayment.objects.select_related(
+                "payment_method",
+                "invoice",
+                "invoice__order",
+                "invoice__order__service_point",
+                "invoice__order__visit",
+            ),
+            pk=pk,
+        )
+        return Response(SalesPaymentDetailSerializer(payment).data)
+
+
 class GuestVisitCheckoutAuthView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -399,13 +511,15 @@ class SalesInvoiceReceiptView(APIView):
     def get(self, request, pk):
         invoice = get_object_or_404(SalesInvoice, pk=pk)
         try:
-            if invoice.receipt_file and invoice.receipt_file.storage.exists(invoice.receipt_file.name):
-                return FileResponse(invoice.receipt_file.open('rb'), content_type='application/pdf', filename=f"{invoice.invoice_number}.pdf")
-
-            if not invoice.receipt_file:
-                generate_invoice_receipt(invoice)
-
-            return FileResponse(invoice.receipt_file.open('rb'), content_type='application/pdf', filename=f"{invoice.invoice_number}.pdf")
+            # Regenerate on download so older invoice-styled files and later payments
+            # never leave a stale receipt in storage.
+            generate_invoice_receipt(invoice)
+            invoice.refresh_from_db(fields=["receipt_file"])
+            return FileResponse(
+                invoice.receipt_file.open("rb"),
+                content_type="application/pdf",
+                filename=f"receipt-{invoice.invoice_number}.pdf",
+            )
         except Exception:
             return Response({"detail": "Failed to generate receipt."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

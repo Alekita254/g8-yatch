@@ -15,6 +15,8 @@ class KeycloakPrincipal:
     keycloak_sub: str
     email: str
     username: str
+    first_name: str
+    last_name: str
     realm_roles: list[str]
     claims: dict
     identity: UserIdentity | None = None
@@ -90,18 +92,42 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
             keycloak_sub=claims["sub"],
             email=claims.get("email", ""),
             username=claims.get("preferred_username", ""),
+            first_name=claims.get("given_name", ""),
+            last_name=claims.get("family_name", ""),
             realm_roles=roles,
             claims=claims,
         )
 
     def _sync_identity(self, principal):
-        identity, _ = UserIdentity.objects.update_or_create(
+        identity, created = UserIdentity.objects.get_or_create(
             keycloak_sub=principal.keycloak_sub,
             defaults={
                 "email": principal.email,
                 "username": principal.username,
+                "first_name": principal.first_name,
+                "last_name": principal.last_name,
                 "realm_roles": principal.realm_roles,
                 "last_seen_at": timezone.now(),
             },
         )
+        if not created:
+            identity.email = principal.email
+            identity.username = principal.username
+            if principal.first_name:
+                identity.first_name = principal.first_name
+            if principal.last_name:
+                identity.last_name = principal.last_name
+            identity.realm_roles = principal.realm_roles
+            identity.last_seen_at = timezone.now()
+            identity.save(
+                update_fields=[
+                    "email",
+                    "username",
+                    "first_name",
+                    "last_name",
+                    "realm_roles",
+                    "last_seen_at",
+                    "updated_at",
+                ]
+            )
         return identity

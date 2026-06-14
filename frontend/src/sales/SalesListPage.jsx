@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Eye, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import api, { emptyPagination, paginationFromResponse } from '../api';
 import DataTable from '../components/DataTable';
+
+const endpoints = {
+  orders: '/api/sales/orders/',
+  invoices: '/api/sales/invoices/',
+  payments: '/api/sales/payments/',
+  paymentRuns: '/api/sales/payment-runs/',
+};
 
 const configs = {
   orders: {
@@ -67,14 +75,15 @@ function valueFor(item, key) {
   return value;
 }
 
+function detailPath(type, row) {
+  if (type === 'orders') return `/sales/orders/${row.id}`;
+  if (type === 'invoices') return `/sales/invoices/${row.id}`;
+  if (type === 'payments') return `/sales/payments/${row.id}`;
+  return null;
+}
+
 export default function SalesListPage({ type }) {
   const config = configs[type];
-  const endpoints = {
-    orders: '/api/sales/orders/',
-    invoices: '/api/sales/invoices/',
-    payments: '/api/sales/payments/',
-    paymentRuns: '/api/sales/payment-runs/',
-  };
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState(emptyPagination);
   const [loading, setLoading] = useState(true);
@@ -111,12 +120,37 @@ export default function SalesListPage({ type }) {
 
       <DataTable
         rows={rows}
-        columns={config.columns.map(([label, key]) => ({
-          key,
-          header: label,
-          cellClassName: 'font-medium text-app-text',
-          render: (row) => valueFor(row, key),
-        }))}
+        columns={[
+          ...config.columns.map(([label, key]) => ({
+            key,
+            header: label,
+            cellClassName: 'font-medium text-app-text',
+            render: (row) => {
+              const linkedKey = (type === 'orders' && key === 'order_number')
+                || (type === 'invoices' && key === 'invoice_number')
+                || (type === 'payments' && key === 'reference');
+              const path = detailPath(type, row);
+              return linkedKey && path ? (
+                <Link to={path} className="font-black text-brand-600 hover:underline">
+                  {valueFor(row, key)}
+                </Link>
+              ) : valueFor(row, key);
+            },
+          })),
+          ...(detailPath(type, { id: 'detail' }) ? [{
+            key: 'actions',
+            header: 'Actions',
+            render: (row) => (
+              <Link
+                to={detailPath(type, row)}
+                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-app-border px-3 text-xs font-black text-app-text transition hover:border-brand-500 hover:bg-app-elevated"
+              >
+                <Eye className="h-4 w-4" />
+                View
+              </Link>
+            ),
+          }] : []),
+        ]}
         getRowKey={(row) => row.id}
         emptyMessage={config.empty}
         minWidth="860px"

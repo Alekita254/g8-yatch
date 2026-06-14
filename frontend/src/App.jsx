@@ -61,6 +61,9 @@ import VisitDetailPage from './frontdesk/VisitDetailPage';
 import FrontdeskShell from './frontdesk/FrontdeskShell';
 import RoomTypesPage from './frontdesk/RoomTypesPage';
 import SalesDashboard from './sales/SalesDashboard';
+import InvoiceDetailPage from './sales/InvoiceDetailPage';
+import OrderDetailPage from './sales/OrderDetailPage';
+import PaymentDetailPage from './sales/PaymentDetailPage';
 import SalesListPage from './sales/SalesListPage';
 import SalesShell from './sales/SalesShell';
 
@@ -400,8 +403,11 @@ export default function App() {
         <Route path="/sales" element={<SalesShell />}>
           <Route index element={<SalesDashboard />} />
           <Route path="orders" element={<SalesListPage type="orders" />} />
+          <Route path="orders/:id" element={<OrderDetailPage />} />
           <Route path="invoices" element={<SalesListPage type="invoices" />} />
+          <Route path="invoices/:id" element={<InvoiceDetailPage />} />
           <Route path="payments" element={<SalesListPage type="payments" />} />
+          <Route path="payments/:id" element={<PaymentDetailPage />} />
           <Route path="payment-runs" element={<SalesListPage type="paymentRuns" />} />
         </Route>
         <Route path="/frontdesk" element={<FrontdeskShell />}>
