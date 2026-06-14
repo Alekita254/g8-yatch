@@ -45,21 +45,21 @@ export default function MenuPage() {
         </div>
       </section>
 
-      <section className="bg-sand/65 py-12 sm:py-16">
+      <section className="bg-sand/65 py-12 dark:bg-[#0a1d22] sm:py-16">
         <div className="page-shell">
           <SectionHeading
             eyebrow="Order from your table"
             title="Fresh food, a few taps away."
             text="Choose a category and build your order. Seating details and waiter alerts are handled in My G8 Plan."
           />
-          <div className="sticky top-16 z-20 -mx-4 mt-8 border-y border-stone-200 bg-stone-50/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:top-20 lg:mx-0 lg:rounded-full lg:border">
+          <div className="sticky top-16 z-20 -mx-4 mt-8 border-y border-stone-200 bg-stone-50/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#07171b]/95 sm:-mx-6 sm:px-6 md:top-20 lg:mx-0 lg:rounded-full lg:border">
             <div className="flex gap-2 overflow-x-auto hide-scrollbar">
               {categories.map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => setCategory(item)}
-                  className={`min-h-11 shrink-0 rounded-full px-5 text-sm font-bold ${category === item ? 'bg-lake text-white' : 'bg-white text-slate-600'}`}
+                  className={`min-h-11 shrink-0 rounded-full px-5 text-sm font-bold ${category === item ? 'bg-lake text-white' : 'bg-white text-slate-600 dark:bg-white/10 dark:text-slate-200'}`}
                 >
                   {item}
                 </button>
@@ -72,14 +72,14 @@ export default function MenuPage() {
               {visibleMenu.map((item) => {
                 const quantity = foodItems.find((entry) => entry.id === item.id)?.quantity || 0
                 return (
-                  <article key={item.id} className="overflow-hidden rounded-[1.5rem] bg-white shadow-sm">
+                  <article key={item.id} className="overflow-hidden rounded-[1.5rem] bg-white shadow-sm dark:bg-[#10252b] dark:ring-1 dark:ring-white/10">
                     <div className="relative">
                       <img src={item.image} alt={item.name} className="h-52 w-full object-cover" loading="lazy" />
                       <p className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1.5 text-sm font-extrabold text-lake shadow-sm">{money(item.price)}</p>
                     </div>
                     <div className="flex min-h-44 flex-col p-4">
-                      <h2 className="font-extrabold text-ink">{item.name}</h2>
-                      <p className="mt-1 text-sm leading-5 text-slate-500">{item.description}</p>
+                      <h2 className="font-extrabold text-ink dark:text-white">{item.name}</h2>
+                      <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-300">{item.description}</p>
                       <div className="mt-auto pt-4">
                         {quantity ? (
                           <div className="flex items-center justify-between rounded-full bg-ink text-white">

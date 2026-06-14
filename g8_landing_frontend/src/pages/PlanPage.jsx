@@ -148,23 +148,23 @@ export default function PlanPage() {
         <div className="mt-8 grid gap-7 lg:grid-cols-[1.2fr_.8fr] lg:items-start">
           <div className="space-y-7">
             {foodItems.length > 0 && (
-              <form onSubmit={placeOrder} className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+              <form onSubmit={placeOrder} className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#10252b] sm:p-7">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="eyebrow text-lake">Food order</p>
-                    <h2 className="mt-2 text-2xl font-extrabold text-ink">{foodCount} item{foodCount === 1 ? '' : 's'}</h2>
+                    <h2 className="mt-2 text-2xl font-extrabold text-ink dark:text-white">{foodCount} item{foodCount === 1 ? '' : 's'}</h2>
                   </div>
                   <strong className="text-lg text-lake">{money(foodTotal)}</strong>
                 </div>
                 <div className="mt-5 space-y-3">
                   {foodItems.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-stone-50 p-3">
+                    <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-stone-50 p-3 dark:bg-white/5">
                       <img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-bold text-ink">{item.name}</p>
-                        <p className="text-sm text-slate-500">{money(item.price * item.quantity)}</p>
+                        <p className="truncate font-bold text-ink dark:text-white">{item.name}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-300">{money(item.price * item.quantity)}</p>
                       </div>
-                      <div className="flex items-center rounded-full border border-slate-200 bg-white">
+                      <div className="flex items-center rounded-full border border-slate-200 bg-white dark:border-white/10 dark:bg-white/10">
                         <QuantityButton label={`Remove one ${item.name}`} onClick={() => changeFoodQuantity(item, -1)}><Minus className="h-4 w-4" /></QuantityButton>
                         <span className="min-w-6 text-center text-sm font-bold">{item.quantity}</span>
                         <QuantityButton label={`Add one ${item.name}`} onClick={() => changeFoodQuantity(item, 1)}><Plus className="h-4 w-4" /></QuantityButton>
@@ -183,9 +183,9 @@ export default function PlanPage() {
             )}
 
             {activities.length > 0 && (
-              <form onSubmit={sendActivityPlan} className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+              <form onSubmit={sendActivityPlan} className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#10252b] sm:p-7">
                 <p className="eyebrow text-copper">Activities</p>
-                <h2 className="mt-2 text-2xl font-extrabold text-ink">Shape your day at G8.</h2>
+                <h2 className="mt-2 text-2xl font-extrabold text-ink dark:text-white">Shape your day at G8.</h2>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   {activities.map((activity) => (
                     <div key={activity.id} className="relative overflow-hidden rounded-2xl bg-ink text-white">
@@ -214,10 +214,10 @@ export default function PlanPage() {
             )}
           </div>
 
-          <aside className="rounded-[2rem] bg-sand p-5 lg:sticky lg:top-28 sm:p-7">
+          <aside className="rounded-[2rem] bg-sand p-5 dark:bg-[#10252b] dark:ring-1 dark:ring-white/10 lg:sticky lg:top-28 sm:p-7">
             <BellRing className="h-8 w-8 text-lake" />
-            <h2 className="mt-5 text-2xl font-extrabold text-ink">Need a waiter?</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Tell the team where you are seated and they will come to you.</p>
+            <h2 className="mt-5 text-2xl font-extrabold text-ink dark:text-white">Need a waiter?</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Tell the team where you are seated and they will come to you.</p>
             <GuestFields guest={guest} setGuest={setGuest} waiterOnly />
             {waiterStatus === 'sent' && <p className="mt-4 flex items-center gap-2 text-sm font-bold text-lake"><CheckCircle2 className="h-5 w-5" /> Waiter notified.</p>}
             {waiterStatus === 'error' && <p className="mt-4 text-sm font-bold text-red-700">The alert could not be sent. Please try again.</p>}
@@ -238,9 +238,9 @@ export default function PlanPage() {
 
 function GuestFields({ guest, setGuest, waiterOnly = false }) {
   return (
-    <div className="mt-5 space-y-4 border-t border-slate-100 pt-5">
+    <div className="mt-5 space-y-4 border-t border-slate-100 pt-5 dark:border-white/10">
       {!waiterOnly && <Field label="Your name" value={guest.name} onChange={(event) => setGuest({ ...guest, name: event.target.value })} required />}
-      <label className="block text-sm font-bold text-ink">
+      <label className="block text-sm font-bold text-ink dark:text-slate-100">
         Where are you seated?
         <select value={guest.serviceArea} onChange={(event) => setGuest({ ...guest, serviceArea: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal outline-none focus:border-lake">
           <option>Restaurant table</option>
@@ -251,7 +251,7 @@ function GuestFields({ guest, setGuest, waiterOnly = false }) {
       </label>
       <Field label="Table or seating number" value={guest.tableNumber} onChange={(event) => setGuest({ ...guest, tableNumber: event.target.value })} placeholder="Example: Table 4" required={!waiterOnly} />
       {!waiterOnly && (
-        <label className="block text-sm font-bold text-ink">
+        <label className="block text-sm font-bold text-ink dark:text-slate-100">
           Notes optional
           <textarea value={guest.notes} onChange={(event) => setGuest({ ...guest, notes: event.target.value })} rows="3" placeholder="Allergies, setup details or a note for the team..." className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-lake" />
         </label>
@@ -262,7 +262,7 @@ function GuestFields({ guest, setGuest, waiterOnly = false }) {
 
 function Field({ label, ...props }) {
   return (
-    <label className="block text-sm font-bold text-ink">
+    <label className="block text-sm font-bold text-ink dark:text-slate-100">
       {label}
       <input {...props} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 font-normal outline-none focus:border-lake" />
     </label>

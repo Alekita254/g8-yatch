@@ -70,13 +70,13 @@ export default function HotelPage() {
         />
         <div className="-mx-4 mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:px-0 hide-scrollbar">
           {rooms.map((room) => (
-            <article key={room.id} className="min-w-[86vw] snap-center overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm sm:min-w-[52vw] lg:min-w-0">
+            <article key={room.id} className="min-w-[86vw] snap-center overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#10252b] sm:min-w-[52vw] lg:min-w-0">
               <img src={room.image} alt={room.name} className="h-56 w-full object-cover" />
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-extrabold text-ink">{room.name}</h2>
-                    <span className="mt-2 inline-flex items-center gap-1 text-sm text-slate-500">
+                    <h2 className="text-xl font-extrabold text-ink dark:text-white">{room.name}</h2>
+                    <span className="mt-2 inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-300">
                       <Users className="h-4 w-4" /> Up to {room.guests} guests
                     </span>
                   </div>
@@ -87,7 +87,7 @@ export default function HotelPage() {
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {room.amenities.map((amenity) => (
-                    <span key={amenity} className="rounded-full bg-sand px-3 py-1.5 text-xs font-semibold text-ink">{amenity}</span>
+                    <span key={amenity} className="rounded-full bg-sand px-3 py-1.5 text-xs font-semibold text-ink dark:bg-white/10 dark:text-slate-100">{amenity}</span>
                   ))}
                 </div>
                 <button type="button" onClick={() => openBooking(room)} className="touch-button mt-5 w-full bg-ink text-white">
@@ -100,17 +100,17 @@ export default function HotelPage() {
         {loadError && <p className="mt-6 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{loadError}</p>}
       </section>
 
-      <section className="bg-sand py-14">
+      <section className="bg-sand py-14 dark:bg-[#0a1d22]">
         <div className="page-shell grid gap-4 sm:grid-cols-3">
           {[
             [Coffee, 'Breakfast available', 'Start the morning with a fresh meal from our kitchen.'],
             [Wifi, 'Reliable Wi-Fi', 'Stay connected for work, travel planning and entertainment.'],
             [MapPin, 'Conveniently in Embu', 'A practical base for business and leisure around Embu County.'],
           ].map(([Icon, title, text]) => (
-            <article key={title} className="rounded-2xl bg-white p-5">
+            <article key={title} className="rounded-2xl bg-white p-5 dark:bg-[#10252b] dark:ring-1 dark:ring-white/10">
               <Icon className="h-6 w-6 text-lake" />
-              <h2 className="mt-4 text-lg font-extrabold text-ink">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+              <h2 className="mt-4 text-lg font-extrabold text-ink dark:text-white">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{text}</p>
             </article>
           ))}
         </div>
@@ -120,8 +120,8 @@ export default function HotelPage() {
         {status === 'success' ? (
           <div className="py-8 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-lake" />
-            <h3 className="mt-4 text-xl font-extrabold text-ink">Availability request received</h3>
-            <p className="mt-2 text-slate-600">Our hotel team will confirm your dates and room options.</p>
+            <h3 className="mt-4 text-xl font-extrabold text-ink dark:text-white">Availability request received</h3>
+            <p className="mt-2 text-slate-600 dark:text-slate-300">Our hotel team will confirm your dates and room options.</p>
           </div>
         ) : (
           <form className="space-y-4" onSubmit={submitAvailability}>
@@ -145,7 +145,7 @@ export default function HotelPage() {
 
 function Field({ label, ...props }) {
   return (
-    <label className="block text-sm font-bold text-ink">
+    <label className="block text-sm font-bold text-ink dark:text-slate-100">
       {label}
       <input {...props} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 font-normal outline-none focus:border-lake" />
     </label>

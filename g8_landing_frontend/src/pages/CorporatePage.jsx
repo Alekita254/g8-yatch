@@ -45,24 +45,24 @@ export default function CorporatePage() {
         <SectionHeading eyebrow="Made for momentum" title="From focused meetings to full company retreats." />
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {corporateExperiences.map((item, index) => (
-            <article key={item.title} className="rounded-[1.5rem] border border-slate-200 bg-white p-5">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sand text-lake">
+            <article key={item.title} className="rounded-[1.5rem] border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-[#10252b]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sand text-lake dark:bg-white/10 dark:text-teal-300">
                 {index % 2 ? <UsersRound className="h-5 w-5" /> : <Presentation className="h-5 w-5" />}
               </span>
-              <h3 className="mt-5 text-xl font-extrabold text-ink">{item.title}</h3>
-              <p className="mt-2 leading-6 text-slate-600">{item.text}</p>
+              <h3 className="mt-5 text-xl font-extrabold text-ink dark:text-white">{item.title}</h3>
+              <p className="mt-2 leading-6 text-slate-600 dark:text-slate-300">{item.text}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="bg-sand py-14 sm:py-20">
+      <section className="bg-sand py-14 dark:bg-[#0a1d22] sm:py-20">
         <div className="page-shell grid gap-8 lg:grid-cols-2 lg:items-center">
           <div>
             <SectionHeading eyebrow="Everything in one plan" title="Less coordination. More connection." />
             <div className="mt-7 space-y-4">
               {['Flexible indoor and outdoor venues', 'Projectors, sound and reliable Wi-Fi', 'Custom menus and dietary planning', 'Accommodation and team activities'].map((item) => (
-                <p key={item} className="flex items-center gap-3 font-semibold text-ink"><CheckCircle2 className="h-5 w-5 text-lake" /> {item}</p>
+                <p key={item} className="flex items-center gap-3 font-semibold text-ink dark:text-slate-100"><CheckCircle2 className="h-5 w-5 text-lake dark:text-teal-300" /> {item}</p>
               ))}
             </div>
           </div>
@@ -79,15 +79,15 @@ export default function CorporatePage() {
         {status === 'success' ? (
           <div className="py-8 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-lake" />
-            <h3 className="mt-4 text-xl font-extrabold text-ink">Request received</h3>
-            <p className="mt-2 text-slate-600">Our events team will contact you with the next steps.</p>
+            <h3 className="mt-4 text-xl font-extrabold text-ink dark:text-white">Request received</h3>
+            <p className="mt-2 text-slate-600 dark:text-slate-300">Our events team will contact you with the next steps.</p>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
             <Field label="Your name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
             <Field label="Company" value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} required />
             <div className="grid grid-cols-2 gap-3"><Field label="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /><Field label="Phone" type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required /></div>
-            <label className="block text-sm font-bold text-ink">Event type<select value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal"><option>Conference Hall</option><option>Team Building</option><option>Garden Event</option><option>Meeting</option><option>Training</option><option>Kids Party / Family Day</option></select></label>
+            <label className="block text-sm font-bold text-ink dark:text-slate-100">Event type<select value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal"><option>Conference Hall</option><option>Team Building</option><option>Garden Event</option><option>Meeting</option><option>Training</option><option>Kids Party / Family Day</option></select></label>
             <div className="grid grid-cols-2 gap-3"><Field label="Start date" type="date" value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} required /><Field label="End date" type="date" value={form.end_date} onChange={(event) => setForm({ ...form, end_date: event.target.value })} required /></div>
             <Field label="Number of people" type="number" min="1" value={form.pax_size} onChange={(event) => setForm({ ...form, pax_size: event.target.value })} required />
             {status === 'error' && <p className="text-sm font-bold text-red-600">Could not send the request. Please try again.</p>}
@@ -100,5 +100,5 @@ export default function CorporatePage() {
 }
 
 function Field({ label, ...props }) {
-  return <label className="block text-sm font-bold text-ink">{label}<input {...props} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 font-normal outline-none focus:border-lake" /></label>
+  return <label className="block text-sm font-bold text-ink dark:text-slate-100">{label}<input {...props} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 font-normal outline-none focus:border-lake" /></label>
 }

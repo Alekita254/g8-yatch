@@ -57,12 +57,12 @@ export default function BottomSheet({ open, onClose, title, children }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-[2rem] bg-white p-5 shadow-2xl md:max-w-xl md:rounded-[2rem] md:p-7"
+        className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-[2rem] bg-white p-5 text-slate-950 shadow-2xl dark:bg-[#10252b] dark:text-slate-100 md:max-w-xl md:rounded-[2rem] md:p-7"
       >
-        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200 md:hidden" />
+        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-600 md:hidden" />
         <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 id={titleId} className="text-xl font-extrabold text-ink">{title}</h2>
-          <button type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100" aria-label="Close">
+          <h2 id={titleId} className="text-xl font-extrabold text-ink dark:text-white">{title}</h2>
+          <button type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-white/10" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>

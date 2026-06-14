@@ -4,6 +4,7 @@ import { useAuth } from 'react-oidc-context';
 import { Anchor, Bell, BedDouble, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, Home, Layers, LayoutDashboard, Loader2, LogOut, MapPin, Menu, ReceiptText, X } from 'lucide-react';
 
 import useProfile from '../hooks/useProfile';
+import ThemeToggle from '../components/ThemeToggle';
 
 const navItems = [
   { name: 'Dashboard', path: '/frontdesk', icon: LayoutDashboard },
@@ -100,6 +101,7 @@ export default function FrontdeskShell() {
                 <h1 className="truncate text-xl font-black text-white sm:text-2xl">{routeLabels[location.pathname] || 'Frontdesk'}</h1>
                 <p className="hidden text-sm text-white/58 sm:block">Rooms, reservations, in-house guests, folios, and requests</p>
               </div>
+              <ThemeToggle inverse className="ml-auto" />
             </div>
           </div>
         </header>

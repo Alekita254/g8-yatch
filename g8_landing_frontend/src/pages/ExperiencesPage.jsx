@@ -67,13 +67,13 @@ export default function ExperiencesPage() {
         />
         <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {activities.map((activity) => (
-            <article key={activity.id} className="flex overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+            <article key={activity.id} className="flex overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#10252b]">
               <div className="flex w-full flex-col">
               <img src={activity.image} alt="" className="h-52 w-full object-cover" />
               <div className="flex flex-1 flex-col p-5">
                 <p className="eyebrow text-lake">{activity.eyebrow}</p>
-                <h2 className="mt-2 text-2xl font-extrabold text-ink">{activity.title}</h2>
-                <p className="mt-3 min-h-18 text-sm leading-6 text-slate-600">{activity.text}</p>
+                <h2 className="mt-2 text-2xl font-extrabold text-ink dark:text-white">{activity.title}</h2>
+                <p className="mt-3 min-h-18 text-sm leading-6 text-slate-600 dark:text-slate-300">{activity.text}</p>
                 <div className="mt-auto grid gap-2 pt-5">
                   <button
                     type="button"
@@ -86,11 +86,11 @@ export default function ExperiencesPage() {
                       : <><Plus className="h-4 w-4" /> Add to my plan</>}
                   </button>
                   {activity.path ? (
-                    <Link to={activity.path} className="touch-button w-full bg-slate-100 text-ink">
+                    <Link to={activity.path} className="touch-button w-full bg-slate-100 text-ink dark:bg-white/10 dark:text-white">
                       {activity.action} <ArrowRight className="h-4 w-4" />
                     </Link>
                   ) : (
-                    <button type="button" onClick={() => openEnquiry(activity.enquiryType)} className="touch-button w-full bg-slate-100 text-ink">
+                    <button type="button" onClick={() => openEnquiry(activity.enquiryType)} className="touch-button w-full bg-slate-100 text-ink dark:bg-white/10 dark:text-white">
                       Enquire now <ArrowRight className="h-4 w-4" />
                     </button>
                   )}
@@ -102,17 +102,17 @@ export default function ExperiencesPage() {
         </div>
       </section>
 
-      <section className="bg-sand py-14 sm:py-20">
+      <section className="bg-sand py-14 dark:bg-[#0a1d22] sm:py-20">
         <div className="page-shell grid gap-4 md:grid-cols-3">
           {[
             [Trees, 'Garden space', 'Flexible outdoor space for events, activities and relaxed family time.'],
             [UsersRound, 'Group friendly', 'Packages can include meals, facilitation, venues and accommodation.'],
             [PartyPopper, 'Family occasions', 'Birthdays, celebrations and a dedicated playground for children.'],
           ].map(([Icon, title, text]) => (
-            <article key={title} className="rounded-2xl bg-white p-5">
+            <article key={title} className="rounded-2xl bg-white p-5 dark:bg-[#10252b] dark:ring-1 dark:ring-white/10">
               <Icon className="h-6 w-6 text-lake" />
-              <h2 className="mt-4 text-lg font-extrabold text-ink">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+              <h2 className="mt-4 text-lg font-extrabold text-ink dark:text-white">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{text}</p>
             </article>
           ))}
         </div>
@@ -122,8 +122,8 @@ export default function ExperiencesPage() {
         {status === 'success' ? (
           <div className="py-8 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-lake" />
-            <h2 className="mt-4 text-xl font-extrabold text-ink">Enquiry received</h2>
-            <p className="mt-2 text-slate-600">Our team will contact you to shape the right experience.</p>
+            <h2 className="mt-4 text-xl font-extrabold text-ink dark:text-white">Enquiry received</h2>
+            <p className="mt-2 text-slate-600 dark:text-slate-300">Our team will contact you to shape the right experience.</p>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -132,7 +132,7 @@ export default function ExperiencesPage() {
               <Field label="Phone" type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required />
               <Field label="Email optional" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
             </div>
-            <label className="block text-sm font-bold text-ink">
+            <label className="block text-sm font-bold text-ink dark:text-slate-100">
               Activity
               <select value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal">
                 <option>Conference Hall</option>
@@ -146,7 +146,7 @@ export default function ExperiencesPage() {
               <Field label="Preferred date" type="date" value={form.preferred_date} onChange={(event) => setForm({ ...form, preferred_date: event.target.value })} required />
               <Field label="People" type="number" min="1" value={form.pax_size} onChange={(event) => setForm({ ...form, pax_size: event.target.value })} required />
             </div>
-            <label className="block text-sm font-bold text-ink">
+            <label className="block text-sm font-bold text-ink dark:text-slate-100">
               Tell us more optional
               <textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} rows="3" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-lake" />
             </label>
@@ -163,7 +163,7 @@ export default function ExperiencesPage() {
 
 function Field({ label, ...props }) {
   return (
-    <label className="block text-sm font-bold text-ink">
+    <label className="block text-sm font-bold text-ink dark:text-slate-100">
       {label}
       <input {...props} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 font-normal outline-none focus:border-lake" />
     </label>

@@ -77,7 +77,7 @@ export default function HomePage() {
       <section className="page-shell py-14 sm:py-20">
         <div className="max-w-2xl">
           <p className="eyebrow text-lake">Choose your journey</p>
-          <h2 className="mt-3 text-3xl font-extrabold text-ink sm:text-5xl">What brings you to G8 today?</h2>
+          <h2 className="mt-3 text-3xl font-extrabold text-ink dark:text-white sm:text-5xl">What brings you to G8 today?</h2>
         </div>
         <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
           {pillars.map((pillar) => (
@@ -98,13 +98,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-sand py-14 sm:py-20">
+      <section className="bg-sand py-14 dark:bg-[#10252b] sm:py-20">
         <div className="page-shell grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:items-center">
           <div>
             <p className="eyebrow text-copper">Built around people</p>
-            <h2 className="mt-3 text-3xl font-extrabold text-ink sm:text-5xl">Practical service, warmly delivered.</h2>
+            <h2 className="mt-3 text-3xl font-extrabold text-ink dark:text-white sm:text-5xl">Practical service, warmly delivered.</h2>
           </div>
-          <p className="text-base leading-8 text-slate-600">
+          <p className="text-base leading-8 text-slate-600 dark:text-slate-300">
             Whether you are checking in for a quiet weekend, planning a company retreat, or paving a new project, our team keeps the process clear, responsive and grounded in local expertise.
           </p>
         </div>

@@ -1,7 +1,8 @@
-import { Anchor, ClipboardList, Menu, X } from 'lucide-react'
+import { Anchor, ClipboardList, Menu, Moon, Sun, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { usePlan } from '../context/planContext'
+import { useTheme } from '../context/themeContext'
 
 const links = [
   ['Food Menu', '/menu'],
@@ -14,6 +15,7 @@ const links = [
 export default function SiteHeader() {
   const [open, setOpen] = useState(false)
   const { planCount } = usePlan()
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/95 text-white backdrop-blur-xl">
@@ -41,6 +43,16 @@ export default function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 transition hover:bg-white/10"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-pressed={theme === 'dark'}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? <Sun className="h-5 w-5 text-sun" /> : <Moon className="h-5 w-5" />}
+          </button>
           <Link to="/plan" onClick={() => setOpen(false)} className="relative flex h-11 min-w-11 items-center justify-center rounded-full border border-white/15 px-3" aria-label={`My G8 Plan, ${planCount} selected`}>
             <ClipboardList className="h-5 w-5" />
             <span className="ml-2 hidden text-sm font-bold sm:inline">My Plan</span>

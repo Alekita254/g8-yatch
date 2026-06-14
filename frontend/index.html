@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -7,6 +7,21 @@
     <meta name="description" content="Bid&Win — AI-powered tender management for Kenyan businesses. Discover, draft, submit, and track winning bids." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <script>
+      (() => {
+        let savedTheme;
+        try {
+          savedTheme = localStorage.getItem('g8_theme');
+        } catch {
+          savedTheme = null;
+        }
+        const isDark = savedTheme
+          ? savedTheme === 'dark'
+          : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', isDark);
+        document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+      })();
+    </script>
     <title>Bid&Win — AI-Powered Tender Management</title>
   </head>
   <body>

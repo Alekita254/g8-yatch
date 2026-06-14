@@ -14,7 +14,7 @@ import PlanPage from './pages/PlanPage'
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-stone-50 text-slate-950">
+      <div className="min-h-screen bg-stone-50 text-slate-950 transition-colors duration-200 dark:bg-[#07171b] dark:text-slate-100">
         <SiteHeader />
         <Routes>
           <Route path="/" element={<HomePage />} />

@@ -1,33 +1,22 @@
-import React, { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
-export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(() => {
-    // Check initial preference
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
-      if (saved) return saved === 'dark';
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return true;
-  });
+import { useTheme } from '../context/themeContext';
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (isDark) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDark]);
-
+export default function ThemeToggle({ inverse = false, className = '' }) {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
   return (
     <button
-      onClick={() => setIsDark(!isDark)}
-      className="p-2 rounded-lg bg-app-elevated border border-app-border text-app-muted hover:text-brand-500 hover:border-brand-500/50 transition-all shadow-sm flex items-center justify-center"
-      aria-label="Toggle theme"
+      type="button"
+      onClick={toggleTheme}
+      className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-all ${
+        inverse
+          ? 'border-white/15 bg-white/8 text-white/70 hover:border-brand-400/50 hover:text-brand-300'
+          : 'border-app-border bg-app-elevated text-app-muted shadow-sm hover:border-brand-500/50 hover:text-brand-600'
+      } ${className}`}
+      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+      aria-pressed={isDark}
+      title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
     >
       {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
     </button>

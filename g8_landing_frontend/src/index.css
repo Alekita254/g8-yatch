@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
@@ -19,6 +20,12 @@
 
   html {
     scroll-behavior: smooth;
+    background: #fafaf9;
+    transition: background-color 180ms ease;
+  }
+
+  html.dark {
+    background: #07171b;
   }
 
   body {
@@ -27,6 +34,12 @@
     overflow-x: hidden;
     background: #fafaf9;
     font-family: var(--font-sans);
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  .dark body {
+    background: #07171b;
+    color: #f1f5f9;
   }
 
   button,
@@ -35,6 +48,26 @@
   select,
   textarea {
     -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  select,
+  textarea {
+    background: white;
+    color: #10252b;
+  }
+
+  .dark input,
+  .dark select,
+  .dark textarea {
+    border-color: #365057;
+    background: #10252b;
+    color: #f8fafc;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #94a3b8;
   }
 
   h1,

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import useProfile from '../hooks/useProfile';
+import ThemeToggle from '../components/ThemeToggle';
 
 const navItems = [
   { name: 'Dashboard', path: '/sales', icon: LayoutDashboard },
@@ -135,6 +136,7 @@ export default function SalesShell() {
                 <h1 className="truncate text-xl font-black text-white sm:text-2xl">{routeLabels[location.pathname] || 'Sales'}</h1>
                 <p className="hidden text-sm text-white/58 sm:block">Orders, invoices, payments, and cashier settlement</p>
               </div>
+              <ThemeToggle inverse className="ml-auto" />
             </div>
           </div>
         </header>

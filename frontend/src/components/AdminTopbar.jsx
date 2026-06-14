@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Bell, ChevronRight, Home, Menu, Search, ShipWheel } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 const routeLabels = {
   '/dashboard': 'Dashboard',
@@ -144,6 +145,7 @@ export default function AdminTopbar({ userName, onMenuClick }) {
           </div>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle inverse />
             <div className="relative hidden md:block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
               <input
