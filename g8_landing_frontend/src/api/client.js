@@ -3,7 +3,8 @@ import axios from 'axios'
 const mockSetting = import.meta.env.VITE_USE_MOCK_DATA
 export const useMockData = mockSetting
   ? mockSetting === 'true'
-  : false
+  : true
+export const useMockVisits = import.meta.env.VITE_USE_MOCK_VISITS === 'true'
 const developmentApiUrl = typeof window === 'undefined'
   ? 'http://localhost:8000'
   : `${window.location.protocol}//${window.location.hostname}:8000`

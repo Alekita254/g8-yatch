@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { useMockData } from '../api/client'
+import { useMockVisits } from '../api/client'
 import { PlanContext } from './planContext'
 
 const STORAGE_KEY = 'g8_visit_plan'
-const visitMode = useMockData ? 'mock' : 'live'
+const visitMode = useMockVisits ? 'mock' : 'live'
 
 function readStoredPlan() {
   try {

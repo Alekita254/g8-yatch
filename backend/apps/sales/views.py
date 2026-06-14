@@ -67,7 +67,7 @@ def find_or_create_visit(*, service_point, table_name, customer_name=""):
     visit = GuestVisit.objects.filter(
         service_point=service_point,
         table_name__iexact=normalized_table,
-        status__in=[GuestVisit.Status.ACTIVE, GuestVisit.Status.CHECKOUT_REQUESTED],
+        status=GuestVisit.Status.ACTIVE,
     ).first()
     if visit:
         if customer_name and not visit.guest_name:
@@ -104,6 +104,7 @@ class SalesOrderListCreateView(ListCreateMixin):
     def get_queryset(self):
         return SalesOrder.objects.select_related("branch", "service_point").prefetch_related("items")
 
+    @transaction.atomic
     def post(self, request):
         data = request.data.copy()
         data["order_number"] = next_number("SO", SalesOrder, "order_number")

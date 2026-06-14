@@ -1,5 +1,5 @@
 import { menuItems, rooms } from '../data/mockData'
-import apiClient, { useMockData } from './client'
+import apiClient, { useMockData, useMockVisits } from './client'
 
 const wait = (value) => new Promise((resolve) => window.setTimeout(() => resolve(value), 450))
 const mockVisits = new Map()
@@ -21,7 +21,7 @@ export async function getRooms() {
 }
 
 export async function getMenu() {
-  if (useMockData) return wait(menuItems)
+  if (useMockVisits) return wait(menuItems)
   const preferredCode = import.meta.env.VITE_MENU_PRICELIST_CODE || 'standard-menu'
   const { data } = await apiClient.get('/api/public/menu/', { params: { pricelist: preferredCode } })
   return data.map((item) => ({
@@ -39,7 +39,7 @@ export async function startVisit({ guestName, phone, serviceArea, tableNumber })
     service_area: serviceArea,
     table_name: tableNumber,
   }
-  if (useMockData) {
+  if (useMockVisits) {
     const token = crypto.randomUUID()
     return wait(saveMockVisit({
       token,
@@ -59,7 +59,7 @@ export async function startVisit({ guestName, phone, serviceArea, tableNumber })
 }
 
 export async function getVisit(token) {
-  if (useMockData) return wait(mockVisit(token))
+  if (useMockVisits) return wait(mockVisit(token))
   const { data } = await apiClient.get(`/api/public/visits/${token}/`)
   return data
 }
@@ -90,7 +90,7 @@ export async function placeHospitalityOrder({
       quantity: item.quantity,
     })),
   }
-  if (useMockData) {
+  if (useMockVisits) {
     const visit = mockVisit(visitToken)
     const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
     visit.orders.push({
@@ -107,7 +107,7 @@ export async function placeHospitalityOrder({
 }
 
 export async function notifyWaiter(visitToken) {
-  if (useMockData) {
+  if (useMockVisits) {
     const visit = mockVisit(visitToken)
     visit.waiter_requested_at = new Date().toISOString()
     visit.waiter_acknowledged_at = null
@@ -118,7 +118,7 @@ export async function notifyWaiter(visitToken) {
 }
 
 export async function requestVisitCheckout(visitToken) {
-  if (useMockData) {
+  if (useMockVisits) {
     const visit = mockVisit(visitToken)
     visit.status = 'CHECKOUT_REQUESTED'
     visit.checkout_requested_at = new Date().toISOString()
@@ -131,7 +131,7 @@ export async function requestVisitCheckout(visitToken) {
 }
 
 export async function submitVisitFeedback(visitToken, payload) {
-  if (useMockData) {
+  if (useMockVisits) {
     const visit = mockVisit(visitToken)
     visit.feedback_rating = payload.rating
     visit.feedback_comment = payload.comment
