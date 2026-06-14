@@ -1,9 +1,10 @@
-import { BellRing, CalendarDays, CheckCircle2, Clock3, MapPin, Minus, Plus, ReceiptText, RotateCcw, ShoppingBag, Star, Trash2, UserPlus, Utensils } from 'lucide-react'
+import { BellRing, CalendarDays, CheckCircle2, Clock3, MapPin, MessageCircle, Minus, Plus, ReceiptText, RotateCcw, ShoppingBag, Star, Trash2, UserPlus, Utensils, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { getVisit, notifyWaiter, placeHospitalityOrder, requestVisitCheckout, startVisit, submitVisitFeedback } from '../api/hospitalityService'
 import { submitProposal } from '../api/corporateService'
+import BottomSheet from '../components/BottomSheet'
 import SectionHeading from '../components/SectionHeading'
 import { usePlan } from '../context/planContext'
 
@@ -40,6 +41,8 @@ export default function PlanPage() {
   const [visitStatus, setVisitStatus] = useState('')
   const [feedback, setFeedback] = useState({ rating: 5, comment: '' })
   const [feedbackStatus, setFeedbackStatus] = useState('')
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [feedbackDismissed, setFeedbackDismissed] = useState(false)
   const [signup, setSignup] = useState({ name: '', phone: '', email: '' })
   const [signupStatus, setSignupStatus] = useState('')
 
@@ -69,6 +72,11 @@ export default function PlanPage() {
         tableNumber: guest.tableNumber,
       })
       setVisit(response)
+      setSignup((current) => ({
+        ...current,
+        name: current.name || response.guest_name || guest.name,
+        phone: current.phone || response.phone || guest.phone,
+      }))
       setVisitStatus('started')
     } catch {
       setVisitStatus('error')
@@ -79,15 +87,53 @@ export default function PlanPage() {
     event.preventDefault()
     setOrderStatus('sending')
     try {
-      const response = await placeHospitalityOrder({
-        visitToken: visit.token,
-        items: foodItems,
-        notes: guest.notes,
-      })
+      let orderVisit = visit
+      let startedNewVisit = false
+
+      if (orderVisit?.status !== 'ACTIVE') {
+        orderVisit = await startVisit({
+          guestName: orderVisit?.guest_name || guest.name,
+          phone: orderVisit?.phone || guest.phone,
+          serviceArea: orderVisit?.service_area || guest.serviceArea,
+          tableNumber: orderVisit?.table_name || guest.tableNumber,
+        })
+        startedNewVisit = true
+      }
+
+      let response
+      try {
+        response = await placeHospitalityOrder({
+          visitToken: orderVisit.token,
+          items: foodItems,
+          notes: guest.notes,
+        })
+      } catch (error) {
+        if (!startedNewVisit && [404, 409].includes(error.response?.status)) {
+          orderVisit = await startVisit({
+            guestName: visit?.guest_name || guest.name,
+            phone: visit?.phone || guest.phone,
+            serviceArea: visit?.service_area || guest.serviceArea,
+            tableNumber: visit?.table_name || guest.tableNumber,
+          })
+          startedNewVisit = true
+          response = await placeHospitalityOrder({
+            visitToken: orderVisit.token,
+            items: foodItems,
+            notes: guest.notes,
+          })
+        } else {
+          throw error
+        }
+      }
+
       clearFood()
-      setVisit({ ...response, token: visit.token })
+      setVisit({ ...response, token: orderVisit.token })
       const newestOrder = response.orders?.at(-1)
-      setOrderStatus(`Order ${newestOrder?.order_number || ''} received`)
+      setOrderStatus(
+        startedNewVisit
+          ? `New service visit started. Order ${newestOrder?.order_number || ''} received`
+          : `Order ${newestOrder?.order_number || ''} received`,
+      )
     } catch {
       setOrderStatus('We could not send the order. Please try again.')
     }
@@ -165,49 +211,56 @@ export default function PlanPage() {
 
   const hasPlan = foodItems.length > 0 || activities.length > 0
   const journeyStep = !visit ? 1 : foodItems.length ? 3 : visit.orders?.length ? 4 : 2
+  const canReviewVisit = visit && (
+    ['CHECKOUT_REQUESTED', 'CLOSED'].includes(visit.status)
+    || visit.orders?.some((order) => ['SERVED', 'INVOICED'].includes(order.status))
+  )
+  const showPlannerContent = foodItems.length > 0
+    || activities.length > 0
 
   return (
     <main>
-      <section className="relative min-h-[68svh] overflow-hidden bg-ink text-white lg:min-h-[calc(100svh-5rem)]">
-        <img
-          src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=90"
-          alt="Restaurant service prepared for guests"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-ink/10 lg:bg-gradient-to-r lg:from-ink/95 lg:via-ink/45 lg:to-transparent" />
-        <div className="page-shell relative flex min-h-[68svh] items-end pb-12 pt-24 lg:min-h-[calc(100svh-5rem)] lg:items-center lg:pb-20">
-          <div className="max-w-3xl">
-            <p className="eyebrow text-sun">My G8 Plan</p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl lg:text-7xl">Everything for your visit, in one place.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">
-              Manage food, activities and quick service requests without losing your place.
-            </p>
+      {!visit && (
+        <section className="relative min-h-[48svh] overflow-hidden bg-ink text-white lg:min-h-[56svh]">
+          <img
+            src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2000&q=90"
+            alt="Restaurant service prepared for guests"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-ink/10 lg:bg-gradient-to-r lg:from-ink/95 lg:via-ink/45 lg:to-transparent" />
+          <div className="page-shell relative flex min-h-[48svh] items-end pb-9 pt-20 lg:min-h-[56svh] lg:items-center lg:pb-12">
+            <div className="max-w-3xl">
+              <p className="eyebrow text-sun">My G8 Visit</p>
+              <h1 className="mt-3 text-4xl font-extrabold leading-tight sm:text-5xl">Your table service, kept simple.</h1>
+              <p className="mt-5 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">
+                Confirm your table once, then order food, call a waiter and track your bill.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className="page-shell py-14 sm:py-20">
-        <SectionHeading
-          eyebrow="Self service"
-          title={visit ? `Visit ${visit.visit_number}` : 'Start with where you are seated.'}
-          text={visit ? 'Every waiter call and every new order stays attached to this one visit until you checkout.' : 'Confirm your table once, then call a waiter, browse the menu, order as many times as you need and track everything here.'}
-        />
-
-        <JourneySteps currentStep={journeyStep} />
+      <section className={`page-shell ${visit ? 'py-6 sm:py-8' : 'py-14 sm:py-20'}`}>
+        {!visit && (
+          <>
+            <SectionHeading
+              eyebrow="Self service"
+              title="Start with where you are seated."
+              text="Confirm your table once, then call a waiter, browse the menu, order as many times as you need and track everything here."
+            />
+            <JourneySteps currentStep={journeyStep} />
+          </>
+        )}
 
         {visit ? (
           <>
-            <VisitJourney visit={visit} onCheckout={checkoutVisit} busy={visitStatus === 'checking-out'} />
-            {visit.status === 'ACTIVE' && (
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <button type="button" onClick={alertWaiter} disabled={waiterStatus === 'sending'} className="touch-button bg-sand text-ink disabled:opacity-50 dark:bg-white/10 dark:text-white">
-                  <BellRing className="h-4 w-4" /> {waiterStatus === 'sending' ? 'Notifying waiter...' : 'Notify a waiter'}
-                </button>
-                <Link to="/menu" className="touch-button bg-lake text-white">
-                  <Utensils className="h-4 w-4" /> {visit.orders?.length ? 'Order more food' : 'See the food menu'}
-                </Link>
-              </div>
-            )}
+            <VisitJourney
+              visit={visit}
+              onCheckout={checkoutVisit}
+              onWaiter={alertWaiter}
+              checkoutBusy={visitStatus === 'checking-out'}
+              waiterBusy={waiterStatus === 'sending'}
+            />
             {waiterStatus === 'sent' && <p role="status" aria-live="polite" className="mt-3 flex items-center gap-2 rounded-xl bg-lake/10 p-3 text-sm font-bold text-lake"><CheckCircle2 className="h-5 w-5" /> Your waiter call is now tracked on this visit.</p>}
             {waiterStatus === 'error' && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">The waiter alert could not be sent. Please try again.</p>}
           </>
@@ -229,10 +282,13 @@ export default function PlanPage() {
           </form>
         )}
 
-        {orderStatus.startsWith('Order ') && (
-          <p role="status" aria-live="polite" className="mt-8 flex items-center gap-3 rounded-2xl bg-lake/10 p-4 font-bold text-lake">
-            <CheckCircle2 className="h-5 w-5 shrink-0" /> {orderStatus}
-          </p>
+        {(orderStatus.startsWith('Order ') || orderStatus.startsWith('New service visit')) && (
+          <div role="status" aria-live="polite" className="mt-8 flex flex-col gap-3 rounded-2xl bg-lake/10 p-4 text-lake sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex items-center gap-3 font-bold"><CheckCircle2 className="h-5 w-5 shrink-0" /> {orderStatus}. It is being tracked below.</p>
+            <Link to="/menu" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-lake px-4 text-sm font-bold text-white">
+              <RotateCcw className="h-4 w-4" /> Add another order
+            </Link>
+          </div>
         )}
         {activityStatus === 'success' && (
           <p role="status" aria-live="polite" className="mt-4 flex items-center gap-3 rounded-2xl bg-lake/10 p-4 font-bold text-lake">
@@ -240,7 +296,7 @@ export default function PlanPage() {
           </p>
         )}
 
-        {!hasPlan && (
+        {!visit && !hasPlan && (
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <Link to="/menu" className="rounded-[1.75rem] bg-lake p-6 text-white">
               <ShoppingBag className="h-7 w-7 text-sun" />
@@ -256,7 +312,8 @@ export default function PlanPage() {
           </div>
         )}
 
-        <div className="mt-8 grid gap-7 lg:grid-cols-[1.2fr_.8fr] lg:items-start">
+        {showPlannerContent && (
+        <div className="mt-8">
           <div className="space-y-7">
             {foodItems.length > 0 && (
               <form onSubmit={placeOrder} className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#10252b] sm:p-7">
@@ -288,7 +345,7 @@ export default function PlanPage() {
                   <textarea value={guest.notes} onChange={(event) => setGuest({ ...guest, notes: event.target.value })} rows="3" placeholder="Allergies, no onions, bring drinks first..." className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-lake" />
                 </label>
                 {orderStatus && orderStatus !== 'sending' && (
-                  <p className={`mt-4 rounded-xl p-3 text-sm font-bold ${orderStatus.startsWith('Order ') ? 'bg-lake/10 text-lake' : 'bg-red-50 text-red-700'}`}>{orderStatus}</p>
+                  <p className={`mt-4 rounded-xl p-3 text-sm font-bold ${orderStatus.startsWith('Order ') || orderStatus.startsWith('New service visit') ? 'bg-lake/10 text-lake' : 'bg-red-50 text-red-700'}`}>{orderStatus}</p>
                 )}
                 {!visit && <p className="mt-4 rounded-xl bg-sand p-3 text-sm font-bold text-ink">Confirm your arrival above before sending this order.</p>}
                 <button disabled={!visit || orderStatus === 'sending'} className="touch-button mt-5 w-full bg-lake text-white disabled:opacity-60">
@@ -328,68 +385,48 @@ export default function PlanPage() {
               </form>
             )}
           </div>
-
-          <aside className="rounded-[2rem] bg-sand p-5 dark:bg-[#10252b] dark:ring-1 dark:ring-white/10 lg:sticky lg:top-28 sm:p-7">
-            <BellRing className="h-8 w-8 text-lake" />
-            <h2 className="mt-5 text-2xl font-extrabold text-ink dark:text-white">Need a waiter?</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Tell the team where you are seated and they will come to you.</p>
-            {visit ? (
-              <p className="mt-5 rounded-2xl bg-white/70 p-4 text-sm font-bold text-ink dark:bg-white/5 dark:text-white">
-                {visit.service_area}, {visit.table_name}
-              </p>
-            ) : <GuestFields guest={guest} setGuest={setGuest} waiterOnly />}
-            {waiterStatus === 'sent' && <p role="status" aria-live="polite" className="mt-4 flex items-center gap-2 text-sm font-bold text-lake"><CheckCircle2 className="h-5 w-5" /> Waiter notified.</p>}
-            {waiterStatus === 'error' && <p role="alert" className="mt-4 text-sm font-bold text-red-700">The alert could not be sent. Please try again.</p>}
-            <button
-              type="button"
-              disabled={!visit || waiterStatus === 'sending'}
-              onClick={alertWaiter}
-              className="touch-button mt-5 w-full bg-lake text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <BellRing className="h-4 w-4" /> {waiterStatus === 'sending' ? 'Notifying...' : 'Notify a waiter'}
-            </button>
-
-            {visit && (
-              <form onSubmit={sendFeedback} className="mt-7 border-t border-ink/10 pt-7 dark:border-white/10">
-                <Star className="h-7 w-7 text-copper" />
-                <h2 className="mt-4 text-xl font-extrabold text-ink dark:text-white">How was your visit?</h2>
-                <label className="mt-4 block text-sm font-bold text-ink dark:text-slate-100">
-                  Rating
-                  <select value={feedback.rating} onChange={(event) => setFeedback({ ...feedback, rating: Number(event.target.value) })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3">
-                    <option value="5">5 - Excellent</option>
-                    <option value="4">4 - Very good</option>
-                    <option value="3">3 - Good</option>
-                    <option value="2">2 - Could be better</option>
-                    <option value="1">1 - Poor</option>
-                  </select>
-                </label>
-                <label className="mt-4 block text-sm font-bold text-ink dark:text-slate-100">
-                  Comment optional
-                  <textarea value={feedback.comment} onChange={(event) => setFeedback({ ...feedback, comment: event.target.value })} rows="3" className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3" />
-                </label>
-                {feedbackStatus === 'sent' && <p className="mt-3 text-sm font-bold text-lake">Thank you. Your feedback is saved with this visit.</p>}
-                <button disabled={feedbackStatus === 'sending'} className="touch-button mt-4 w-full bg-ink text-white disabled:opacity-50">
-                  {feedbackStatus === 'sending' ? 'Sending...' : 'Send feedback'}
-                </button>
-              </form>
-            )}
-
-            {visit && (feedbackStatus === 'sent' || visit.status === 'CLOSED') && (
-              <ClientSignupPrompt
-                signup={signup}
-                setSignup={setSignup}
-                status={signupStatus}
-                onSubmit={requestClientAccount}
-              />
-            )}
-          </aside>
         </div>
+        )}
       </section>
+
+      {canReviewVisit && !feedbackDismissed && !feedbackOpen && feedbackStatus !== 'sent' && (
+        <div className="fixed bottom-5 right-4 z-30 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-white/10 bg-ink p-3 text-white shadow-2xl sm:bottom-6 sm:right-6">
+          <button type="button" onClick={() => setFeedbackOpen(true)} className="flex min-h-12 items-center gap-3 text-left">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lake text-white">
+              <MessageCircle className="h-5 w-5" />
+            </span>
+            <span>
+              <strong className="block text-sm">How was your visit?</strong>
+              <span className="text-xs text-white/60">Share quick feedback</span>
+            </span>
+          </button>
+          <button type="button" onClick={() => setFeedbackDismissed(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70 hover:text-white" aria-label="Dismiss feedback">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      <BottomSheet open={feedbackOpen} onClose={() => setFeedbackOpen(false)} title="How was your visit?">
+        <FeedbackChat
+          feedback={feedback}
+          setFeedback={setFeedback}
+          status={feedbackStatus}
+          onSubmit={sendFeedback}
+        />
+        {feedbackStatus === 'sent' && (
+          <ClientSignupPrompt
+            signup={signup}
+            setSignup={setSignup}
+            status={signupStatus}
+            onSubmit={requestClientAccount}
+          />
+        )}
+      </BottomSheet>
     </main>
   )
 }
 
-function VisitJourney({ visit, onCheckout, busy }) {
+function VisitJourney({ visit, onCheckout, onWaiter, checkoutBusy, waiterBusy }) {
   const statusLabels = {
     SENT: 'Received',
     PREPARING: 'Being prepared',
@@ -399,25 +436,54 @@ function VisitJourney({ visit, onCheckout, busy }) {
     CANCELLED: 'Cancelled',
   }
   const due = Number(visit.total_due || 0)
+  const latestOrder = visit.orders?.at(-1)
+  const latestStatus = latestOrder ? statusLabels[latestOrder.status] || latestOrder.status : 'Ready to order'
 
   return (
-    <section className="mt-8 rounded-[2rem] bg-ink p-5 text-white sm:p-7">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="eyebrow text-sun">Live visit</p>
-          <h2 className="mt-2 text-2xl font-extrabold">{visit.service_area}, {visit.table_name}</h2>
-          <p className="mt-1 text-sm text-white/60">
-            {visit.guest_name || 'Walk-in guest'} · arrived {visit.arrived_at
-              ? new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : 'just now'}
-          </p>
+    <section className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-ink text-white shadow-xl shadow-ink/10">
+      <div className="border-b border-white/10 p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="eyebrow text-sun">Live visit</p>
+              <span className="text-xs font-bold text-white/35">{visit.visit_number}</span>
+            </div>
+            <h1 className="mt-2 text-2xl font-extrabold sm:text-3xl">{visit.service_area}, {visit.table_name}</h1>
+            <p className="mt-1 text-sm text-white/60">
+              {visit.guest_name || 'Guest'} · arrived {visit.arrived_at
+                ? new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : 'just now'}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-bold uppercase tracking-wider">{visit.status.replaceAll('_', ' ')}</span>
+            <p className="mt-3 text-sm font-bold text-sun">{latestStatus}</p>
+          </div>
         </div>
-        <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-bold uppercase tracking-wider">{visit.status.replaceAll('_', ' ')}</span>
+
+        {visit.status === 'ACTIVE' && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <Link to="/menu" className="touch-button bg-lake text-white">
+              <Utensils className="h-4 w-4" /> {visit.orders?.length ? 'Order more food' : 'Browse food menu'}
+            </Link>
+            <button type="button" onClick={onWaiter} disabled={waiterBusy} className="touch-button border border-white/15 bg-white/8 text-white disabled:opacity-50">
+              <BellRing className="h-4 w-4" /> {waiterBusy ? 'Calling waiter...' : 'Call a waiter'}
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="mt-6 space-y-3">
+      <div className="p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="eyebrow text-white/45">Your orders</p>
+            <h2 className="mt-1 text-lg font-extrabold">Service progress</h2>
+          </div>
+          <span className="text-sm font-bold text-white/65">{visit.orders?.length || 0} order{visit.orders?.length === 1 ? '' : 's'}</span>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
         {visit.orders?.length ? visit.orders.map((order) => (
-          <article key={order.id} className="rounded-2xl bg-white/8 p-4">
+          <article key={order.id} className="rounded-2xl border border-white/8 bg-white/6 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-extrabold">{order.order_number}</p>
@@ -425,14 +491,21 @@ function VisitJourney({ visit, onCheckout, busy }) {
               </div>
               <strong className="text-sun">{money(order.grand_total)}</strong>
             </div>
+            {order.items?.length ? (
+              <ul className="mt-3 space-y-1 border-t border-white/10 pt-3 text-sm text-white/65">
+                {order.items.map((item) => (
+                  <li key={item.id}>{Number(item.quantity)} × {item.product_name || item.name}</li>
+                ))}
+              </ul>
+            ) : null}
           </article>
         )) : (
           <p className="rounded-2xl bg-white/8 p-4 text-sm text-white/65">You are checked in. Choose from the menu or notify a waiter when ready.</p>
         )}
-      </div>
+        </div>
 
       {visit.waiter_acknowledged_at && (
-        <p className="mt-5 flex items-center gap-2 rounded-2xl bg-emerald-500/15 p-4 text-sm font-bold text-emerald-200">
+        <p className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-500/15 p-4 text-sm font-bold text-emerald-200">
           <CheckCircle2 className="h-5 w-5" /> A waiter has received your call and is on the way.
         </p>
       )}
@@ -448,10 +521,22 @@ function VisitJourney({ visit, onCheckout, busy }) {
           <p className="mt-1 text-sm">Amount due: <strong>{money(due)}</strong>. A waiter or cashier will collect payment and provide your receipt.</p>
         </div>
       ) : visit.orders?.length ? (
-        <button type="button" onClick={onCheckout} disabled={busy} className="touch-button mt-5 w-full bg-sun text-ink disabled:opacity-50">
-          <ReceiptText className="h-4 w-4" /> {busy ? 'Preparing your bill...' : 'Request bill and checkout'}
-        </button>
-      ) : null}
+        <div className="mt-5 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-white/55">Ready to leave?</p>
+            <p className="font-extrabold">Request one bill for all orders.</p>
+          </div>
+          <button type="button" onClick={onCheckout} disabled={checkoutBusy} className="touch-button bg-sun text-ink disabled:opacity-50">
+            <ReceiptText className="h-4 w-4" /> {checkoutBusy ? 'Preparing bill...' : 'Request bill'}
+          </button>
+        </div>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-dashed border-white/15 p-5 text-center">
+          <p className="font-extrabold">No orders yet</p>
+          <p className="mt-1 text-sm text-white/55">Browse the menu or call a waiter when you are ready.</p>
+        </div>
+      )}
+      </div>
     </section>
   )
 }
@@ -478,6 +563,105 @@ function GuestFields({ guest, setGuest, waiterOnly = false, arrival = false }) {
         </label>
       )}
     </div>
+  )
+}
+
+function JourneySteps({ currentStep }) {
+  const steps = [
+    ['1', 'Confirm table', 'Start one private visit'],
+    ['2', 'Choose service', 'Call a waiter or see menu'],
+    ['3', 'Order food', 'Send one or more orders'],
+    ['4', 'Track & checkout', 'Follow service and settle'],
+  ]
+
+  return (
+    <div className="mt-8 overflow-x-auto pb-2 hide-scrollbar">
+      <ol className="grid min-w-[720px] grid-cols-4 gap-3">
+        {steps.map(([number, title, text], index) => {
+          const active = index + 1 <= currentStep
+          const current = index + 1 === currentStep
+          return (
+            <li key={number} className={`rounded-2xl border p-4 ${current ? 'border-lake bg-lake text-white' : active ? 'border-lake/25 bg-lake/5 dark:bg-white/5' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-[#10252b]'}`}>
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-extrabold ${current ? 'bg-white text-lake' : active ? 'bg-lake text-white' : 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300'}`}>{number}</span>
+              <p className={`mt-3 font-extrabold ${current ? 'text-white' : 'text-ink dark:text-white'}`}>{title}</p>
+              <p className={`mt-1 text-xs ${current ? 'text-white/70' : 'text-slate-500 dark:text-slate-300'}`}>{text}</p>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+function FeedbackChat({ feedback, setFeedback, status, onSubmit }) {
+  if (status === 'sent') {
+    return (
+      <div className="rounded-2xl bg-lake/10 p-5 text-center">
+        <CheckCircle2 className="mx-auto h-8 w-8 text-lake" />
+        <p className="mt-3 font-extrabold text-ink dark:text-white">Thank you for sharing.</p>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Your feedback is saved with this visit.</p>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <div className="max-w-[88%] rounded-2xl rounded-bl-md bg-sand p-4 text-sm leading-6 text-ink dark:bg-white/10 dark:text-white">
+        We hope you enjoyed your time at G8. How would you rate the service?
+      </div>
+      <div className="mt-4 flex justify-end">
+        <label className="w-full max-w-[88%] rounded-2xl rounded-br-md bg-lake p-4 text-sm font-bold text-white">
+          My rating
+          <select value={feedback.rating} onChange={(event) => setFeedback({ ...feedback, rating: Number(event.target.value) })} className="mt-2 min-h-12 w-full rounded-xl border-0 px-3 text-ink">
+            <option value="5">5 - Excellent</option>
+            <option value="4">4 - Very good</option>
+            <option value="3">3 - Good</option>
+            <option value="2">2 - Could be better</option>
+            <option value="1">1 - Poor</option>
+          </select>
+        </label>
+      </div>
+      <div className="mt-4 max-w-[88%] rounded-2xl rounded-bl-md bg-sand p-4 dark:bg-white/10">
+        <label className="block text-sm font-bold text-ink dark:text-white">
+          Anything else you would like us to know?
+          <textarea value={feedback.comment} onChange={(event) => setFeedback({ ...feedback, comment: event.target.value })} rows="3" placeholder="Optional message..." className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-lake" />
+        </label>
+      </div>
+      {status === 'error' && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">We could not send your feedback. Please try again.</p>}
+      <button disabled={status === 'sending'} className="touch-button mt-5 w-full bg-ink text-white disabled:opacity-50 dark:bg-lake">
+        <Star className="h-4 w-4" /> {status === 'sending' ? 'Sending...' : 'Send feedback'}
+      </button>
+    </form>
+  )
+}
+
+function ClientSignupPrompt({ signup, setSignup, status, onSubmit }) {
+  if (status === 'saved') {
+    return (
+      <div className="mt-7 border-t border-ink/10 pt-7 dark:border-white/10">
+        <p className="flex items-center gap-2 font-extrabold text-lake"><CheckCircle2 className="h-5 w-5" /> Client-area interest saved</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">We will use these details when client accounts are opened. This has not created a login yet.</p>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="mt-7 border-t border-ink/10 pt-7 dark:border-white/10">
+      <UserPlus className="h-7 w-7 text-lake" />
+      <p className="eyebrow mt-4 text-lake">Loved your visit?</p>
+      <h2 className="mt-2 text-xl font-extrabold text-ink dark:text-white">Join the G8 client area</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Register your interest to keep future visits, receipts, favourites and bookings in one personal space.</p>
+      <div className="mt-4 space-y-3">
+        <Field label="Your name" value={signup.name} onChange={(event) => setSignup({ ...signup, name: event.target.value })} required />
+        <Field label="Phone number" type="tel" value={signup.phone} onChange={(event) => setSignup({ ...signup, phone: event.target.value })} required />
+        <Field label="Email optional" type="email" value={signup.email} onChange={(event) => setSignup({ ...signup, email: event.target.value })} />
+      </div>
+      {status === 'error' && <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">We could not save your interest on this device.</p>}
+      <button className="touch-button mt-4 w-full bg-lake text-white">
+        <UserPlus className="h-4 w-4" /> Request my client account
+      </button>
+      <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">Client login is being prepared. We will not claim an account exists until registration is connected.</p>
+    </form>
   )
 }
 

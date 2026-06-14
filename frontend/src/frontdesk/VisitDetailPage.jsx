@@ -8,6 +8,24 @@ import VisitCheckoutModal from './VisitCheckoutModal';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+async function fetchReceipt(invoice) {
+  const response = await api.get(`/api/sales/invoices/${invoice.id}/receipt/`, {
+    responseType: 'blob',
+  });
+  return new Blob([response.data], { type: 'application/pdf' });
+}
+
+function downloadReceiptBlob(invoice, blob) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${invoice.invoice_number}.pdf`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 function currentJourneyStep(visit, invoices, totalBalance) {
   if (visit.status === 'CLOSED' || (invoices.length > 0 && totalBalance <= 0)) return 5;
   if (visit.status === 'CHECKOUT_REQUESTED' || invoices.length > 0) return 4;
@@ -129,11 +147,11 @@ export default function VisitDetailPage() {
     const method = paymentMethods.find((m) => String(m.id) === String(paymentMethod));
     if (!method) {
       toast.error('Choose a payment method');
-      return;
+      return false;
     }
     if (method.requires_reference && !reference?.trim()) {
       toast.error(`${method.name} requires a reference`);
-      return;
+      return false;
     }
     try {
       setWorking(`invoice-${invoice.id}`);
@@ -143,10 +161,18 @@ export default function VisitDetailPage() {
         amount: amount || invoice.balance_due,
         reference: reference || '',
       });
-      toast.success('Payment collected and visit updated');
       await load();
+      try {
+        const receipt = await fetchReceipt(invoice);
+        downloadReceiptBlob(invoice, receipt);
+        toast.success('Payment collected. Receipt downloaded.');
+      } catch {
+        toast.error('Payment was collected, but the receipt could not be downloaded. Use Download PDF to try again.');
+      }
+      return true;
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not collect payment');
+      return false;
     } finally {
       setWorking('');
     }
@@ -155,18 +181,8 @@ export default function VisitDetailPage() {
   const downloadInvoiceReceipt = async (invoice) => {
     try {
       setWorking(`receipt-${invoice.id}`);
-      const response = await api.get(`/api/sales/invoices/${invoice.id}/receipt/`, {
-        responseType: 'blob',
-      });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${invoice.invoice_number}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      const blob = await fetchReceipt(invoice);
+      downloadReceiptBlob(invoice, blob);
       toast.success('Receipt downloaded');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not download receipt');
@@ -179,10 +195,7 @@ export default function VisitDetailPage() {
     try {
       setPreviewLoading(true);
       setViewingInvoiceId(invoice.id);
-      const response = await api.get(`/api/sales/invoices/${invoice.id}/receipt/`, {
-        responseType: 'blob',
-      });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blob = await fetchReceipt(invoice);
       const url = window.URL.createObjectURL(blob);
       const newWindow = window.open(url, '_blank');
       if (!newWindow) {

@@ -66,22 +66,17 @@ export default function FrontdeskDashboard() {
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-app-border bg-[#172326] p-5 text-white sm:p-6 lg:p-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d7b56d]">Front desk shift overview</p>
-            <h2 className="mt-3 max-w-3xl text-2xl font-black tracking-tight sm:text-3xl md:text-4xl">
-              See who is arriving, who needs service, and who is ready to settle.
-            </h2>
-            <p className="mt-4 max-w-3xl text-sm font-medium leading-7 text-white/68">
-              Accommodation and dining remain separate workflows, while this dashboard brings the staff actions that need attention into one place.
-            </p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d7b56d]">Front desk</p>
+            <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Today&apos;s operations</h2>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link to="/frontdesk/visits" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[#d7b56d] px-4 text-sm font-black text-[#172326]">
-              <UsersRound className="h-4 w-4" /> Open live visits
+              <UsersRound className="h-4 w-4" /> Live Visits
             </Link>
             <Link to="/frontdesk/service-points" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/20 px-4 text-sm font-black text-white">
-              <Utensils className="h-4 w-4" /> Open a POS
+              <Utensils className="h-4 w-4" /> POS
             </Link>
           </div>
         </div>

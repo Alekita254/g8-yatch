@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Banknote, ReceiptText, MapPin } from 'lucide-react';
+import { Banknote, MapPin, ReceiptText, X } from 'lucide-react';
 import ModalLayer from '../components/ModalLayer';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -42,13 +42,23 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
 
   const handleCollect = async () => {
     if (!selectedInvoice) return;
-    onCollectPayment(selectedInvoice, Number(amount), paymentMethod, reference);
+    const collected = await onCollectPayment(selectedInvoice, Number(amount), paymentMethod, reference);
+    if (collected) onClose();
   };
 
   return (
     <ModalLayer label="Checkout guest visit" onClose={onClose}>
       <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-app-border bg-app-card shadow-2xl">
-        <div className="border-b border-app-border bg-app-elevated px-5 py-5">
+        <div className="relative border-b border-app-border bg-app-elevated px-5 py-5 pr-16">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-app-border bg-app-card text-app-muted transition hover:bg-app-bg hover:text-app-text"
+            aria-label="Close checkout"
+            title="Close checkout"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-500">Checkout</p>

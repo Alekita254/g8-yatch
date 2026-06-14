@@ -101,7 +101,15 @@ class PublicVisitOrderView(APIView):
 
     @transaction.atomic
     def post(self, request, token):
-        visit = get_object_or_404(GuestVisit, public_token=token, status=GuestVisit.Status.ACTIVE)
+        visit = get_object_or_404(GuestVisit, public_token=token)
+        if visit.status != GuestVisit.Status.ACTIVE:
+            return Response(
+                {
+                    "detail": "This visit is no longer open for orders.",
+                    "visit_status": visit.status,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         requested_items = request.data.get("items") or []
         if not requested_items:
             return Response({"detail": "Add at least one menu item."}, status=status.HTTP_400_BAD_REQUEST)

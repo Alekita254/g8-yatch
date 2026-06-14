@@ -46,17 +46,17 @@ export default function HotelPage() {
 
   return (
     <main>
-      <section className="relative min-h-[72svh] overflow-hidden bg-ink text-white lg:min-h-[calc(100svh-5rem)]">
+      <section className="relative min-h-[50svh] overflow-hidden bg-ink text-white lg:min-h-[58svh]">
         <img
           src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=90"
           alt="Comfortable hotel accommodation in Embu"
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/50 to-ink/10 lg:bg-gradient-to-r lg:from-ink/95 lg:via-ink/45 lg:to-transparent" />
-        <div className="page-shell relative flex min-h-[72svh] items-end pb-12 pt-24 lg:min-h-[calc(100svh-5rem)] lg:items-center lg:pb-20">
+        <div className="page-shell relative flex min-h-[50svh] items-end pb-9 pt-20 lg:min-h-[58svh] lg:items-center lg:pb-12">
           <div className="max-w-2xl">
             <p className="eyebrow text-sun">Hotel in Embu</p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-6xl lg:text-7xl">A comfortable place to pause and feel at home.</h1>
+            <h1 className="mt-3 text-4xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">A comfortable place to pause and feel at home.</h1>
             <p className="mt-4 max-w-xl leading-7 text-white/70">Choose your room, check your dates and let our accommodation team handle the rest.</p>
           </div>
         </div>

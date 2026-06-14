@@ -14,6 +14,21 @@ const filters = [
   ['PAYMENT', 'Checkout'],
 ];
 
+async function downloadReceipt(invoice) {
+  const response = await api.get(`/api/sales/invoices/${invoice.id}/receipt/`, {
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { type: 'application/pdf' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${invoice.invoice_number}.pdf`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 function visitStage(visit) {
   if (visit.status === 'CLOSED') return 'Paid and closed';
   if (visit.status === 'CHECKOUT_REQUESTED') return 'Checkout';
@@ -119,11 +134,11 @@ export default function GuestVisitsPage() {
     const method = paymentMethods.find((item) => String(item.id) === String(paymentMethod));
     if (!method) {
       toast.error('Choose a payment method');
-      return;
+      return false;
     }
     if (method.requires_reference && !reference?.trim()) {
       toast.error(`${method.name} requires a reference`);
-      return;
+      return false;
     }
     try {
       setWorking(`invoice-${invoice.id}`);
@@ -133,10 +148,17 @@ export default function GuestVisitsPage() {
         amount: amount || invoice.balance_due,
         reference: reference || '',
       });
-      toast.success('Payment collected and visit updated');
       await load();
+      try {
+        await downloadReceipt(invoice);
+        toast.success('Payment collected. Receipt downloaded.');
+      } catch {
+        toast.error('Payment was collected, but the receipt could not be downloaded. Open the visit to try again.');
+      }
+      return true;
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not collect payment');
+      return false;
     } finally {
       setWorking('');
     }

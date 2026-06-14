@@ -364,6 +364,7 @@ class SalesPaymentListCreateView(ListCreateMixin):
         invoice.balance_due = max(invoice.grand_total - cleared_total, Decimal("0"))
         invoice.status = SalesInvoice.Status.CLOSED if invoice.balance_due <= 0 else SalesInvoice.Status.PARTIALLY_PAID
         invoice.save(update_fields=["paid_total", "balance_due", "status"])
+        generate_invoice_receipt(invoice)
         if invoice.status == SalesInvoice.Status.CLOSED and invoice.order.visit_id:
             visit = invoice.order.visit
             outstanding = visit.orders.filter(invoice__balance_due__gt=0).exists()
