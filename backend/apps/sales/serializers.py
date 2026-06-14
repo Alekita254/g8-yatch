@@ -143,6 +143,7 @@ class GuestVisitSerializer(serializers.ModelSerializer):
     class Meta:
         model = GuestVisit
         fields = [
+            "waiter_keycloak_sub",
             "id",
             "visit_number",
             "public_token",

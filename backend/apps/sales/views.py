@@ -206,7 +206,16 @@ class GuestVisitWaiterAcknowledgeView(APIView):
     def post(self, request, pk):
         visit = get_object_or_404(GuestVisit, pk=pk)
         visit.waiter_acknowledged_at = timezone.now()
-        visit.save(update_fields=["waiter_acknowledged_at", "updated_at"])
+        visit.waiter_keycloak_sub = getattr(request.user, "keycloak_sub", "") or ""
+        visit.save(update_fields=["waiter_acknowledged_at", "waiter_keycloak_sub", "updated_at"])
+        return Response(GuestVisitSerializer(visit).data)
+
+
+class GuestVisitDetailView(APIView):
+    permission_classes = [IsPosManager]
+
+    def get(self, request, pk):
+        visit = get_object_or_404(GuestVisit, pk=pk)
         return Response(GuestVisitSerializer(visit).data)
 
 

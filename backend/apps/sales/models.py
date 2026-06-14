@@ -25,6 +25,7 @@ class GuestVisit(models.Model):
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.ACTIVE)
     waiter_requested_at = models.DateTimeField(null=True, blank=True)
     waiter_acknowledged_at = models.DateTimeField(null=True, blank=True)
+    waiter_keycloak_sub = models.CharField(max_length=255, blank=True)
     checkout_requested_at = models.DateTimeField(null=True, blank=True)
     feedback_rating = models.PositiveSmallIntegerField(null=True, blank=True)
     feedback_comment = models.TextField(blank=True)

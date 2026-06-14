@@ -455,7 +455,7 @@ export default function FrontdeskServicePointsPage() {
               </div>
               {receipt.visitId && !receipt.paid ? (
                 <Link to="/frontdesk/visits" className="mt-4 inline-flex min-h-10 items-center rounded-md bg-emerald-600 px-4 text-sm font-bold text-white">
-                  Follow this visit in Live Visits
+                  Follow this stay in Guest Stays
                 </Link>
               ) : null}
             </div>

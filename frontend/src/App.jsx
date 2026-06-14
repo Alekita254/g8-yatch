@@ -57,6 +57,7 @@ import FrontdeskDashboard from './frontdesk/FrontdeskDashboard';
 import FrontdeskListPage from './frontdesk/FrontdeskListPage';
 import FrontdeskServicePointsPage from './frontdesk/FrontdeskServicePointsPage';
 import GuestVisitsPage from './frontdesk/GuestVisitsPage';
+import VisitDetailPage from './frontdesk/VisitDetailPage';
 import FrontdeskShell from './frontdesk/FrontdeskShell';
 import RoomTypesPage from './frontdesk/RoomTypesPage';
 import SalesDashboard from './sales/SalesDashboard';
@@ -407,6 +408,7 @@ export default function App() {
           <Route index element={<FrontdeskDashboard />} />
           <Route path="service-points" element={<FrontdeskServicePointsPage />} />
           <Route path="visits" element={<GuestVisitsPage />} />
+          <Route path="visits/:id" element={<VisitDetailPage />} />
           <Route path="business-partners" element={<FrontdeskListPage type="partners" />} />
           <Route path="room-types" element={<RoomTypesPage />} />
           <Route path="rooms" element={<FrontdeskListPage type="rooms" />} />

@@ -4,6 +4,7 @@ from .views import (
     CustomerPaymentRunApplyView,
     CustomerPaymentRunListCreateView,
     GuestVisitListView,
+    GuestVisitDetailView,
     GuestVisitWaiterAcknowledgeView,
     SalesInvoiceCreateFromOrderView,
     SalesInvoiceListView,
@@ -17,6 +18,7 @@ from .views import (
 
 urlpatterns = [
     path("visits/", GuestVisitListView.as_view(), name="guest-visits"),
+    path("visits/<int:pk>/", GuestVisitDetailView.as_view(), name="guest-visit-detail"),
     path("visits/<int:pk>/waiter-acknowledge/", GuestVisitWaiterAcknowledgeView.as_view(), name="guest-visit-waiter-acknowledge"),
     path("orders/", SalesOrderListCreateView.as_view(), name="sales-orders"),
     path("orders/<int:pk>/", SalesOrderDetailView.as_view(), name="sales-order-detail"),

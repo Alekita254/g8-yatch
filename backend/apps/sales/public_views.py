@@ -177,6 +177,7 @@ class PublicVisitWaiterView(APIView):
         visit = get_object_or_404(GuestVisit, public_token=token, status=GuestVisit.Status.ACTIVE)
         visit.waiter_requested_at = timezone.now()
         visit.waiter_acknowledged_at = None
+        visit.waiter_keycloak_sub = ""
         visit.save(update_fields=["waiter_requested_at", "waiter_acknowledged_at", "updated_at"])
         return Response(visit_response(visit))
 
