@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
     path('api/auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/accounting/', include('apps.accounting.urls')),
     path('api/business-partners/', include('apps.business_partners.urls')),
     path('api/concierge/', include('apps.concierge.urls')),
     path('api/folios/', include('apps.folios.urls')),

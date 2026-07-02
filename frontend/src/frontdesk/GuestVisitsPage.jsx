@@ -29,6 +29,13 @@ async function downloadReceipt(invoice) {
   window.URL.revokeObjectURL(url);
 }
 
+function visitAmount(visit) {
+  return visit.orders.reduce((sum, order) => {
+    const invoiceTotal = order.invoice?.grand_total;
+    return sum + Number(invoiceTotal || order.grand_total || 0);
+  }, 0);
+}
+
 function visitStage(visit) {
   if (visit.status === 'CLOSED') return 'Paid and closed';
   if (visit.status === 'CHECKOUT_REQUESTED') return 'Checkout';
@@ -178,12 +185,12 @@ export default function GuestVisitsPage() {
     <div className="space-y-6">
       <section className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="flex items-center gap-3 text-2xl font-black text-app-text"><UsersRound className="h-6 w-6 text-brand-500" /> Restaurant & Bar Visits</h2>
+          <h2 className="flex items-center gap-3 text-2xl font-black text-app-text"><UsersRound className="h-6 w-6 text-brand-500" /> Queue</h2>
           <p className="mt-1 text-sm text-app-muted">QR and POS visits appear here. The most urgent staff action is always shown first.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex rounded-md border border-app-border bg-app-card p-1">
-            <button type="button" onClick={() => setMode('LIVE')} className={`px-3 py-2 text-sm font-bold ${mode === 'LIVE' ? 'bg-brand-600 text-white' : 'text-app-text'}`}>Live</button>
+            <button type="button" onClick={() => setMode('LIVE')} className={`px-3 py-2 text-sm font-bold ${mode === 'LIVE' ? 'bg-brand-600 text-white' : 'text-app-text'}`}>Queue</button>
             <button type="button" onClick={() => setMode('HISTORY')} className={`px-3 py-2 text-sm font-bold ${mode === 'HISTORY' ? 'bg-brand-600 text-white' : 'text-app-text'}`}>History</button>
           </div>
           <button type="button" onClick={load} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text hover:bg-app-elevated">
@@ -215,7 +222,7 @@ export default function GuestVisitsPage() {
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Service point</th>
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Journey stage</th>
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Next action</th>
-              <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Balance</th>
+              <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Amount</th>
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Arrived</th>
               <th className="px-4 py-3 text-xs font-black uppercase text-app-muted">Actions</th>
             </tr>
@@ -228,7 +235,7 @@ export default function GuestVisitsPage() {
                 <td className="px-4 py-3 text-sm text-app-muted">{visit.service_area}{visit.table_name ? ` · ${visit.table_name}` : ''}</td>
                 <td className="px-4 py-3 text-sm"><span className="rounded-full bg-brand-500/10 px-3 py-1 text-xs font-black text-brand-600">{visitStage(visit)}</span></td>
                 <td className="px-4 py-3 text-sm font-bold text-app-text">{nextAction(visit)}</td>
-                <td className="px-4 py-3 text-sm font-black text-app-text">KES {Number(visit.total_due || 0).toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
+                <td className="px-4 py-3 text-sm font-black text-app-text">KES {visitAmount(visit).toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
                 <td className="px-4 py-3 text-sm text-app-muted">{new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex flex-wrap gap-2">

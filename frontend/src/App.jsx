@@ -26,6 +26,7 @@ import {
 import AdminTopbar from './components/AdminTopbar';
 import Sidebar from './components/Sidebar';
 import ThemeToggle from './components/ThemeToggle';
+import AccountingDashboard from './accounting/AccountingDashboard';
 import BankAccountsPage from './pages/BankAccountsPage';
 import BranchesPage from './pages/BranchesPage';
 import DashboardOverview from './pages/DashboardOverview';
@@ -128,7 +129,7 @@ function LoginPage() {
                 className="inline-flex items-center gap-2 rounded-lg bg-[#d7b56d] px-4 py-2.5 text-sm font-black text-[#172326] shadow-lg shadow-black/20 transition hover:bg-[#efcf83]"
               >
                 <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign in</span>
+                <span className="hidden sm:inline">Sign in with Google or email</span>
               </button>
             </div>
           </nav>
@@ -153,7 +154,7 @@ function LoginPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#d7b56d] px-5 py-3 text-sm font-black text-[#172326] transition hover:bg-[#efcf83]"
               >
                 <ShieldCheck className="h-4 w-4" />
-                Enter console
+                Sign in with Google or email
               </button>
               <a
                 href="#services"
@@ -263,6 +264,13 @@ function AppChooserPage() {
       accent: 'bg-[#0d6b67] text-white',
     },
     {
+      icon: FileText,
+      title: 'Accounting',
+      description: 'Monthly sales, tax totals, collections, receivables, and payment summaries.',
+      path: '/accounting',
+      accent: 'bg-[#172326] text-[#d7b56d]',
+    },
+    {
       icon: LayoutDashboard,
       title: 'Sales',
       description: 'Leads, bookings, packages, invoices, corporate accounts, and guest offers.',
@@ -310,7 +318,7 @@ function AppChooserPage() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {apps.map((app) => (
             <Link
               key={app.title}
@@ -424,6 +432,7 @@ export default function App() {
         </Route>
         <Route element={<DashboardShell />}>
           <Route path="/dashboard" element={<DashboardOverview />} />
+          <Route path="/accounting" element={<AccountingDashboard />} />
           <Route path="/users" element={<UserSetupPage />}>
             <Route index element={<UsersDashboard embedded />} />
             <Route path="roles" element={<RolesSetupPage />} />

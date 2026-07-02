@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "apps.business_partners",
+    "apps.accounting",
     "apps.concierge",
     "apps.folios",
     "apps.organisation",

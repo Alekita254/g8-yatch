@@ -15,15 +15,26 @@ async function fetchReceipt(invoice) {
   return new Blob([response.data], { type: 'application/pdf' });
 }
 
-function downloadReceiptBlob(invoice, blob) {
+async function fetchInvoiceDocument(invoice) {
+  const response = await api.get(`/api/sales/invoices/${invoice.id}/invoice/`, {
+    responseType: 'blob',
+  });
+  return new Blob([response.data], { type: 'application/pdf' });
+}
+
+function downloadDocumentBlob(filename, blob) {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `receipt-${invoice.invoice_number}.pdf`);
+  link.setAttribute('download', filename);
   document.body.appendChild(link);
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+}
+
+function downloadReceiptBlob(invoice, blob) {
+  downloadDocumentBlob(`receipt-${invoice.invoice_number}.pdf`, blob);
 }
 
 function currentJourneyStep(visit, invoices, totalBalance) {
@@ -56,7 +67,7 @@ export default function VisitDetailPage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutInvoiceId, setCheckoutInvoiceId] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [viewingInvoiceId, setViewingInvoiceId] = useState(null);
+  const [viewingDocumentKey, setViewingDocumentKey] = useState('');
   const [tab, setTab] = useState('overview'); // overview | orders | invoices | related
   const [relatedVisits, setRelatedVisits] = useState([]);
 
@@ -191,11 +202,24 @@ export default function VisitDetailPage() {
     }
   };
 
-  const openReceiptDocument = async (invoice) => {
+  const downloadInvoiceDocument = async (invoice) => {
+    try {
+      setWorking(`invoice-doc-${invoice.id}`);
+      const blob = await fetchInvoiceDocument(invoice);
+      downloadDocumentBlob(`invoice-${invoice.invoice_number}.pdf`, blob);
+      toast.success('Invoice downloaded');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not download invoice');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const openPdfDocument = async (invoice, type) => {
     try {
       setPreviewLoading(true);
-      setViewingInvoiceId(invoice.id);
-      const blob = await fetchReceipt(invoice);
+      setViewingDocumentKey(`${type}-${invoice.id}`);
+      const blob = type === 'invoice' ? await fetchInvoiceDocument(invoice) : await fetchReceipt(invoice);
       const url = window.URL.createObjectURL(blob);
       const newWindow = window.open(url, '_blank');
       if (!newWindow) {
@@ -207,10 +231,10 @@ export default function VisitDetailPage() {
         window.URL.revokeObjectURL(url);
       }, 60000);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not load payment receipt');
+      toast.error(err.response?.data?.detail || `Could not load ${type === 'invoice' ? 'invoice' : 'payment receipt'}`);
     } finally {
       setPreviewLoading(false);
-      setViewingInvoiceId(null);
+      setViewingDocumentKey('');
     }
   };
 
@@ -412,20 +436,40 @@ export default function VisitDetailPage() {
                                   <>
                                     <button
                                       type="button"
-                                      onClick={() => openReceiptDocument(order.invoice)}
-                                      disabled={previewLoading && viewingInvoiceId === order.invoice.id}
+                                      onClick={() => openPdfDocument(order.invoice, 'invoice')}
+                                      disabled={previewLoading && viewingDocumentKey === `invoice-${order.invoice.id}`}
                                       className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
                                     >
-                                      {previewLoading && viewingInvoiceId === order.invoice.id ? 'Loading...' : 'View'}
+                                      {previewLoading && viewingDocumentKey === `invoice-${order.invoice.id}` ? 'Loading...' : 'View invoice'}
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => downloadInvoiceReceipt(order.invoice)}
-                                      disabled={working === `receipt-${order.invoice.id}`}
+                                      onClick={() => downloadInvoiceDocument(order.invoice)}
+                                      disabled={working === `invoice-doc-${order.invoice.id}`}
                                       className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
                                     >
-                                      {working === `receipt-${order.invoice.id}` ? 'Downloading...' : 'Download'}
+                                      {working === `invoice-doc-${order.invoice.id}` ? 'Downloading...' : 'Download invoice'}
                                     </button>
+                                    {Number(order.invoice.paid_total || 0) > 0 && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => openPdfDocument(order.invoice, 'receipt')}
+                                          disabled={previewLoading && viewingDocumentKey === `receipt-${order.invoice.id}`}
+                                          className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
+                                        >
+                                          {previewLoading && viewingDocumentKey === `receipt-${order.invoice.id}` ? 'Loading...' : 'View receipt'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => downloadInvoiceReceipt(order.invoice)}
+                                          disabled={working === `receipt-${order.invoice.id}`}
+                                          className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
+                                        >
+                                          {working === `receipt-${order.invoice.id}` ? 'Downloading...' : 'Download receipt'}
+                                        </button>
+                                      </>
+                                    )}
                                   </>
                                 )}
                               </div>
@@ -470,20 +514,40 @@ export default function VisitDetailPage() {
                       )}
                       <button
                         type="button"
-                        onClick={() => openReceiptDocument(inv)}
-                        disabled={previewLoading && viewingInvoiceId === inv.id}
+                        onClick={() => openPdfDocument(inv, 'invoice')}
+                        disabled={previewLoading && viewingDocumentKey === `invoice-${inv.id}`}
                         className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
                       >
-                        {previewLoading && viewingInvoiceId === inv.id ? 'Loading...' : 'View receipt'}
+                        {previewLoading && viewingDocumentKey === `invoice-${inv.id}` ? 'Loading...' : 'View invoice'}
                       </button>
                       <button
                         type="button"
-                        onClick={() => downloadInvoiceReceipt(inv)}
-                        disabled={working === `receipt-${inv.id}`}
+                        onClick={() => downloadInvoiceDocument(inv)}
+                        disabled={working === `invoice-doc-${inv.id}`}
                         className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
                       >
-                        {working === `receipt-${inv.id}` ? 'Downloading...' : 'Download receipt'}
+                        {working === `invoice-doc-${inv.id}` ? 'Downloading...' : 'Download invoice'}
                       </button>
+                      {Number(inv.paid_total || 0) > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openPdfDocument(inv, 'receipt')}
+                            disabled={previewLoading && viewingDocumentKey === `receipt-${inv.id}`}
+                            className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                          >
+                            {previewLoading && viewingDocumentKey === `receipt-${inv.id}` ? 'Loading...' : 'View receipt'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => downloadInvoiceReceipt(inv)}
+                            disabled={working === `receipt-${inv.id}`}
+                            className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                          >
+                            {working === `receipt-${inv.id}` ? 'Downloading...' : 'Download receipt'}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

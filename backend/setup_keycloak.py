@@ -12,6 +12,8 @@ Optional environment variables:
     KEYCLOAK_AUDIENCE=pos-terminal
     KEYCLOAK_DEV_USERNAME=manager
     KEYCLOAK_DEV_PASSWORD=manager123
+    KEYCLOAK_GOOGLE_CLIENT_ID=
+    KEYCLOAK_GOOGLE_CLIENT_SECRET=
 """
 
 import os
@@ -46,18 +48,24 @@ REALM = os.environ.get("KEYCLOAK_REALM", "g8-yacht")
 CLIENT_ID = os.environ.get("KEYCLOAK_AUDIENCE", "pos-terminal")
 DEV_USERNAME = os.environ.get("KEYCLOAK_DEV_USERNAME", "manager")
 DEV_PASSWORD = os.environ.get("KEYCLOAK_DEV_PASSWORD", "manager123")
+GOOGLE_CLIENT_ID = os.environ.get("KEYCLOAK_GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("KEYCLOAK_GOOGLE_CLIENT_SECRET", "")
 
 REDIRECT_URIS = [
     "http://localhost:5173/*",
     "http://localhost:5174/*",
+    "http://localhost:5175/*",
     "http://127.0.0.1:5173/*",
     "http://127.0.0.1:5174/*",
+    "http://127.0.0.1:5175/*",
 ]
 WEB_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5174",
+    "http://localhost:5175",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175",
 ]
 REALM_ROLES = ["POS_MANAGER", "WAITER", "NAIROBI_BRANCH"]
 
@@ -95,9 +103,24 @@ def create_realm(token: str) -> None:
     headers = auth_headers(token)
     realm_url = f"{KEYCLOAK_SERVER_URL}/admin/realms/{REALM}"
     response = requests.get(realm_url, headers=headers, timeout=20)
+    realm_payload = {
+        "realm": REALM,
+        "enabled": True,
+        "loginWithEmailAllowed": True,
+        "duplicateEmailsAllowed": False,
+        "resetPasswordAllowed": True,
+        "rememberMe": True,
+    }
 
     if response.status_code == 200:
+        request(
+            "PUT",
+            realm_url,
+            headers=headers,
+            json={**response.json(), **realm_payload},
+        )
         print(f"Realm exists: {REALM}")  # noqa: T201
+        print("Email login enabled")  # noqa: T201
         return
 
     if response.status_code != 404:
@@ -107,9 +130,10 @@ def create_realm(token: str) -> None:
         "POST",
         f"{KEYCLOAK_SERVER_URL}/admin/realms",
         headers=headers,
-        json={"realm": REALM, "enabled": True},
+        json=realm_payload,
     )
     print(f"Realm created: {REALM}")  # noqa: T201
+    print("Email login enabled")  # noqa: T201
 
 
 def get_client(token: str):
@@ -206,6 +230,52 @@ def create_audience_mapper(token: str, client_uuid: str) -> None:
     print(f"Audience mapper created: {CLIENT_ID}")  # noqa: T201
 
 
+def create_or_update_google_provider(token: str) -> None:
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        print("Google login skipped: KEYCLOAK_GOOGLE_CLIENT_ID/SECRET not set")  # noqa: T201
+        print(f"Google redirect URI: {KEYCLOAK_SERVER_URL}/realms/{REALM}/broker/google/endpoint")  # noqa: T201
+        return
+
+    headers = auth_headers(token)
+    alias = "google"
+    provider_url = f"{KEYCLOAK_SERVER_URL}/admin/realms/{REALM}/identity-provider/instances/{alias}"
+    payload = {
+        "alias": alias,
+        "displayName": "Google",
+        "providerId": "google",
+        "enabled": True,
+        "trustEmail": True,
+        "storeToken": False,
+        "addReadTokenRoleOnCreate": False,
+        "authenticateByDefault": False,
+        "linkOnly": False,
+        "firstBrokerLoginFlowAlias": "first broker login",
+        "config": {
+            "clientId": GOOGLE_CLIENT_ID,
+            "clientSecret": GOOGLE_CLIENT_SECRET,
+            "defaultScope": "openid profile email",
+            "useJwksUrl": "true",
+        },
+    }
+
+    response = requests.get(provider_url, headers=headers, timeout=20)
+    if response.status_code == 200:
+        request("PUT", provider_url, headers=headers, json={**response.json(), **payload})
+        print("Google login provider updated")  # noqa: T201
+    elif response.status_code == 404:
+        request(
+            "POST",
+            f"{KEYCLOAK_SERVER_URL}/admin/realms/{REALM}/identity-provider/instances",
+            headers=headers,
+            json=payload,
+        )
+        print("Google login provider created")  # noqa: T201
+    else:
+        raise KeycloakSetupError(f"Google provider check failed: {response.status_code} {response.text}")
+
+    print(f"Google redirect URI: {KEYCLOAK_SERVER_URL}/realms/{REALM}/broker/google/endpoint")  # noqa: T201
+
+
 def get_user(token: str):
     headers = auth_headers(token)
     url = f"{KEYCLOAK_SERVER_URL}/admin/realms/{REALM}/users"
@@ -284,6 +354,7 @@ def main() -> None:
         create_role(token, role_name)
 
     create_audience_mapper(token, client_uuid)
+    create_or_update_google_provider(token)
     user_id = create_or_update_dev_user(token)
     assign_roles(token, user_id, ["POS_MANAGER", "NAIROBI_BRANCH"])
 

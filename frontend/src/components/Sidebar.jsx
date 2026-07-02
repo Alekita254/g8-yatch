@@ -60,6 +60,11 @@ const navItems = [
     ],
   },
   {
+    name: 'Accounting',
+    path: '/accounting',
+    icon: Calculator,
+  },
+  {
     name: 'Payment',
     path: '/payments',
     icon: CreditCard,

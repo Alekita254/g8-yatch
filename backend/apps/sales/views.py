@@ -178,6 +178,95 @@ def generate_payment_receipt_pdf(invoice):
     return buffer
 
 
+def generate_sales_invoice_pdf(invoice):
+    from io import BytesIO
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    items = list(
+        invoice.order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product")
+    )
+    page_width = 80 * mm
+    content_lines = 28 + len(items)
+    page_height = max(135 * mm, (content_lines * 4.7 + 18) * mm)
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+    margin = 6 * mm
+    right = page_width - margin
+    center = page_width / 2
+    line_height = 4.6 * mm
+    y = page_height - 8 * mm
+
+    def centered(text, font="Helvetica", size=8):
+        nonlocal y
+        c.setFont(font, size)
+        c.drawCentredString(center, y, str(text))
+        y -= line_height
+
+    def pair(label, value, font="Helvetica", size=8):
+        nonlocal y
+        c.setFont(font, size)
+        c.drawString(margin, y, str(label))
+        c.drawRightString(right, y, str(value))
+        y -= line_height
+
+    def rule():
+        nonlocal y
+        y -= 1 * mm
+        c.setDash(1, 2)
+        c.line(margin, y, right, y)
+        c.setDash()
+        y -= 3.5 * mm
+
+    visit = invoice.order.visit
+
+    centered("G8 YACHT VILLA", "Helvetica-Bold", 13)
+    centered("Embu, Kenya", "Helvetica", 8)
+    centered("SALES INVOICE", "Helvetica-Bold", 10)
+    centered(invoice.status.replace("_", " "), "Helvetica-Bold", 9)
+    rule()
+
+    pair("Invoice", invoice.invoice_number)
+    pair("Date", timezone.localtime(invoice.created_at).strftime("%d %b %Y  %H:%M"))
+    pair("Order", invoice.order.order_number)
+    if invoice.branch:
+        pair("Branch", invoice.branch.name[:24])
+    if visit:
+        pair("Location", f"{visit.service_area} {visit.table_name}".strip()[:28])
+    pair("Guest", (invoice.customer_name or (visit.guest_name if visit else "") or "Walk-in guest")[:28])
+    if invoice.issued_by:
+        pair("Issued by", staff_display_name(invoice.issued_by)[:24])
+    rule()
+
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(margin, y, "ITEM")
+    c.drawRightString(right, y, "AMOUNT")
+    y -= line_height
+    for item in items:
+        quantity = f"{item.quantity:g}"
+        c.setFont("Helvetica", 8)
+        c.drawString(margin, y, f"{quantity} x {str(item.product.name)[:24]}")
+        c.drawRightString(right, y, f"{item.line_total:,.2f}")
+        y -= line_height
+
+    rule()
+    pair("Subtotal", f"KES {invoice.subtotal:,.2f}")
+    if invoice.tax_total:
+        pair("Tax", f"KES {invoice.tax_total:,.2f}")
+    if invoice.discount_total:
+        pair("Discount", f"- KES {invoice.discount_total:,.2f}")
+    pair("INVOICE TOTAL", f"KES {invoice.grand_total:,.2f}", "Helvetica-Bold", 10)
+    pair("Amount paid", f"KES {invoice.paid_total:,.2f}", "Helvetica", 8)
+    pair("Balance due", f"KES {invoice.balance_due:,.2f}", "Helvetica-Bold", 9)
+    rule()
+
+    centered("This is the sales invoice for billed goods and services.", "Helvetica", 7)
+    centered("Payment receipts are issued separately when payment is collected.", "Helvetica", 7)
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
 def generate_invoice_receipt(invoice):
     buffer = generate_payment_receipt_pdf(invoice)
     filename = generate_receipt_filename(invoice)
@@ -202,7 +291,6 @@ def create_invoice_from_order(order):
     )
     order.status = SalesOrder.Status.INVOICED
     order.save(update_fields=["status", "updated_at"])
-    generate_invoice_receipt(invoice)
     return invoice
 
 
@@ -211,7 +299,6 @@ def create_invoice_from_order_with_issuer(order, issued_by=''):
     if issued_by:
         invoice.issued_by = issued_by
         invoice.save(update_fields=["issued_by"])
-        generate_invoice_receipt(invoice)
     return invoice
 
 
@@ -510,6 +597,8 @@ class SalesInvoiceReceiptView(APIView):
 
     def get(self, request, pk):
         invoice = get_object_or_404(SalesInvoice, pk=pk)
+        if not invoice.payments.filter(status=SalesPayment.Status.CLEARED).exists():
+            return Response({"detail": "No payment receipt is available until payment is collected."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             # Regenerate on download so older invoice-styled files and later payments
             # never leave a stale receipt in storage.
@@ -522,6 +611,31 @@ class SalesInvoiceReceiptView(APIView):
             )
         except Exception:
             return Response({"detail": "Failed to generate receipt."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SalesInvoiceDocumentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        invoice = get_object_or_404(
+            SalesInvoice.objects.select_related(
+                "branch",
+                "order",
+                "order__visit",
+            ).prefetch_related(
+                "order__items__product",
+            ),
+            pk=pk,
+        )
+        try:
+            document = generate_sales_invoice_pdf(invoice)
+            return FileResponse(
+                document,
+                content_type="application/pdf",
+                filename=f"invoice-{invoice.invoice_number}.pdf",
+            )
+        except Exception:
+            return Response({"detail": "Failed to generate invoice."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CustomerPaymentRunListCreateView(ListCreateMixin):

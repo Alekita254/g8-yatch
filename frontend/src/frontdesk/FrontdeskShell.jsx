@@ -9,7 +9,7 @@ import useDesktopViewport from '../hooks/useDesktopViewport';
 
 const navItems = [
   { name: 'Dashboard', path: '/frontdesk', icon: LayoutDashboard },
-  { name: 'Live Service', path: '/frontdesk/visits', icon: UsersRound },
+  { name: 'Queue', path: '/frontdesk/visits', icon: UsersRound },
   { name: 'Service Points', path: '/frontdesk/service-points', icon: MapPin },
   { name: 'Guests & Customers', path: '/frontdesk/business-partners', icon: BriefcaseBusiness },
   { name: 'Room Types', path: '/frontdesk/room-types', icon: Layers },
@@ -22,7 +22,7 @@ const navItems = [
 const routeLabels = {
   '/frontdesk': 'Frontdesk Dashboard',
   '/frontdesk/service-points': 'Service Points',
-  '/frontdesk/visits': 'Restaurant & Bar Visits',
+  '/frontdesk/visits': 'Queue',
   '/frontdesk/business-partners': 'Guests & Customers',
   '/frontdesk/room-types': 'Room Types',
   '/frontdesk/rooms': 'Rooms',

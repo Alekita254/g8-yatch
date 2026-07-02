@@ -8,7 +8,6 @@ import {
   FileText,
   Loader2,
   MapPin,
-  ReceiptText,
   UserRound,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -31,6 +30,7 @@ export default function InvoiceDetailPage() {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [receiptBusy, setReceiptBusy] = useState('');
+  const [invoiceBusy, setInvoiceBusy] = useState('');
 
   useEffect(() => {
     const loadInvoice = async () => {
@@ -52,41 +52,56 @@ export default function InvoiceDetailPage() {
     return new Blob([response.data], { type: 'application/pdf' });
   };
 
-  const viewReceipt = async () => {
+  const fetchInvoiceDocument = async () => {
+    const response = await api.get(`/api/sales/invoices/${id}/invoice/`, { responseType: 'blob' });
+    return new Blob([response.data], { type: 'application/pdf' });
+  };
+
+  const viewDocument = async (type) => {
     try {
-      setReceiptBusy('view');
-      const blob = await fetchReceipt();
+      if (type === 'invoice') {
+        setInvoiceBusy('view');
+      } else {
+        setReceiptBusy('view');
+      }
+      const blob = type === 'invoice' ? await fetchInvoiceDocument() : await fetchReceipt();
       const url = window.URL.createObjectURL(blob);
-      const receiptWindow = window.open(url, '_blank');
-      if (!receiptWindow) {
+      const documentWindow = window.open(url, '_blank');
+      if (!documentWindow) {
         window.URL.revokeObjectURL(url);
-        toast.error('Please allow pop-ups to view the receipt');
+        toast.error(`Please allow pop-ups to view the ${type === 'invoice' ? 'invoice' : 'receipt'}`);
         return;
       }
       setTimeout(() => window.URL.revokeObjectURL(url), 60000);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not open receipt');
+      toast.error(err.response?.data?.detail || `Could not open ${type === 'invoice' ? 'invoice' : 'receipt'}`);
     } finally {
       setReceiptBusy('');
+      setInvoiceBusy('');
     }
   };
 
-  const downloadReceipt = async () => {
+  const downloadDocument = async (type) => {
     try {
-      setReceiptBusy('download');
-      const blob = await fetchReceipt();
+      if (type === 'invoice') {
+        setInvoiceBusy('download');
+      } else {
+        setReceiptBusy('download');
+      }
+      const blob = type === 'invoice' ? await fetchInvoiceDocument() : await fetchReceipt();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `receipt-${invoice.invoice_number}.pdf`;
+      link.download = `${type}-${invoice.invoice_number}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not download receipt');
+      toast.error(err.response?.data?.detail || `Could not download ${type === 'invoice' ? 'invoice' : 'receipt'}`);
     } finally {
       setReceiptBusy('');
+      setInvoiceBusy('');
     }
   };
 
@@ -126,14 +141,26 @@ export default function InvoiceDetailPage() {
             <span className={`rounded-full px-3 py-2 text-xs font-black uppercase ${statusClass(invoice.status)}`}>
               {invoice.status.replaceAll('_', ' ')}
             </span>
-            <button type="button" onClick={viewReceipt} disabled={Boolean(receiptBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-app-border px-4 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50">
-              {receiptBusy === 'view' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
-              View receipt
+            <button type="button" onClick={() => viewDocument('invoice')} disabled={Boolean(invoiceBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-app-border px-4 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50">
+              {invoiceBusy === 'view' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+              View invoice
             </button>
-            <button type="button" onClick={downloadReceipt} disabled={Boolean(receiptBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-black text-white transition hover:bg-brand-700 disabled:opacity-50">
-              {receiptBusy === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Download receipt
+            <button type="button" onClick={() => downloadDocument('invoice')} disabled={Boolean(invoiceBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-black text-white transition hover:bg-brand-700 disabled:opacity-50">
+              {invoiceBusy === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Download invoice
             </button>
+            {Number(invoice.paid_total || 0) > 0 && (
+              <>
+                <button type="button" onClick={() => viewDocument('receipt')} disabled={Boolean(receiptBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-app-border px-4 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50">
+                  {receiptBusy === 'view' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                  View receipt
+                </button>
+                <button type="button" onClick={() => downloadDocument('receipt')} disabled={Boolean(receiptBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-app-border px-4 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50">
+                  {receiptBusy === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  Download receipt
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -221,11 +248,6 @@ export default function InvoiceDetailPage() {
             ))}
           </div>
         )}
-      </section>
-
-      <section className="rounded-lg border border-app-border bg-app-elevated p-4 text-sm text-app-muted">
-        <p className="flex items-center gap-2 font-black text-app-text"><ReceiptText className="h-4 w-4 text-brand-500" /> Fiscal status</p>
-        <p className="mt-2">eTIMS: {invoice.etims_status.replaceAll('_', ' ')}{invoice.synced_at ? ` · Synced ${new Date(invoice.synced_at).toLocaleString()}` : ''}</p>
       </section>
     </div>
   );

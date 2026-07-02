@@ -29,14 +29,13 @@ const configs = {
   },
   invoices: {
     title: 'Sales Invoices',
-    description: 'Immutable fiscal records created from orders. Mistakes should become credit notes later, not edits.',
+    description: 'Invoice records created from orders with amount, balance, and payment status.',
     empty: 'No invoices yet.',
     columns: [
       ['Invoice', 'invoice_number'],
       ['Order', 'order_number'],
       ['Customer', 'customer_name'],
       ['Status', 'status'],
-      ['eTIMS', 'etims_status'],
       ['Balance', 'balance_due'],
     ],
   },

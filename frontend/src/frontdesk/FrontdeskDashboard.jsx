@@ -73,7 +73,7 @@ export default function FrontdeskDashboard() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link to="/frontdesk/visits" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[#d7b56d] px-4 text-sm font-black text-[#172326]">
-              <UsersRound className="h-4 w-4" /> Live Visits
+              <UsersRound className="h-4 w-4" /> Queue
             </Link>
             <Link to="/frontdesk/service-points" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/20 px-4 text-sm font-black text-white">
               <Utensils className="h-4 w-4" /> POS
@@ -102,7 +102,7 @@ export default function FrontdeskDashboard() {
         <div className="flex flex-col gap-4 border-b border-app-border p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-600">Restaurant and bar</p>
-            <h3 className="mt-1 text-xl font-black text-app-text">Live service queue</h3>
+            <h3 className="mt-1 text-xl font-black text-app-text">Queue</h3>
             <p className="mt-1 text-sm text-app-muted">The most urgent guest actions appear first.</p>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -143,7 +143,7 @@ export default function FrontdeskDashboard() {
           </div>
         )}
         <Link to="/frontdesk/visits" className="flex min-h-12 items-center justify-center gap-2 border-t border-app-border text-sm font-black text-brand-600">
-          View all live visits <ArrowRight className="h-4 w-4" />
+          View full queue <ArrowRight className="h-4 w-4" />
         </Link>
       </section>
 
