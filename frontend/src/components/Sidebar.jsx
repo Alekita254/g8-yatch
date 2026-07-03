@@ -1,6 +1,7 @@
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
 import useDesktopViewport from '../hooks/useDesktopViewport';
+import { canAccessApp } from '../accessControl';
 import { 
   Anchor,
   BadgePercent,
@@ -26,11 +27,12 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, appKey: 'admin' },
   {
     name: 'User Setup',
     path: '/users',
     icon: Users,
+    appKey: 'admin',
     children: [
       { name: 'Users', path: '/users', icon: Users },
       { name: 'Roles', path: '/users/roles', icon: ShieldCheck },
@@ -41,6 +43,7 @@ const navItems = [
     name: 'Products',
     path: '/products',
     icon: Package,
+    appKey: 'admin',
     children: [
       { name: 'Categories', path: '/products/categories', icon: ListTree },
       { name: 'Products & Items', path: '/products/items', icon: Package },
@@ -52,6 +55,7 @@ const navItems = [
     name: 'Taxes & Discount',
     path: '/taxes-discounts',
     icon: Percent,
+    appKey: 'admin',
     children: [
       { name: 'Tax Configurations', path: '/taxes-discounts/configurations', icon: Calculator },
       { name: 'Tax Categories', path: '/taxes-discounts/categories', icon: BookOpenCheck },
@@ -63,11 +67,13 @@ const navItems = [
     name: 'Accounting',
     path: '/accounting',
     icon: Calculator,
+    appKey: 'accounting',
   },
   {
     name: 'Payment',
     path: '/payments',
     icon: CreditCard,
+    appKey: 'admin',
     children: [
       { name: 'Payment Methods', path: '/payments/methods', icon: CreditCard },
       { name: 'Bank Details', path: '/payments/bank-accounts', icon: Landmark },
@@ -78,6 +84,7 @@ const navItems = [
     name: 'Organisation Setup',
     path: '/organisation',
     icon: Building2,
+    appKey: 'admin',
     children: [
       { name: 'Organizations', path: '/organisation/organizations', icon: Building2 },
       { name: 'Branches', path: '/organisation/branches', icon: GitBranch },
@@ -91,10 +98,12 @@ export default function Sidebar({ djangoUser, isOpen = false, onClose }) {
   const currentPath = location.pathname;
   const isDesktop = useDesktopViewport();
   const navigationHidden = !isDesktop && !isOpen;
+  const identity = djangoUser?.identity || djangoUser;
+  const visibleNavItems = navItems.filter((item) => !item.appKey || canAccessApp(djangoUser, item.appKey));
 
   // Extract initials and name from loaded SSO context
-  const userName = djangoUser?.first_name 
-    ? `${djangoUser.first_name} ${djangoUser.last_name || ''}`.trim() 
+  const userName = identity?.first_name
+    ? `${identity.first_name} ${identity.last_name || ''}`.trim()
     : 'User Profile';
   const userInitials = userName ? userName.substring(0, 2).toUpperCase() : "US";
 
@@ -123,7 +132,7 @@ export default function Sidebar({ djangoUser, isOpen = false, onClose }) {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-6 sm:py-8">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           // Check active state
           const active = currentPath === item.path || currentPath.startsWith(`${item.path}/`);
           const expanded = item.children && active;
@@ -186,7 +195,7 @@ export default function Sidebar({ djangoUser, isOpen = false, onClose }) {
             <div className="flex-1 overflow-hidden text-left">
               <p className="text-sm font-black text-shell-text truncate leading-tight">{userName}</p>
               <p className="text-[10px] font-bold text-shell-muted truncate uppercase tracking-tighter">
-                {djangoUser?.role || 'Manage Account'}
+                {(djangoUser?.roles || identity?.realm_roles || []).slice(0, 2).join(', ') || 'Manage Account'}
               </p>
             </div>
           </Link>

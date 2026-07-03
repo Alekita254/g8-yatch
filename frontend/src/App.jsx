@@ -26,6 +26,7 @@ import {
 import AdminTopbar from './components/AdminTopbar';
 import Sidebar from './components/Sidebar';
 import ThemeToggle from './components/ThemeToggle';
+import { APP_ACCESS, canAccessApp } from './accessControl';
 import AccountingDashboard from './accounting/AccountingDashboard';
 import BankAccountsPage from './pages/BankAccountsPage';
 import BranchesPage from './pages/BranchesPage';
@@ -252,6 +253,7 @@ function AppChooserPage() {
     {
       icon: MonitorCog,
       title: 'Admin Console',
+      appKey: 'admin',
       description: 'Users, roles, service points, approvals, reports, and system controls.',
       path: '/dashboard',
       accent: 'bg-[#172326] text-white',
@@ -259,6 +261,7 @@ function AppChooserPage() {
     {
       icon: ConciergeBell,
       title: 'Frontdesk',
+      appKey: 'frontdesk',
       description: 'Arrivals, guest profiles, room movements, concierge notes, and villa operations.',
       path: '/frontdesk',
       accent: 'bg-[#0d6b67] text-white',
@@ -266,6 +269,7 @@ function AppChooserPage() {
     {
       icon: FileText,
       title: 'Accounting',
+      appKey: 'accounting',
       description: 'Monthly sales, tax totals, collections, receivables, and payment summaries.',
       path: '/accounting',
       accent: 'bg-[#172326] text-[#d7b56d]',
@@ -273,11 +277,25 @@ function AppChooserPage() {
     {
       icon: LayoutDashboard,
       title: 'Sales',
+      appKey: 'sales',
       description: 'Leads, bookings, packages, invoices, corporate accounts, and guest offers.',
       path: '/sales',
       accent: 'bg-[#d7b56d] text-[#172326]',
     },
   ];
+  const visibleApps = apps.filter((app) => canAccessApp(profile.djangoUser, app.appKey));
+
+  if (profile.auth.isLoading || profile.loading) {
+    return (
+      <div className="min-h-screen bg-app-bg text-app-text flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      </div>
+    );
+  }
+
+  if (!profile.isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <main className="min-h-screen bg-app-bg text-app-text transition-colors duration-300">
@@ -318,8 +336,9 @@ function AppChooserPage() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {apps.map((app) => (
+        {visibleApps.length ? (
+          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {visibleApps.map((app) => (
             <Link
               key={app.title}
               to={app.path}
@@ -334,11 +353,61 @@ function AppChooserPage() {
                 Open app
               </span>
             </Link>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-10 rounded-lg border border-app-border bg-app-card p-8">
+            <ShieldCheck className="h-8 w-8 text-brand-500" />
+            <h2 className="mt-4 text-xl font-black text-app-text">No apps assigned</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-app-muted">
+              Your account is active, but no workspace permissions have been assigned yet. Ask an administrator to add an app permission or realm role to your user.
+            </p>
+          </div>
+        )}
       </section>
     </main>
   );
+}
+
+function AccessDeniedPage({ appKey }) {
+  const appName = APP_ACCESS[appKey]?.label || 'this app';
+
+  return (
+    <main className="min-h-screen bg-app-bg p-6 text-app-text">
+      <div className="mx-auto mt-20 max-w-xl rounded-lg border border-app-border bg-app-card p-8 text-center">
+        <ShieldCheck className="mx-auto h-10 w-10 text-brand-500" />
+        <h1 className="mt-4 text-2xl font-black">Access not assigned</h1>
+        <p className="mt-3 text-sm leading-6 text-app-muted">
+          Your account does not currently have permission to open {appName}.
+        </p>
+        <Link to="/home" className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 text-sm font-black text-white">
+          Back to apps
+        </Link>
+      </div>
+    </main>
+  );
+}
+
+function RequireAppAccess({ appKey, children }) {
+  const profile = useProfile();
+
+  if (profile.auth.isLoading || profile.loading) {
+    return (
+      <div className="min-h-screen bg-app-bg text-app-text flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      </div>
+    );
+  }
+
+  if (!profile.isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!canAccessApp(profile.djangoUser, appKey)) {
+    return <AccessDeniedPage appKey={appKey} />;
+  }
+
+  return children;
 }
 
 function DashboardShell() {
@@ -369,7 +438,7 @@ function DashboardShell() {
         />
       )}
       <Sidebar
-        djangoUser={profile.djangoUser?.identity}
+        djangoUser={profile.djangoUser}
         isOpen={navigationOpen}
         onClose={() => setNavigationOpen(false)}
       />
@@ -408,7 +477,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/home" element={<AppChooserPage />} />
-        <Route path="/sales" element={<SalesShell />}>
+        <Route path="/sales" element={<RequireAppAccess appKey="sales"><SalesShell /></RequireAppAccess>}>
           <Route index element={<SalesDashboard />} />
           <Route path="orders" element={<SalesListPage type="orders" />} />
           <Route path="orders/:id" element={<OrderDetailPage />} />
@@ -418,7 +487,7 @@ export default function App() {
           <Route path="payments/:id" element={<PaymentDetailPage />} />
           <Route path="payment-runs" element={<SalesListPage type="paymentRuns" />} />
         </Route>
-        <Route path="/frontdesk" element={<FrontdeskShell />}>
+        <Route path="/frontdesk" element={<RequireAppAccess appKey="frontdesk"><FrontdeskShell /></RequireAppAccess>}>
           <Route index element={<FrontdeskDashboard />} />
           <Route path="service-points" element={<FrontdeskServicePointsPage />} />
           <Route path="visits" element={<GuestVisitsPage />} />
@@ -431,47 +500,47 @@ export default function App() {
           <Route path="requests" element={<FrontdeskListPage type="requests" />} />
         </Route>
         <Route element={<DashboardShell />}>
-          <Route path="/dashboard" element={<DashboardOverview />} />
-          <Route path="/accounting" element={<AccountingDashboard />} />
-          <Route path="/users" element={<UserSetupPage />}>
+          <Route path="/dashboard" element={<RequireAppAccess appKey="admin"><DashboardOverview /></RequireAppAccess>} />
+          <Route path="/accounting" element={<RequireAppAccess appKey="accounting"><AccountingDashboard /></RequireAppAccess>} />
+          <Route path="/users" element={<RequireAppAccess appKey="admin"><UserSetupPage /></RequireAppAccess>}>
             <Route index element={<UsersDashboard embedded />} />
             <Route path="roles" element={<RolesSetupPage />} />
             <Route path="service-points" element={<ServicePointsSetupPage />} />
           </Route>
-          <Route path="/products" element={<ProductsSetupPage />}>
+          <Route path="/products" element={<RequireAppAccess appKey="admin"><ProductsSetupPage /></RequireAppAccess>}>
             <Route path="categories" element={<ProductCategoriesPage />} />
             <Route path="items" element={<ProductsItemsPage />} />
             <Route path="sales-pricelists" element={<SalesPricelistsPage />} />
             <Route path="sales-pricelists/:pricelistId" element={<SalesPricelistDetailPage />} />
             <Route path="purchase-pricelists" element={<PurchasePricelistsPage />} />
           </Route>
-          <Route path="/taxes-discounts" element={<TaxesDiscountsSetupPage />}>
+          <Route path="/taxes-discounts" element={<RequireAppAccess appKey="admin"><TaxesDiscountsSetupPage /></RequireAppAccess>}>
             <Route path="configurations" element={<TaxConfigurationsPage />} />
             <Route path="categories" element={<TaxCategoriesPage />} />
             <Route path="offices" element={<TaxOfficesPage />} />
             <Route path="discounts" element={<DiscountRulesPage />} />
           </Route>
-          <Route path="/payments" element={<PaymentSetupPage />}>
+          <Route path="/payments" element={<RequireAppAccess appKey="admin"><PaymentSetupPage /></RequireAppAccess>}>
             <Route path="methods" element={<PaymentMethodsPage />} />
             <Route path="bank-accounts" element={<BankAccountsPage />} />
             <Route path="routing-rules" element={<PaymentRoutingRulesPage />} />
           </Route>
-          <Route path="/organisation" element={<OrganisationSetupPage />}>
+          <Route path="/organisation" element={<RequireAppAccess appKey="admin"><OrganisationSetupPage /></RequireAppAccess>}>
             <Route path="organizations" element={<OrganizationsPage />} />
             <Route path="branches" element={<BranchesPage />} />
           </Route>
           <Route
             path="/tenders"
-            element={<PlaceholderPage icon={FileText} title="Tenders" description="Tender workflows are being connected." />}
+            element={<RequireAppAccess appKey="admin"><PlaceholderPage icon={FileText} title="Tenders" description="Tender workflows are being connected." /></RequireAppAccess>}
           />
-          <Route path="/users/members" element={<MembersTablePage />} />
+          <Route path="/users/members" element={<RequireAppAccess appKey="admin"><MembersTablePage /></RequireAppAccess>} />
           <Route
             path="/crm"
-            element={<PlaceholderPage icon={Target} title="CRM Pipeline" description="Client relationship management is being connected." />}
+            element={<RequireAppAccess appKey="admin"><PlaceholderPage icon={Target} title="CRM Pipeline" description="Client relationship management is being connected." /></RequireAppAccess>}
           />
           <Route
             path="/documents"
-            element={<PlaceholderPage icon={FolderOpen} title="Documents" description="Compliance document management is being connected." />}
+            element={<RequireAppAccess appKey="admin"><PlaceholderPage icon={FolderOpen} title="Documents" description="Compliance document management is being connected." /></RequireAppAccess>}
           />
           <Route
             path="/profile"
@@ -479,7 +548,7 @@ export default function App() {
           />
           <Route
             path="/workspace"
-            element={<PlaceholderPage icon={Building2} title="Workspace" description="Workspace settings are being connected." />}
+            element={<RequireAppAccess appKey="admin"><PlaceholderPage icon={Building2} title="Workspace" description="Workspace settings are being connected." /></RequireAppAccess>}
           />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

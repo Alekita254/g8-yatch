@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Loader2, Plus, ShieldCheck } from 'lucide-react';
+import { Loader2, Pencil, Plus, ShieldCheck } from 'lucide-react';
 
 import api, { emptyPagination, paginationFromResponse } from '../api';
+import { APP_PERMISSION_OPTIONS } from '../accessControl';
 import DataTable from '../components/DataTable';
 import RoleFormModal from '../components/RoleFormModal';
 
@@ -22,6 +23,7 @@ export default function RolesSetupPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingRole, setEditingRole] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -55,22 +57,79 @@ export default function RolesSetupPage() {
     ...(role.permissions || []),
   ].join(' ').toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
-  const createRole = async (event) => {
+  const nonAppPermissions = (permissions) => permissions.filter((permission) => !permission.startsWith('app.'));
+  const selectedAppKeys = (permissions) => APP_PERMISSION_OPTIONS
+    .filter((app) => permissions.includes(app.permission))
+    .map((app) => app.value);
+  const permissionsFromForm = () => {
+    const manualPermissions = permissionText
+      .split(',')
+      .map((permission) => permission.trim())
+      .filter(Boolean)
+      .filter((permission) => !permission.startsWith('app.'));
+    return Array.from(new Set([...manualPermissions, ...(form.permissions || [])]));
+  };
+
+  const openCreateModal = () => {
+    setForm(emptyRole);
+    setPermissionText('');
+    setEditingRole(null);
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (role) => {
+    setForm({
+      key: role.key,
+      name: role.name,
+      description: role.description || '',
+      permissions: role.permissions || [],
+      sync_to_keycloak: role.sync_to_keycloak,
+      is_active: role.is_active,
+    });
+    setPermissionText(nonAppPermissions(role.permissions || []).join(', '));
+    setEditingRole(role);
+    setShowAddModal(true);
+  };
+
+  const closeModal = () => {
+    setForm(emptyRole);
+    setPermissionText('');
+    setEditingRole(null);
+    setShowAddModal(false);
+  };
+
+  const toggleAppPermission = (appKey) => {
+    const app = APP_PERMISSION_OPTIONS.find((item) => item.value === appKey);
+    if (!app) return;
+
+    setForm((current) => {
+      const permissions = new Set(current.permissions || []);
+      if (permissions.has(app.permission)) {
+        permissions.delete(app.permission);
+      } else {
+        permissions.add(app.permission);
+      }
+      return { ...current, permissions: Array.from(permissions) };
+    });
+  };
+
+  const saveRole = async (event) => {
     event.preventDefault();
     try {
       setSaving(true);
-      const permissions = permissionText
-        .split(',')
-        .map((permission) => permission.trim())
-        .filter(Boolean);
-      const response = await api.post('/api/users/roles/', { ...form, permissions });
-      setRoles((current) => [response.data, ...current]);
-      setForm(emptyRole);
-      setPermissionText('');
-      setShowAddModal(false);
-      toast.success('Role created');
+      const permissions = permissionsFromForm();
+      if (editingRole) {
+        const response = await api.patch(`/api/users/roles/${editingRole.id}/`, { ...form, permissions });
+        setRoles((current) => current.map((role) => role.id === editingRole.id ? response.data : role));
+        toast.success('Role updated');
+      } else {
+        const response = await api.post('/api/users/roles/', { ...form, permissions });
+        setRoles((current) => [response.data, ...current]);
+        toast.success('Role created');
+      }
+      closeModal();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create role');
+      toast.error(err.response?.data?.detail || `Failed to ${editingRole ? 'update' : 'create'} role`);
     } finally {
       setSaving(false);
     }
@@ -98,7 +157,7 @@ export default function RolesSetupPage() {
         </div>
         <button
           type="button"
-          onClick={() => setShowAddModal(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
         >
           <Plus className="h-4 w-4" />
@@ -121,15 +180,45 @@ export default function RolesSetupPage() {
           },
           { key: 'description', header: 'Description', render: (role) => role.description || 'No description yet.' },
           {
+            key: 'apps',
+            header: 'Apps',
+            render: (role) => {
+              const apps = selectedAppKeys(role.permissions || [])
+                .map((appKey) => APP_PERMISSION_OPTIONS.find((app) => app.value === appKey)?.label)
+                .filter(Boolean);
+              return apps.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {apps.map((app) => (
+                    <span key={app} className="rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">{app}</span>
+                  ))}
+                </div>
+              ) : '-';
+            },
+          },
+          {
             key: 'permissions',
             header: 'Permissions',
-            render: (role) => (role.permissions || []).length ? (
+            render: (role) => nonAppPermissions(role.permissions || []).length ? (
               <div className="flex flex-wrap gap-2">
-                {role.permissions.map((permission) => (
+                {nonAppPermissions(role.permissions || []).map((permission) => (
                   <span key={permission} className="rounded-md bg-brand-500/10 px-2 py-1 text-xs font-bold text-brand-500">{permission}</span>
                 ))}
               </div>
             ) : '-',
+          },
+          {
+            key: 'actions',
+            header: 'Actions',
+            render: (role) => (
+              <button
+                type="button"
+                onClick={() => openEditModal(role)}
+                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-app-border px-3 text-xs font-black text-app-text transition hover:bg-app-elevated"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </button>
+            ),
           },
           {
             key: 'status',
@@ -165,12 +254,17 @@ export default function RolesSetupPage() {
       <RoleFormModal
         isOpen={showAddModal}
         form={form}
+        title={editingRole ? 'Edit operational role' : 'Create operational role'}
+        mode={editingRole ? 'edit' : 'create'}
         permissionText={permissionText}
+        appOptions={APP_PERMISSION_OPTIONS}
+        selectedAppKeys={selectedAppKeys(form.permissions || [])}
         onChange={updateForm}
         onPermissionTextChange={setPermissionText}
+        onToggleAppPermission={toggleAppPermission}
         onToggleSync={() => updateForm('sync_to_keycloak', !form.sync_to_keycloak)}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={createRole}
+        onClose={closeModal}
+        onSubmit={saveRole}
         isSaving={saving}
       />
     </div>

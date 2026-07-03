@@ -4,9 +4,14 @@ import ModalLayer from './ModalLayer';
 export default function RoleFormModal({
   isOpen,
   form,
+  title = 'Create operational role',
+  mode = 'create',
   permissionText,
+  appOptions = [],
+  selectedAppKeys = [],
   onChange,
   onPermissionTextChange,
+  onToggleAppPermission,
   onToggleSync,
   onClose,
   onSubmit,
@@ -21,10 +26,10 @@ export default function RoleFormModal({
           <div>
             <div className="flex items-center gap-2 text-brand-500">
               <ShieldCheck className="h-5 w-5" />
-              <p className="text-xs font-black uppercase tracking-[0.16em]">Add Role</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em]">{mode === 'edit' ? 'Edit Role' : 'Add Role'}</p>
             </div>
-            <h2 className="mt-2 text-2xl font-black text-app-text">Create operational role</h2>
-            <p className="text-sm text-app-muted">Roles can be synced to Keycloak and assigned to users.</p>
+            <h2 className="mt-2 text-2xl font-black text-app-text">{title}</h2>
+            <p className="text-sm text-app-muted">Assign apps here, then assign this role to users.</p>
           </div>
           <button
             type="button"
@@ -42,8 +47,9 @@ export default function RoleFormModal({
               value={form.key}
               onChange={(event) => onChange('key', event.target.value.toUpperCase().replace(/\s+/g, '_'))}
               required
+              disabled={mode === 'edit'}
               placeholder="POS_MANAGER"
-              className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-60"
             />
           </label>
           <label className="space-y-2">
@@ -66,14 +72,37 @@ export default function RoleFormModal({
             />
           </label>
           <label className="space-y-2 lg:col-span-2">
-            <span className="text-xs font-bold uppercase text-app-muted">Permissions optional</span>
+            <span className="text-xs font-bold uppercase text-app-muted">Assigned apps</span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {appOptions.map((app) => {
+                const active = selectedAppKeys.includes(app.value);
+                return (
+                  <button
+                    key={app.value}
+                    type="button"
+                    onClick={() => onToggleAppPermission(app.value)}
+                    className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm font-bold transition ${
+                      active
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                        : 'border-app-border bg-app-elevated text-app-muted hover:text-app-text'
+                    }`}
+                  >
+                    <span>{app.label}</span>
+                    {active && <Check className="h-4 w-4" />}
+                  </button>
+                );
+              })}
+            </div>
+          </label>
+          <label className="space-y-2 lg:col-span-2">
+            <span className="text-xs font-bold uppercase text-app-muted">Other permissions optional</span>
             <input
               value={permissionText}
               onChange={(event) => onPermissionTextChange(event.target.value)}
               placeholder="Leave empty for now, or add users.manage, pos.void_items"
               className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
             />
-            <p className="text-xs text-app-muted">You can create roles without permissions and attach permission rules later.</p>
+            <p className="text-xs text-app-muted">Use app checkboxes for app access. Use this field for extra action permissions.</p>
           </label>
           <button
             type="button"
@@ -104,7 +133,7 @@ export default function RoleFormModal({
             className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Role
+            {mode === 'edit' ? 'Save Changes' : 'Save Role'}
           </button>
         </div>
       </form>

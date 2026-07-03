@@ -21,10 +21,21 @@ from .serializers import (
 class MeView(APIView):
     def get(self, request):
         serializer = UserIdentitySerializer(request.user.identity)
+        roles = request.user.realm_roles
+        role_keys = set(roles)
+        role_keys.update(role.upper() for role in roles)
+        permissions = sorted(
+            {
+                permission
+                for role in Role.objects.filter(key__in=role_keys, is_active=True)
+                for permission in (role.permissions or [])
+            }
+        )
         return Response(
             {
                 "identity": serializer.data,
-                "roles": request.user.realm_roles,
+                "roles": roles,
+                "permissions": permissions,
             }
         )
 

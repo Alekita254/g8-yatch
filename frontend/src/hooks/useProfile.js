@@ -33,8 +33,9 @@ export default function useProfile() {
   }, [auth.isAuthenticated, auth.user]);
 
   // Process visual helpers
-  const userName = djangoUser?.first_name 
-    ? `${djangoUser.first_name} ${djangoUser.last_name || ''}`.trim() 
+  const identity = djangoUser?.identity;
+  const userName = identity?.first_name
+    ? `${identity.first_name} ${identity.last_name || ''}`.trim()
     : (auth.user?.profile?.name || auth.user?.profile?.preferred_username || auth.user?.profile?.email || "User");
   
   const userInitials = userName ? userName.substring(0, 2).toUpperCase() : "US";
