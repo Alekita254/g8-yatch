@@ -276,32 +276,38 @@ export default function VisitDetailPage() {
     }
   };
 
-  const downloadCombinedVisitInvoice = async () => {
+  const printCombinedVisitInvoice = async () => {
+    let printWindow;
     try {
+      printWindow = openPrintWindow(`visit-invoice-${visit.visit_number}`);
       setWorking('all-invoices');
       const blob = await fetchVisitDocument(id, 'invoice');
-      downloadDocumentBlob(`visit-invoice-${visit.visit_number}.pdf`, blob);
-      toast.success('Combined visit invoice downloaded');
+      await printPdfBlob(blob, `visit-invoice-${visit.visit_number}`, printWindow);
+      toast.success('Combined visit invoice sent to print dialog');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not download combined invoice');
+      if (printWindow && !printWindow.closed) printWindow.close();
+      toast.error(err.response?.data?.detail || 'Could not print combined invoice');
     } finally {
       setWorking('');
     }
   };
 
-  const downloadCombinedVisitReceipt = async () => {
+  const printCombinedVisitReceipt = async () => {
     if (!invoices.some((invoice) => Number(invoice.paid_total || 0) > 0)) {
-      toast.error('There are no paid receipts to download yet.');
+      toast.error('There are no paid receipts to print yet.');
       return;
     }
 
+    let printWindow;
     try {
+      printWindow = openPrintWindow(`visit-receipt-${visit.visit_number}`);
       setWorking('all-receipts');
       const blob = await fetchVisitDocument(id, 'receipt');
-      downloadDocumentBlob(`visit-receipt-${visit.visit_number}.pdf`, blob);
-      toast.success('Combined visit receipt downloaded');
+      await printPdfBlob(blob, `visit-receipt-${visit.visit_number}`, printWindow);
+      toast.success('Combined visit receipt sent to print dialog');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not download combined receipt');
+      if (printWindow && !printWindow.closed) printWindow.close();
+      toast.error(err.response?.data?.detail || 'Could not print combined receipt');
     } finally {
       setWorking('');
     }
@@ -766,21 +772,21 @@ export default function VisitDetailPage() {
                 <div className="grid gap-2 rounded-lg border border-app-border bg-app-elevated p-3 sm:flex sm:flex-wrap">
                   <button
                     type="button"
-                    onClick={downloadCombinedVisitInvoice}
+                    onClick={printCombinedVisitInvoice}
                     disabled={working === 'all-invoices'}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-bold text-white disabled:opacity-50"
                   >
-                    {working === 'all-invoices' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
-                    Download combined invoice
+                    {working === 'all-invoices' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                    Print combined invoice
                   </button>
                   <button
                     type="button"
-                    onClick={downloadCombinedVisitReceipt}
+                    onClick={printCombinedVisitReceipt}
                     disabled={working === 'all-receipts' || !invoices.some((invoice) => Number(invoice.paid_total || 0) > 0)}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-4 text-sm font-bold text-app-text disabled:opacity-50"
                   >
-                    {working === 'all-receipts' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
-                    Download combined receipt
+                    {working === 'all-receipts' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                    Print combined receipt
                   </button>
                 </div>
               ) : null}
