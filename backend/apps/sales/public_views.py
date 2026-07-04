@@ -13,6 +13,7 @@ from apps.users.models import ServicePoint
 
 from .models import GuestVisit, SalesOrder, SalesOrderItem
 from .serializers import GuestVisitSerializer
+from .taxing import calculate_order_tax_lines, money, percent_amount
 from .views import create_invoice_from_order, next_number
 
 
@@ -149,6 +150,21 @@ class PublicVisitOrderView(APIView):
             subtotal += line_total
             lines.append((product, quantity, price, line_total))
 
+        taxes = calculate_order_tax_lines([
+            {
+                "base": money(line_total),
+                "vat_rate": product.category.tax_rate if product.category_id else Decimal("16.00"),
+            }
+            for product, quantity, price, line_total in lines
+        ])
+        taxed_lines = []
+        for product, quantity, price, line_total in lines:
+            base = money(line_total)
+            vat = percent_amount(base, product.category.tax_rate if product.category_id else Decimal("16.00"))
+            tot = money(taxes["tot_total"] * base / taxes["subtotal"]) if taxes["subtotal"] > 0 else Decimal("0")
+            line_tax = money(vat + tot)
+            taxed_lines.append((product, quantity, price, base, line_tax, money(base + line_tax)))
+
         order = SalesOrder.objects.create(
             order_number=next_number("WEB", SalesOrder, "order_number"),
             visit=visit,
@@ -156,8 +172,9 @@ class PublicVisitOrderView(APIView):
             table_name=f"{visit.service_area} {visit.table_name}".strip(),
             customer_name=visit.guest_name or "Walk-in guest",
             status=SalesOrder.Status.SENT,
-            subtotal=subtotal,
-            grand_total=subtotal,
+            subtotal=taxes["subtotal"],
+            tax_total=taxes["tax_total"],
+            grand_total=taxes["subtotal"] + taxes["tax_total"],
             notes=str(request.data.get("notes", "")).strip(),
         )
         SalesOrderItem.objects.bulk_create([
@@ -167,12 +184,13 @@ class PublicVisitOrderView(APIView):
                 service_point=visit.service_point,
                 quantity=quantity,
                 unit_price=price,
-                line_total=line_total,
+                tax_total=line_tax,
+                line_total=gross_total,
                 status=SalesOrderItem.Status.SENT_TO_KITCHEN,
                 routed_station=product.category.route_station,
                 sent_at=timezone.now(),
             )
-            for product, quantity, price, line_total in lines
+            for product, quantity, price, line_total, line_tax, gross_total in taxed_lines
         ])
         create_invoice_from_order(order)
         return Response(visit_response(visit), status=status.HTTP_201_CREATED)

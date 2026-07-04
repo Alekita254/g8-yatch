@@ -51,6 +51,7 @@ export default function FrontdeskServicePointsPage() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [pricelists, setPricelists] = useState([]);
+  const [taxConfigurations, setTaxConfigurations] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPointId, setSelectedPointId] = useState('');
   const [selectedVisitId, setSelectedVisitId] = useState('');
@@ -71,12 +72,13 @@ export default function FrontdeskServicePointsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [points, activeVisits, productCategories, productItems, salesPricelists, activePaymentMethods] = await Promise.all([
+        const [points, activeVisits, productCategories, productItems, salesPricelists, activeTaxConfigurations, activePaymentMethods] = await Promise.all([
           fetchAllResults('/api/users/service-points/'),
           fetchAllResults('/api/sales/visits/'),
           fetchAllResults('/api/products/categories/'),
           fetchAllResults('/api/products/items/'),
           fetchAllResults('/api/products/sales-pricelists/'),
+          fetchAllResults('/api/taxes/configurations/'),
           fetchAllResults('/api/payments/methods/'),
         ]);
         setServicePoints(points.filter((point) => point.is_active && salesKinds.has(point.kind)));
@@ -84,6 +86,7 @@ export default function FrontdeskServicePointsPage() {
         setCategories(productCategories.filter((category) => category.is_active));
         setProducts(productItems.filter((product) => product.is_active && product.is_sellable));
         setPricelists(salesPricelists.filter((pricelist) => pricelist.is_active));
+        setTaxConfigurations(activeTaxConfigurations.filter((tax) => tax.is_active));
         setPaymentMethods(activePaymentMethods
           .filter((method) => method.is_active && !method.requires_room_verification));
       } catch (err) {
@@ -178,10 +181,19 @@ export default function FrontdeskServicePointsPage() {
   }, [categories, categoryById, saleItems]);
 
   const subtotal = cart.reduce((sum, line) => sum + lineTotal(line), 0);
+  const vatTotal = cart.reduce((sum, line) => {
+    const category = line.categoryId ? categoryById.get(String(line.categoryId)) : null;
+    const rate = Number(category?.tax_rate ?? 16);
+    return sum + (lineTotal(line) * rate / 100);
+  }, 0);
+  const totRate = Number(taxConfigurations.find((tax) => ['tot', 'tot-1-5', 'turnover-tax'].includes(tax.code))?.rate || 0);
+  const totTotal = subtotal * totRate / 100;
+  const taxTotal = vatTotal + totTotal;
+  const grandTotal = subtotal + taxTotal;
   const selectedPaymentMethod = paymentMethods.find((method) => String(method.id) === String(sale.payment_method));
   const isCashPayment = selectedPaymentMethod?.method_type === 'CASH';
   const amountReceived = Number(sale.amount_received || 0);
-  const changeDue = isCashPayment ? Math.max(amountReceived - subtotal, 0) : 0;
+  const changeDue = isCashPayment ? Math.max(amountReceived - grandTotal, 0) : 0;
   const selectedSaleCategory = saleCategories.find((category) => category.id === selectedCategory);
   const selectedVisit = visits.find((visit) => String(visit.id) === String(selectedVisitId));
   const sortedVisits = useMemo(() => [...visits].sort((left, right) => {
@@ -236,18 +248,18 @@ export default function FrontdeskServicePointsPage() {
       table_name: selectedVisit ? selectedVisit.table_name : sale.table_name,
       customer_name: selectedVisit ? selectedVisit.guest_name : sale.customer_name,
       subtotal: subtotal.toFixed(2),
-      tax_total: '0.00',
+      tax_total: taxTotal.toFixed(2),
       discount_total: '0.00',
-      grand_total: subtotal.toFixed(2),
+      grand_total: grandTotal.toFixed(2),
       notes: `${selectedPoint.name} POS sale`,
       items: cart.map((line) => ({
         product: line.product,
         service_point: selectedPoint.id,
         quantity: String(line.quantity),
         unit_price: Number(line.price).toFixed(2),
-        tax_total: '0.00',
+        tax_total: (lineTotal(line) * ((Number(categoryById.get(String(line.categoryId))?.tax_rate ?? 16) + totRate) / 100)).toFixed(2),
         discount_total: '0.00',
-        line_total: lineTotal(line).toFixed(2),
+        line_total: (lineTotal(line) + (lineTotal(line) * ((Number(categoryById.get(String(line.categoryId))?.tax_rate ?? 16) + totRate) / 100))).toFixed(2),
       })),
     });
     await api.post(`/api/sales/orders/${orderResponse.data.id}/send/`);
@@ -275,7 +287,7 @@ export default function FrontdeskServicePointsPage() {
     try {
       setSaving(true);
       const order = await createOrder();
-      setReceipt({ orderNumber: order.order_number, visitId: order.visit, total: subtotal, paid: false });
+      setReceipt({ orderNumber: order.order_number, visitId: order.visit, total: grandTotal, paid: false });
       resetSale();
       if (order.visit && !selectedVisitId) setSelectedVisitId(String(order.visit));
       window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -298,7 +310,7 @@ export default function FrontdeskServicePointsPage() {
       toast.error(`${selectedPaymentMethod.name} requires a customer name`);
       return;
     }
-    if (isCashPayment && amountReceived < subtotal) {
+    if (isCashPayment && amountReceived < grandTotal) {
       toast.error('Cash received cannot be less than the amount due');
       return;
     }
@@ -310,15 +322,15 @@ export default function FrontdeskServicePointsPage() {
       await api.post('/api/sales/payments/', {
         invoice: invoiceResponse.data.id,
         payment_method: selectedPaymentMethod.id,
-        amount: subtotal.toFixed(2),
+        amount: Number(invoiceResponse.data.grand_total || grandTotal).toFixed(2),
         reference: sale.reference.trim(),
       });
       setReceipt({
         orderNumber: order.order_number,
         invoiceNumber: invoiceResponse.data.invoice_number,
         paymentMethod: selectedPaymentMethod.name,
-        total: subtotal,
-        amountReceived: isCashPayment ? amountReceived : subtotal,
+        total: Number(invoiceResponse.data.grand_total || grandTotal),
+        amountReceived: isCashPayment ? amountReceived : Number(invoiceResponse.data.grand_total || grandTotal),
         change: changeDue,
         paid: true,
       });
@@ -583,9 +595,23 @@ export default function FrontdeskServicePointsPage() {
             </label>
           </div>
 
-          <div className="mt-6 flex items-center justify-between border-t border-app-border pt-4">
-            <span className="text-sm font-black uppercase text-app-muted">Total</span>
-            <span className="text-2xl font-black text-app-text">{money(subtotal)}</span>
+          <div className="mt-6 space-y-2 border-t border-app-border pt-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-bold text-app-muted">Subtotal</span>
+              <span className="font-black text-app-text">{money(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-bold text-app-muted">VAT</span>
+              <span className="font-black text-app-text">{money(vatTotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-bold text-app-muted">TOT</span>
+              <span className="font-black text-app-text">{money(totTotal)}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-app-border pt-3">
+              <span className="text-sm font-black uppercase text-app-muted">Total</span>
+              <span className="text-2xl font-black text-app-text">{money(grandTotal)}</span>
+            </div>
           </div>
 
           {!checkoutOpen ? (
@@ -616,7 +642,7 @@ export default function FrontdeskServicePointsPage() {
               {isCashPayment ? (
                 <label className="block space-y-2">
                   <span className="text-xs font-bold uppercase text-app-muted">Cash received</span>
-                  <input required min={subtotal} step="0.01" type="number" inputMode="decimal" value={sale.amount_received} onChange={(event) => setSale((current) => ({ ...current, amount_received: event.target.value }))} placeholder={subtotal.toFixed(2)} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+                  <input required min={grandTotal} step="0.01" type="number" inputMode="decimal" value={sale.amount_received} onChange={(event) => setSale((current) => ({ ...current, amount_received: event.target.value }))} placeholder={grandTotal.toFixed(2)} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
                 </label>
               ) : null}
               {selectedPaymentMethod?.requires_reference ? (
@@ -625,7 +651,7 @@ export default function FrontdeskServicePointsPage() {
                   <input required value={sale.reference} onChange={(event) => setSale((current) => ({ ...current, reference: event.target.value }))} placeholder="M-Pesa code, card approval, bank ref..." className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
                 </label>
               ) : null}
-              {isCashPayment && amountReceived >= subtotal ? (
+              {isCashPayment && amountReceived >= grandTotal ? (
                 <div className="flex items-center justify-between rounded-md bg-app-elevated p-3">
                   <span className="text-sm font-bold text-app-muted">Change to return</span>
                   <span className="text-lg font-black text-app-text">{money(changeDue)}</span>
@@ -633,7 +659,7 @@ export default function FrontdeskServicePointsPage() {
               ) : null}
               <button type="submit" disabled={saving || !selectedPaymentMethod} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
-                Collect {money(subtotal)}
+                Collect {money(grandTotal)}
               </button>
               <button type="button" onClick={() => setCheckoutOpen(false)} disabled={saving} className="w-full rounded-md px-4 py-2 text-sm font-bold text-app-muted transition hover:bg-app-elevated hover:text-app-text">
                 Back to order

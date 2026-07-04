@@ -788,6 +788,15 @@ export default function VisitDetailPage() {
                     <div>
                       <p className="font-black">{inv.invoice_number}</p>
                       <p className="text-sm text-app-muted">Total: {money(inv.grand_total)} · Paid: {money(inv.paid_total)} · Due: {money(inv.balance_due)}</p>
+                      {inv.tax_lines?.length ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {inv.tax_lines.map((tax) => (
+                            <span key={`${inv.id}-${tax.code}`} className="rounded-md bg-app-card px-2 py-1 text-xs font-black text-app-muted">
+                              {tax.name} {tax.rate}%: {money(tax.amount)}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                     <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
                       {inv.balance_due > 0 && (

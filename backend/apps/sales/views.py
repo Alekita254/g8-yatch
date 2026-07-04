@@ -14,9 +14,11 @@ from rest_framework.views import APIView
 from apps.users.models import ServicePoint
 from apps.users.models import UserIdentity
 from apps.pagination import paginated_response
+from apps.products.models import Product
 
 from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, GuestVisit, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
 from .serializers import CustomerPaymentRunSerializer, GuestVisitSerializer, SalesInvoiceDetailSerializer, SalesInvoiceSerializer, SalesOrderItemSerializer, SalesOrderSerializer, SalesPaymentDetailSerializer, SalesPaymentSerializer
+from .taxing import calculate_order_tax_lines, money, percent_amount, tax_lines_from_payload
 
 
 def next_number(prefix, model, field):
@@ -25,24 +27,81 @@ def next_number(prefix, model, field):
 
 
 def build_fiscal_payload(order):
-    items = order.items.exclude(status=SalesOrderItem.Status.VOIDED).values(
-        "product_id",
-        "quantity",
-        "unit_price",
-        "line_total",
-    )
+    item_source = order.items.exclude(status=SalesOrderItem.Status.VOIDED)
+    try:
+        items = list(item_source.select_related("product", "product__category"))
+    except TypeError:
+        item_values = item_source.values("product_id", "quantity", "unit_price", "line_total")
+        return {
+            "order_number": order.order_number,
+            "items": [
+                {
+                    "product_id": item["product_id"],
+                    "quantity": str(item["quantity"]),
+                    "unit_price": str(item["unit_price"]),
+                    "line_total": str(item["line_total"]),
+                }
+                for item in item_values
+            ],
+        }
+    line_bases = [
+        {
+            "base": money(item.quantity * item.unit_price),
+            "vat_rate": item.product.category.tax_rate if item.product.category_id else Decimal("16.00"),
+        }
+        for item in items
+    ]
+    taxes = calculate_order_tax_lines(line_bases)
     return {
         "order_number": order.order_number,
+        "tax_lines": taxes["tax_lines"],
         "items": [
             {
-                "product_id": item["product_id"],
-                "quantity": str(item["quantity"]),
-                "unit_price": str(item["unit_price"]),
-                "line_total": str(item["line_total"]),
+                "product_id": item.product_id,
+                "quantity": str(item.quantity),
+                "unit_price": str(item.unit_price),
+                "line_total": str(item.line_total),
             }
             for item in items
         ],
     }
+
+
+def apply_sales_taxes_to_order_data(data):
+    items = data.get("items") or []
+    product_ids = [int(item.get("product")) for item in items if item.get("product")]
+    products = {
+        product.id: product
+        for product in Product.objects.select_related("category").filter(id__in=product_ids)
+    }
+    line_bases = []
+    normalized_items = []
+
+    for item in items:
+        product = products.get(int(item.get("product"))) if item.get("product") else None
+        quantity = Decimal(str(item.get("quantity") or "0"))
+        unit_price = money(item.get("unit_price") or "0")
+        base = money(quantity * unit_price)
+        vat_rate = product.category.tax_rate if product and product.category_id else Decimal("16.00")
+        line_bases.append({"base": base, "vat_rate": vat_rate})
+        normalized_items.append((item, base, vat_rate))
+
+    taxes = calculate_order_tax_lines(line_bases)
+    for item, base, vat_rate in normalized_items:
+        item_tax = percent_amount(base, vat_rate)
+        if taxes["subtotal"] > 0:
+            item_tax += money(taxes["tot_total"] * base / taxes["subtotal"])
+        item["tax_total"] = str(item_tax)
+        item["discount_total"] = str(money(item.get("discount_total") or "0"))
+        item["line_total"] = str(money(base + item_tax - Decimal(item["discount_total"])))
+
+    discount_total = money(sum((Decimal(str(item.get("discount_total") or "0")) for item in items), Decimal("0")))
+    data["items"] = items
+    data["subtotal"] = str(taxes["subtotal"])
+    data["tax_total"] = str(taxes["tax_total"])
+    data["discount_total"] = str(discount_total)
+    data["grand_total"] = str(money(taxes["subtotal"] + taxes["tax_total"] - discount_total))
+    return data
 
 
 def generate_receipt_filename(invoice):
@@ -161,7 +220,9 @@ def generate_payment_receipt_pdf(invoice):
     c.drawString(margin, y, "BILL SUMMARY")
     y -= line_height
     pair("Subtotal (items)", f"KES {invoice.subtotal:,.2f}")
-    pair("Tax", f"KES {invoice.tax_total:,.2f}")
+    for tax in tax_lines_from_payload(invoice.fiscal_payload):
+        pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
+    pair("Tax total", f"KES {invoice.tax_total:,.2f}")
     pair("Discount", f"- KES {invoice.discount_total:,.2f}")
     pair("TOTAL", f"KES {invoice.grand_total:,.2f}", "Helvetica-Bold", 10)
     rule()
@@ -271,7 +332,9 @@ def generate_sales_invoice_pdf(invoice):
     c.drawString(margin, y, "BILL SUMMARY")
     y -= line_height
     pair("Subtotal (items)", f"KES {invoice.subtotal:,.2f}")
-    pair("Tax", f"KES {invoice.tax_total:,.2f}")
+    for tax in tax_lines_from_payload(invoice.fiscal_payload):
+        pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
+    pair("Tax total", f"KES {invoice.tax_total:,.2f}")
     pair("Discount", f"- KES {invoice.discount_total:,.2f}")
     pair("INVOICE TOTAL", f"KES {invoice.grand_total:,.2f}", "Helvetica-Bold", 10)
     pair("Amount paid", f"KES {invoice.paid_total:,.2f}", "Helvetica", 8)
@@ -393,7 +456,9 @@ def generate_order_receipts_pdf(order):
             c.drawString(margin, y, "BILL SUMMARY")
             y -= line_height
             pair("Subtotal (items)", f"KES {order.subtotal:,.2f}")
-            pair("Tax", f"KES {order.tax_total:,.2f}")
+            for tax in build_fiscal_payload(order).get("tax_lines", []):
+                pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
+            pair("Tax total", f"KES {order.tax_total:,.2f}")
             pair("Discount", f"- KES {order.discount_total:,.2f}")
             pair("ORDER TOTAL", f"KES {order.grand_total:,.2f}", "Helvetica-Bold", 10)
         else:
@@ -438,6 +503,7 @@ def create_invoice_from_order(order, issued_by=""):
     if issued_by:
         create_kwargs["issued_by"] = issued_by
 
+    fiscal_payload = build_fiscal_payload(order)
     return SalesInvoice.objects.create(
         invoice_number=next_number("INV", SalesInvoice, "invoice_number"),
         order=order,
@@ -448,7 +514,7 @@ def create_invoice_from_order(order, issued_by=""):
         discount_total=order.discount_total,
         grand_total=order.grand_total,
         balance_due=order.grand_total,
-        fiscal_payload=build_fiscal_payload(order),
+        fiscal_payload=fiscal_payload,
         **create_kwargs,
     )
 
@@ -520,6 +586,7 @@ class SalesOrderListCreateView(ListCreateMixin):
                 customer_name=str(data.get("customer_name", "")).strip(),
             )
             data["visit"] = visit.pk
+        data = apply_sales_taxes_to_order_data(data)
         serializer = self.serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
         order = serializer.save(

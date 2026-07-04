@@ -94,6 +94,7 @@ class SalesOrderSerializer(serializers.ModelSerializer):
             "id": obj.invoice.id,
             "invoice_number": obj.invoice.invoice_number,
             "grand_total": obj.invoice.grand_total,
+            "tax_lines": obj.invoice.fiscal_payload.get("tax_lines", []) if isinstance(obj.invoice.fiscal_payload, dict) else [],
             "paid_total": obj.invoice.paid_total,
             "balance_due": obj.invoice.balance_due,
             "status": obj.invoice.status,
@@ -166,6 +167,7 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
     issued_by = serializers.CharField(read_only=True)
     issued_by_name = serializers.SerializerMethodField()
     receipt_url = serializers.SerializerMethodField()
+    tax_lines = serializers.SerializerMethodField()
 
     class Meta:
         model = SalesInvoice
@@ -181,6 +183,7 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
             "issued_by_name",
             "subtotal",
             "tax_total",
+            "tax_lines",
             "discount_total",
             "grand_total",
             "paid_total",
@@ -204,6 +207,11 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
 
     def get_issued_by_name(self, obj):
         return identity_display_name(obj.issued_by)
+
+    def get_tax_lines(self, obj):
+        if not isinstance(obj.fiscal_payload, dict):
+            return []
+        return obj.fiscal_payload.get("tax_lines", [])
 
 
 class SalesInvoiceDetailSerializer(SalesInvoiceSerializer):
