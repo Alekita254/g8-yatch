@@ -13,7 +13,7 @@ from apps.users.models import ServicePoint
 
 from .models import GuestVisit, SalesOrder, SalesOrderItem
 from .serializers import GuestVisitSerializer
-from .taxing import calculate_order_tax_lines, money, percent_amount
+from .taxing import calculate_order_tax_lines, inclusive_tax_breakdown, money
 from .views import create_invoice_from_order, next_number
 
 
@@ -160,10 +160,8 @@ class PublicVisitOrderView(APIView):
         taxed_lines = []
         for product, quantity, price, line_total in lines:
             base = money(line_total)
-            vat = percent_amount(base, product.category.tax_rate if product.category_id else Decimal("16.00"))
-            tot = money(taxes["tot_total"] * base / taxes["subtotal"]) if taxes["subtotal"] > 0 else Decimal("0")
-            line_tax = money(vat + tot)
-            taxed_lines.append((product, quantity, price, base, line_tax, money(base + line_tax)))
+            breakdown = inclusive_tax_breakdown(base, product.category.tax_rate if product.category_id else Decimal("16.00"), taxes["tot_rate"])
+            taxed_lines.append((product, quantity, price, base, breakdown["tax"], base))
 
         order = SalesOrder.objects.create(
             order_number=next_number("WEB", SalesOrder, "order_number"),
@@ -174,7 +172,7 @@ class PublicVisitOrderView(APIView):
             status=SalesOrder.Status.SENT,
             subtotal=taxes["subtotal"],
             tax_total=taxes["tax_total"],
-            grand_total=taxes["subtotal"] + taxes["tax_total"],
+            grand_total=taxes["gross_total"],
             notes=str(request.data.get("notes", "")).strip(),
         )
         SalesOrderItem.objects.bulk_create([

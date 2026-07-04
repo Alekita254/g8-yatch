@@ -18,7 +18,7 @@ from apps.products.models import Product
 
 from .models import CustomerPaymentRun, CustomerPaymentRunAllocation, GuestVisit, SalesInvoice, SalesOrder, SalesOrderItem, SalesPayment
 from .serializers import CustomerPaymentRunSerializer, GuestVisitSerializer, SalesInvoiceDetailSerializer, SalesInvoiceSerializer, SalesOrderItemSerializer, SalesOrderSerializer, SalesPaymentDetailSerializer, SalesPaymentSerializer
-from .taxing import calculate_order_tax_lines, money, percent_amount, tax_lines_from_payload
+from .taxing import calculate_order_tax_lines, inclusive_tax_breakdown, money, tax_lines_from_payload
 
 
 def next_number(prefix, model, field):
@@ -88,19 +88,17 @@ def apply_sales_taxes_to_order_data(data):
 
     taxes = calculate_order_tax_lines(line_bases)
     for item, base, vat_rate in normalized_items:
-        item_tax = percent_amount(base, vat_rate)
-        if taxes["subtotal"] > 0:
-            item_tax += money(taxes["tot_total"] * base / taxes["subtotal"])
+        item_tax = inclusive_tax_breakdown(base, vat_rate, taxes["tot_rate"])["tax"]
         item["tax_total"] = str(item_tax)
         item["discount_total"] = str(money(item.get("discount_total") or "0"))
-        item["line_total"] = str(money(base + item_tax - Decimal(item["discount_total"])))
+        item["line_total"] = str(money(base - Decimal(item["discount_total"])))
 
     discount_total = money(sum((Decimal(str(item.get("discount_total") or "0")) for item in items), Decimal("0")))
     data["items"] = items
     data["subtotal"] = str(taxes["subtotal"])
     data["tax_total"] = str(taxes["tax_total"])
     data["discount_total"] = str(discount_total)
-    data["grand_total"] = str(money(taxes["subtotal"] + taxes["tax_total"] - discount_total))
+    data["grand_total"] = str(money(taxes["gross_total"] - discount_total))
     return data
 
 
@@ -219,7 +217,7 @@ def generate_payment_receipt_pdf(invoice):
     c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "BILL SUMMARY")
     y -= line_height
-    pair("Subtotal (items)", f"KES {invoice.subtotal:,.2f}")
+    pair("Taxable subtotal", f"KES {invoice.subtotal:,.2f}")
     for tax in tax_lines_from_payload(invoice.fiscal_payload):
         pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
     pair("Tax total", f"KES {invoice.tax_total:,.2f}")
@@ -331,7 +329,7 @@ def generate_sales_invoice_pdf(invoice):
     c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "BILL SUMMARY")
     y -= line_height
-    pair("Subtotal (items)", f"KES {invoice.subtotal:,.2f}")
+    pair("Taxable subtotal", f"KES {invoice.subtotal:,.2f}")
     for tax in tax_lines_from_payload(invoice.fiscal_payload):
         pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
     pair("Tax total", f"KES {invoice.tax_total:,.2f}")
@@ -343,6 +341,143 @@ def generate_sales_invoice_pdf(invoice):
 
     centered("This is the sales invoice for billed goods and services.", "Helvetica", 7)
     centered("Payment receipts are issued separately when payment is collected.", "Helvetica", 7)
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
+def generate_visit_invoice_pdf(visit, *, receipt=False):
+    from io import BytesIO
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    invoices = [
+        order.invoice
+        for order in visit.orders.exclude(status=SalesOrder.Status.CANCELLED).select_related("invoice", "branch")
+        if hasattr(order, "invoice")
+    ]
+    items = list(
+        SalesOrderItem.objects.filter(order__visit=visit)
+        .exclude(status=SalesOrderItem.Status.VOIDED)
+        .select_related("product", "order")
+        .order_by("order__created_at", "created_at")
+    )
+    payments = list(
+        SalesPayment.objects.filter(invoice__in=invoices, status=SalesPayment.Status.CLEARED)
+        .select_related("payment_method", "invoice")
+        .order_by("created_at")
+    )
+    subtotal = sum((invoice.subtotal for invoice in invoices), Decimal("0"))
+    tax_total = sum((invoice.tax_total for invoice in invoices), Decimal("0"))
+    discount_total = sum((invoice.discount_total for invoice in invoices), Decimal("0"))
+    grand_total = sum((invoice.grand_total for invoice in invoices), Decimal("0"))
+    paid_total = sum((invoice.paid_total for invoice in invoices), Decimal("0"))
+    balance_due = sum((invoice.balance_due for invoice in invoices), Decimal("0"))
+    tax_totals = {}
+    for invoice in invoices:
+        for tax in tax_lines_from_payload(invoice.fiscal_payload):
+            key = (tax.get("code") or tax.get("name") or "Tax", tax.get("name") or "Tax", tax.get("rate") or "")
+            tax_totals[key] = tax_totals.get(key, Decimal("0")) + Decimal(str(tax.get("amount", "0")))
+
+    content_lines = 18 + len(items) + len(invoices) + len(payments) + len(tax_totals)
+    page_width = 80 * mm
+    page_height = max(165 * mm, (content_lines * 4.8 + 26) * mm)
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+    margin = 6 * mm
+    right = page_width - margin
+    center = page_width / 2
+    line_height = 4.6 * mm
+    y = page_height - 8 * mm
+
+    def centered(text, font="Helvetica", size=8):
+        nonlocal y
+        c.setFont(font, size)
+        c.drawCentredString(center, y, str(text))
+        y -= line_height
+
+    def pair(label, value, font="Helvetica", size=8):
+        nonlocal y
+        c.setFont(font, size)
+        c.drawString(margin, y, str(label)[:25])
+        c.drawRightString(right, y, str(value))
+        y -= line_height
+
+    def rule():
+        nonlocal y
+        y -= 1 * mm
+        c.setDash(1, 2)
+        c.line(margin, y, right, y)
+        c.setDash()
+        y -= 3.5 * mm
+
+    centered("G8 YACHT VILLA", "Helvetica-Bold", 13)
+    centered("COMBINED PAYMENT RECEIPT" if receipt else "COMBINED VISIT INVOICE", "Helvetica-Bold", 10)
+    centered(visit.visit_number, "Helvetica-Bold", 9)
+    y = draw_till_block(c, y=y, margin=margin, right=right, center=center, line_height=line_height, mm=mm)
+    rule()
+
+    pair("Date", timezone.localtime(timezone.now()).strftime("%d %b %Y  %H:%M"))
+    pair("Guest", visit.guest_name or "Walk-in guest")
+    pair("Visit", f"{visit.service_area} {visit.table_name}".strip())
+    pair("Invoices", str(len(invoices)))
+    rule()
+
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(margin, y, "ITEM")
+    c.drawRightString(42 * mm, y, "QTY")
+    c.drawRightString(59 * mm, y, "PRICE")
+    c.drawRightString(right, y, "AMOUNT")
+    y -= line_height
+    for item in items:
+        c.setFont("Helvetica", 8)
+        c.drawString(margin, y, str(item.product.name)[:17])
+        c.drawRightString(42 * mm, y, f"{item.quantity:g}")
+        c.drawRightString(59 * mm, y, f"{item.unit_price:,.2f}")
+        c.drawRightString(right, y, f"{item.line_total:,.2f}")
+        y -= line_height
+
+    rule()
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(margin, y, "BILL SUMMARY")
+    y -= line_height
+    pair("Taxable subtotal", f"KES {subtotal:,.2f}")
+    for (_, name, rate), amount in tax_totals.items():
+        pair(f"{name} {rate}%", f"KES {amount:,.2f}")
+    pair("Tax total", f"KES {tax_total:,.2f}")
+    pair("Discount", f"- KES {discount_total:,.2f}")
+    pair("TOTAL", f"KES {grand_total:,.2f}", "Helvetica-Bold", 10)
+    rule()
+
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(margin, y, "INVOICES")
+    c.drawRightString(right, y, "TOTAL")
+    y -= line_height
+    for invoice in invoices:
+        c.setFont("Helvetica", 8)
+        c.drawString(margin, y, invoice.invoice_number[:24])
+        c.drawRightString(right, y, f"{invoice.grand_total:,.2f}")
+        y -= line_height
+
+    if receipt:
+        rule()
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(margin, y, "PAYMENTS")
+        c.drawRightString(right, y, "AMOUNT")
+        y -= line_height
+        for payment in payments:
+            reference = f" ({payment.reference})" if payment.reference else ""
+            c.setFont("Helvetica", 8)
+            c.drawString(margin, y, f"{payment.payment_method.name}{reference}"[:31])
+            c.drawRightString(right, y, f"{payment.amount:,.2f}")
+            y -= line_height
+
+    rule()
+    pair("AMOUNT PAID", f"KES {paid_total:,.2f}", "Helvetica-Bold", 10)
+    pair("BALANCE", f"KES {balance_due:,.2f}", "Helvetica-Bold", 9)
+    rule()
+    centered("Thank you for visiting G8 Yacht Villa.", "Helvetica", 7)
+
     c.save()
     buffer.seek(0)
     return buffer
@@ -455,7 +590,7 @@ def generate_order_receipts_pdf(order):
             c.setFont("Helvetica-Bold", 8)
             c.drawString(margin, y, "BILL SUMMARY")
             y -= line_height
-            pair("Subtotal (items)", f"KES {order.subtotal:,.2f}")
+            pair("Taxable subtotal", f"KES {order.subtotal:,.2f}")
             for tax in build_fiscal_payload(order).get("tax_lines", []):
                 pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
             pair("Tax total", f"KES {order.tax_total:,.2f}")
@@ -760,6 +895,54 @@ class GuestVisitDetailView(APIView):
     def get(self, request, pk):
         visit = get_object_or_404(GuestVisit, pk=pk)
         return Response(GuestVisitSerializer(visit).data)
+
+
+class GuestVisitInvoiceDocumentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        visit = get_object_or_404(
+            GuestVisit.objects.prefetch_related(
+                "orders__invoice__payments",
+                "orders__items__product",
+            ),
+            pk=pk,
+        )
+        if not any(hasattr(order, "invoice") for order in visit.orders.exclude(status=SalesOrder.Status.CANCELLED)):
+            return Response({"detail": "No invoices are available for this visit yet."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            document = generate_visit_invoice_pdf(visit, receipt=False)
+            return FileResponse(
+                document,
+                content_type="application/pdf",
+                filename=f"visit-invoice-{visit.visit_number}.pdf",
+            )
+        except Exception:
+            return Response({"detail": "Failed to generate combined visit invoice."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GuestVisitReceiptDocumentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        visit = get_object_or_404(
+            GuestVisit.objects.prefetch_related(
+                "orders__invoice__payments",
+                "orders__items__product",
+            ),
+            pk=pk,
+        )
+        if not SalesPayment.objects.filter(invoice__order__visit=visit, status=SalesPayment.Status.CLEARED).exists():
+            return Response({"detail": "No payment receipt is available until payment is collected."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            document = generate_visit_invoice_pdf(visit, receipt=True)
+            return FileResponse(
+                document,
+                content_type="application/pdf",
+                filename=f"visit-receipt-{visit.visit_number}.pdf",
+            )
+        except Exception:
+            return Response({"detail": "Failed to generate combined visit receipt."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SalesOrderStatusView(APIView):

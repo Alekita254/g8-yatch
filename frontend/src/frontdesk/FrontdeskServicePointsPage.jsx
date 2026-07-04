@@ -21,6 +21,15 @@ function lineTotal(line) {
   return Number(line.quantity || 0) * Number(line.price || 0);
 }
 
+function inclusiveTax(gross, vatRate, totRate) {
+  const combinedRate = Number(vatRate || 0) + Number(totRate || 0);
+  if (combinedRate <= 0) return { net: gross, vat: 0, tot: 0, tax: 0 };
+  const net = gross / (1 + (combinedRate / 100));
+  const vat = net * Number(vatRate || 0) / 100;
+  const tot = net * Number(totRate || 0) / 100;
+  return { net: gross - vat - tot, vat, tot, tax: vat + tot };
+}
+
 function visitTime(visit) {
   return new Date(visit.updated_at || visit.arrived_at || 0).getTime() || 0;
 }
@@ -180,16 +189,18 @@ export default function FrontdeskServicePointsPage() {
     });
   }, [categories, categoryById, saleItems]);
 
-  const subtotal = cart.reduce((sum, line) => sum + lineTotal(line), 0);
-  const vatTotal = cart.reduce((sum, line) => {
+  const grossTotal = cart.reduce((sum, line) => sum + lineTotal(line), 0);
+  const totRate = Number(taxConfigurations.find((tax) => ['tot', 'tot-1-5', 'turnover-tax'].includes(tax.code))?.rate || 0);
+  const taxBreakdowns = cart.map((line) => {
     const category = line.categoryId ? categoryById.get(String(line.categoryId)) : null;
     const rate = Number(category?.tax_rate ?? 16);
-    return sum + (lineTotal(line) * rate / 100);
-  }, 0);
-  const totRate = Number(taxConfigurations.find((tax) => ['tot', 'tot-1-5', 'turnover-tax'].includes(tax.code))?.rate || 0);
-  const totTotal = subtotal * totRate / 100;
+    return inclusiveTax(lineTotal(line), rate, totRate);
+  });
+  const subtotal = taxBreakdowns.reduce((sum, item) => sum + item.net, 0);
+  const vatTotal = taxBreakdowns.reduce((sum, item) => sum + item.vat, 0);
+  const totTotal = taxBreakdowns.reduce((sum, item) => sum + item.tot, 0);
   const taxTotal = vatTotal + totTotal;
-  const grandTotal = subtotal + taxTotal;
+  const grandTotal = grossTotal;
   const selectedPaymentMethod = paymentMethods.find((method) => String(method.id) === String(sale.payment_method));
   const isCashPayment = selectedPaymentMethod?.method_type === 'CASH';
   const amountReceived = Number(sale.amount_received || 0);
@@ -257,9 +268,9 @@ export default function FrontdeskServicePointsPage() {
         service_point: selectedPoint.id,
         quantity: String(line.quantity),
         unit_price: Number(line.price).toFixed(2),
-        tax_total: (lineTotal(line) * ((Number(categoryById.get(String(line.categoryId))?.tax_rate ?? 16) + totRate) / 100)).toFixed(2),
+        tax_total: inclusiveTax(lineTotal(line), Number(categoryById.get(String(line.categoryId))?.tax_rate ?? 16), totRate).tax.toFixed(2),
         discount_total: '0.00',
-        line_total: (lineTotal(line) + (lineTotal(line) * ((Number(categoryById.get(String(line.categoryId))?.tax_rate ?? 16) + totRate) / 100))).toFixed(2),
+        line_total: lineTotal(line).toFixed(2),
       })),
     });
     await api.post(`/api/sales/orders/${orderResponse.data.id}/send/`);
@@ -597,15 +608,15 @@ export default function FrontdeskServicePointsPage() {
 
           <div className="mt-6 space-y-2 border-t border-app-border pt-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-app-muted">Subtotal</span>
+              <span className="font-bold text-app-muted">Taxable subtotal</span>
               <span className="font-black text-app-text">{money(subtotal)}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-app-muted">VAT</span>
+              <span className="font-bold text-app-muted">VAT included</span>
               <span className="font-black text-app-text">{money(vatTotal)}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-app-muted">TOT</span>
+              <span className="font-bold text-app-muted">TOT included</span>
               <span className="font-black text-app-text">{money(totTotal)}</span>
             </div>
             <div className="flex items-center justify-between border-t border-app-border pt-3">

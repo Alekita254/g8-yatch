@@ -30,6 +30,13 @@ async function fetchOrderReceipts(order) {
   return new Blob([response.data], { type: 'application/pdf' });
 }
 
+async function fetchVisitDocument(visitId, type) {
+  const response = await api.get(`/api/sales/visits/${visitId}/${type}/`, {
+    responseType: 'blob',
+  });
+  return new Blob([response.data], { type: 'application/pdf' });
+}
+
 function downloadDocumentBlob(filename, blob) {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -269,37 +276,32 @@ export default function VisitDetailPage() {
     }
   };
 
-  const downloadAllInvoiceDocuments = async (invoicesToDownload) => {
+  const downloadCombinedVisitInvoice = async () => {
     try {
       setWorking('all-invoices');
-      for (const invoice of invoicesToDownload) {
-        const blob = await fetchInvoiceDocument(invoice);
-        downloadDocumentBlob(`invoice-${invoice.invoice_number}.pdf`, blob);
-      }
-      toast.success(`${invoicesToDownload.length} invoices downloaded`);
+      const blob = await fetchVisitDocument(id, 'invoice');
+      downloadDocumentBlob(`visit-invoice-${visit.visit_number}.pdf`, blob);
+      toast.success('Combined visit invoice downloaded');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not download all invoices');
+      toast.error(err.response?.data?.detail || 'Could not download combined invoice');
     } finally {
       setWorking('');
     }
   };
 
-  const downloadAllInvoiceReceipts = async (invoicesToDownload) => {
-    const paidInvoices = invoicesToDownload.filter((invoice) => Number(invoice.paid_total || 0) > 0);
-    if (paidInvoices.length === 0) {
+  const downloadCombinedVisitReceipt = async () => {
+    if (!invoices.some((invoice) => Number(invoice.paid_total || 0) > 0)) {
       toast.error('There are no paid receipts to download yet.');
       return;
     }
 
     try {
       setWorking('all-receipts');
-      for (const invoice of paidInvoices) {
-        const blob = await fetchReceipt(invoice);
-        downloadReceiptBlob(invoice, blob);
-      }
-      toast.success(`${paidInvoices.length} receipts downloaded`);
+      const blob = await fetchVisitDocument(id, 'receipt');
+      downloadDocumentBlob(`visit-receipt-${visit.visit_number}.pdf`, blob);
+      toast.success('Combined visit receipt downloaded');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not download all receipts');
+      toast.error(err.response?.data?.detail || 'Could not download combined receipt');
     } finally {
       setWorking('');
     }
@@ -764,21 +766,21 @@ export default function VisitDetailPage() {
                 <div className="grid gap-2 rounded-lg border border-app-border bg-app-elevated p-3 sm:flex sm:flex-wrap">
                   <button
                     type="button"
-                    onClick={() => downloadAllInvoiceDocuments(invoices)}
+                    onClick={downloadCombinedVisitInvoice}
                     disabled={working === 'all-invoices'}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-bold text-white disabled:opacity-50"
                   >
                     {working === 'all-invoices' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
-                    Download all invoices
+                    Download combined invoice
                   </button>
                   <button
                     type="button"
-                    onClick={() => downloadAllInvoiceReceipts(invoices)}
+                    onClick={downloadCombinedVisitReceipt}
                     disabled={working === 'all-receipts' || !invoices.some((invoice) => Number(invoice.paid_total || 0) > 0)}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-4 text-sm font-bold text-app-text disabled:opacity-50"
                   >
                     {working === 'all-receipts' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
-                    Download all receipts
+                    Download combined receipt
                   </button>
                 </div>
               ) : null}
