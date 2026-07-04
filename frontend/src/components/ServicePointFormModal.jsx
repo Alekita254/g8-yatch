@@ -17,19 +17,20 @@ export default function ServicePointFormModal({
   onClose,
   onSubmit,
   isSaving,
+  isEditing = false,
 }) {
   if (!isOpen) return null;
 
   return (
-    <ModalLayer label="Add service point" onClose={onClose}>
+    <ModalLayer label={isEditing ? 'Edit service point' : 'Add service point'} onClose={onClose}>
       <form onSubmit={onSubmit} className="w-full max-w-2xl overflow-hidden rounded-lg border border-app-border bg-app-card shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-app-border bg-app-elevated px-6 py-5">
           <div>
             <div className="flex items-center gap-2 text-brand-500">
               <MapPin className="h-5 w-5" />
-              <p className="text-xs font-black uppercase tracking-[0.16em]">Add Service Point</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em]">{isEditing ? 'Edit Service Point' : 'Add Service Point'}</p>
             </div>
-            <h2 className="mt-2 text-2xl font-black text-app-text">Register physical point</h2>
+            <h2 className="mt-2 text-2xl font-black text-app-text">{isEditing ? 'Update physical point' : 'Register physical point'}</h2>
             <p className="text-sm text-app-muted">Track where staff perform service and POS actions.</p>
           </div>
           <button
@@ -92,6 +93,25 @@ export default function ServicePointFormModal({
               className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
             />
           </label>
+          <label className="space-y-2 lg:col-span-2">
+            <span className="text-xs font-bold uppercase text-app-muted">Description</span>
+            <textarea
+              value={form.description}
+              onChange={(event) => onChange('description', event.target.value)}
+              rows={3}
+              placeholder="Optional operating notes"
+              className="w-full resize-none rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </label>
+          <label className="flex items-center gap-3 rounded-md border border-app-border bg-app-elevated px-3 py-2 lg:col-span-2">
+            <input
+              type="checkbox"
+              checked={Boolean(form.is_active)}
+              onChange={(event) => onChange('is_active', event.target.checked)}
+              className="h-4 w-4 rounded border-app-border text-brand-600 focus:ring-brand-500"
+            />
+            <span className="text-sm font-bold text-app-text">Active service point</span>
+          </label>
         </div>
 
         <div className="flex justify-end gap-2 border-t border-app-border bg-app-elevated px-6 py-4">
@@ -109,7 +129,7 @@ export default function ServicePointFormModal({
             className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Service Point
+            {isEditing ? 'Update Service Point' : 'Save Service Point'}
           </button>
         </div>
       </form>

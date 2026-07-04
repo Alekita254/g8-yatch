@@ -1,12 +1,12 @@
+from django.db.models import ProtectedError
+from django.shortcuts import get_object_or_404
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .keycloak_admin import KeycloakAdminClient, KeycloakAdminError
-from django.shortcuts import get_object_or_404
-from rest_framework import status
-
 from apps.pagination import paginated_response
 
+from .keycloak_admin import KeycloakAdminClient, KeycloakAdminError
 from .models import Role, ServicePoint, UserIdentity
 from .permissions import IsPosManager
 from .serializers import (
@@ -164,6 +164,22 @@ class ServicePointDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         service_point = serializer.save()
         return Response(ServicePointSerializer(service_point).data)
+
+    def delete(self, request, pk):
+        service_point = get_object_or_404(ServicePoint, pk=pk)
+        try:
+            service_point.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": (
+                        "This service point is linked to existing records. "
+                        "Set it inactive instead of deleting it."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MyTokenObtainPairView(APIView):

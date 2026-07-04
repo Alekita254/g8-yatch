@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Loader2, MapPin, Plus } from 'lucide-react';
+import { Edit3, Loader2, MapPin, Plus, Trash2 } from 'lucide-react';
 
 import api, { emptyPagination, paginationFromResponse } from '../api';
 import DataTable from '../components/DataTable';
@@ -22,6 +22,7 @@ export default function ServicePointsSetupPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingServicePoint, setEditingServicePoint] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -48,6 +49,30 @@ export default function ServicePointsSetupPage() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  const openCreateModal = () => {
+    setEditingServicePoint(null);
+    setForm(emptyServicePoint);
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (point) => {
+    setEditingServicePoint(point);
+    setForm({
+      ...emptyServicePoint,
+      ...point,
+      mac_address: point.mac_address || '',
+      location: point.location || '',
+      description: point.description || '',
+    });
+    setShowAddModal(true);
+  };
+
+  const closeModal = () => {
+    setShowAddModal(false);
+    setEditingServicePoint(null);
+    setForm(emptyServicePoint);
+  };
+
   const visibleServicePoints = servicePoints.filter((point) => [
     point.name,
     point.code,
@@ -57,7 +82,7 @@ export default function ServicePointsSetupPage() {
     point.mac_address,
   ].join(' ').toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
-  const createServicePoint = async (event) => {
+  const saveServicePoint = async (event) => {
     event.preventDefault();
     try {
       setSaving(true);
@@ -65,13 +90,34 @@ export default function ServicePointsSetupPage() {
         ...form,
         mac_address: form.mac_address || null,
       };
-      const response = await api.post('/api/users/service-points/', payload);
-      setServicePoints((current) => [response.data, ...current]);
-      setForm(emptyServicePoint);
-      setShowAddModal(false);
-      toast.success('Service point created');
+      const response = editingServicePoint
+        ? await api.patch(`/api/users/service-points/${editingServicePoint.id}/`, payload)
+        : await api.post('/api/users/service-points/', payload);
+      setServicePoints((current) => (
+        editingServicePoint
+          ? current.map((point) => (point.id === response.data.id ? response.data : point))
+          : [response.data, ...current]
+      ));
+      closeModal();
+      toast.success(editingServicePoint ? 'Service point updated' : 'Service point created');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create service point');
+      const detail = err.response?.data?.detail || Object.values(err.response?.data || {})?.[0]?.[0];
+      toast.error(detail || 'Failed to save service point');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteServicePoint = async (point) => {
+    if (!window.confirm(`Delete ${point.name}? This cannot be undone.`)) return;
+
+    try {
+      setSaving(true);
+      await api.delete(`/api/users/service-points/${point.id}/`);
+      setServicePoints((current) => current.filter((item) => item.id !== point.id));
+      toast.success('Service point deleted');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to delete service point');
     } finally {
       setSaving(false);
     }
@@ -99,7 +145,7 @@ export default function ServicePointsSetupPage() {
         </div>
         <button
           type="button"
-          onClick={() => setShowAddModal(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-700"
         >
           <Plus className="h-4 w-4" />
@@ -132,6 +178,33 @@ export default function ServicePointsSetupPage() {
               </span>
             ),
           },
+          {
+            key: 'actions',
+            header: 'Actions',
+            headerClassName: 'text-right',
+            cellClassName: 'text-right',
+            render: (point) => (
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEditModal(point)}
+                  className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500"
+                  title="Edit service point"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteServicePoint(point)}
+                  disabled={saving}
+                  className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Delete service point"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ),
+          },
         ]}
         getRowKey={(point) => point.id}
         title={`${visibleServicePoints.length} service points`}
@@ -158,9 +231,10 @@ export default function ServicePointsSetupPage() {
         isOpen={showAddModal}
         form={form}
         onChange={updateForm}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={createServicePoint}
+        onClose={closeModal}
+        onSubmit={saveServicePoint}
         isSaving={saving}
+        isEditing={Boolean(editingServicePoint)}
       />
     </div>
   );
