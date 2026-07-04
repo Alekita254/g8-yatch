@@ -354,22 +354,24 @@ export default function VisitDetailPage() {
   return (
     <div className="space-y-6">
       {/* Customer header */}
-      <div className="rounded-lg border border-app-border bg-app-card p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+      <div className="rounded-lg border border-app-border bg-app-card p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-brand-500">{visit.visit_number}</p>
             <h2 className="mt-2 text-2xl font-black text-app-text">{visit.guest_name || 'Walk-in guest'}</h2>
-            <p className="mt-1 text-sm text-app-muted">{visit.phone || ''} · {visit.service_area} · {visit.table_name}</p>
+            <p className="mt-1 text-sm text-app-muted">
+              {[visit.phone, visit.service_area, visit.table_name].filter(Boolean).join(' · ')}
+            </p>
             <p className="mt-2 text-sm text-app-muted">Assigned waiter: {visit.waiter_keycloak_sub || (visit.waiter_acknowledged_at ? 'someone' : '—')}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link to="/frontdesk/visits" className="rounded-md px-3 py-2 text-sm font-bold text-app-text border border-app-border">Back</Link>
+          <div className="grid gap-2 sm:flex sm:items-center sm:gap-3">
+            <Link to="/frontdesk/visits" className="inline-flex min-h-11 items-center justify-center rounded-md border border-app-border px-3 text-sm font-bold text-app-text">Back</Link>
             {visit.waiter_requested_at && !visit.waiter_acknowledged_at ? (
-              <button type="button" onClick={acknowledgeWaiter} disabled={working === 'ack' || working === 'checkout'} className="inline-flex items-center gap-2 rounded-md bg-amber-500/10 px-3 py-2 text-sm font-bold text-amber-700">
+              <button type="button" onClick={acknowledgeWaiter} disabled={working === 'ack' || working === 'checkout'} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-amber-500/10 px-3 text-sm font-bold text-amber-700">
                 {working === 'ack' ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />} Acknowledge
               </button>
             ) : null}
-            <button type="button" onClick={openCheckout} disabled={working === 'checkout' || visit.status === 'CLOSED'} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-bold text-white">
+            <button type="button" onClick={() => openCheckout()} disabled={working === 'checkout' || visit.status === 'CLOSED'} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 text-sm font-bold text-white">
               {working === 'checkout' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />} Checkout
             </button>
           </div>
@@ -394,26 +396,26 @@ export default function VisitDetailPage() {
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
             <p className="text-xs font-black uppercase text-app-muted">Total billed</p>
-            <p className="mt-2 text-xl font-black text-app-text">{money(totalInvoiceAmount)}</p>
+            <p className="mt-2 text-lg font-black text-app-text sm:text-xl">{money(totalInvoiceAmount)}</p>
           </div>
           <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
             <p className="text-xs font-black uppercase text-app-muted">Amount collected</p>
-            <p className="mt-2 text-xl font-black text-app-text">{money(totalPaid)}</p>
+            <p className="mt-2 text-lg font-black text-app-text sm:text-xl">{money(totalPaid)}</p>
           </div>
           <div className="rounded-lg border border-app-border bg-app-card px-4 py-3">
             <p className="text-xs font-black uppercase text-app-muted">Balance remaining</p>
-            <p className="mt-2 text-xl font-black text-app-text">{money(totalBalance)}</p>
+            <p className="mt-2 text-lg font-black text-app-text sm:text-xl">{money(totalBalance)}</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="rounded-lg border border-app-border bg-app-card p-4">
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setTab('overview')} className={`px-3 py-2 text-sm font-bold ${tab === 'overview' ? 'bg-brand-600 text-white' : 'text-app-text border border-app-border'}`}>Overview</button>
-          <button type="button" onClick={() => setTab('orders')} className={`px-3 py-2 text-sm font-bold ${tab === 'orders' ? 'bg-brand-600 text-white' : 'text-app-text border border-app-border'}`}>Orders</button>
-          <button type="button" onClick={() => setTab('invoices')} className={`px-3 py-2 text-sm font-bold ${tab === 'invoices' ? 'bg-brand-600 text-white' : 'text-app-text border border-app-border'}`}>Invoices</button>
-          <button type="button" onClick={() => setTab('related')} className={`px-3 py-2 text-sm font-bold ${tab === 'related' ? 'bg-brand-600 text-white' : 'text-app-text border border-app-border'}`}>Related</button>
+      <div className="rounded-lg border border-app-border bg-app-card p-3 sm:p-4">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <button type="button" onClick={() => setTab('overview')} className={`min-h-11 rounded-md px-3 text-sm font-bold ${tab === 'overview' ? 'bg-brand-600 text-white' : 'border border-app-border text-app-text'}`}>Overview</button>
+          <button type="button" onClick={() => setTab('orders')} className={`min-h-11 rounded-md px-3 text-sm font-bold ${tab === 'orders' ? 'bg-brand-600 text-white' : 'border border-app-border text-app-text'}`}>Orders</button>
+          <button type="button" onClick={() => setTab('invoices')} className={`min-h-11 rounded-md px-3 text-sm font-bold ${tab === 'invoices' ? 'bg-brand-600 text-white' : 'border border-app-border text-app-text'}`}>Invoices</button>
+          <button type="button" onClick={() => setTab('related')} className={`min-h-11 rounded-md px-3 text-sm font-bold ${tab === 'related' ? 'bg-brand-600 text-white' : 'border border-app-border text-app-text'}`}>Related</button>
         </div>
 
         <div className="mt-4">
@@ -424,18 +426,18 @@ export default function VisitDetailPage() {
                 <p className="mt-0.5 text-sm text-app-muted">{nextActionSubtext}</p>
               </div>
 
-              <div className="p-5 sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
+              <div className="p-4 sm:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-600">{visit.visit_number}</p>
                     <h2 className="mt-2 text-xl font-black text-app-text">
                       {visit.service_area}{visit.table_name ? `, ${visit.table_name}` : ''}
                     </h2>
                     <p className="mt-1 text-sm text-app-muted">
-                      {visit.guest_name || 'Walk-in guest'}{visit.phone ? ` · ${visit.phone}` : ''} · {arrivalTime}
+                      {[visit.guest_name || 'Walk-in guest', visit.phone, arrivalTime].filter(Boolean).join(' · ')}
                     </p>
                   </div>
-                  <span className="rounded-full bg-brand-500/10 px-3 py-1.5 text-xs font-black text-brand-600">
+                  <span className="w-fit rounded-full bg-brand-500/10 px-3 py-1.5 text-xs font-black text-brand-600">
                     {visit.status.replaceAll('_', ' ')}
                   </span>
                 </div>
@@ -465,20 +467,22 @@ export default function VisitDetailPage() {
                           <li key={item.id}>{Number(item.quantity)} × {item.product_name}</li>
                         ))}
                       </ul>
-                      {['SENT', 'PREPARING', 'READY'].includes(order.status) ? (
-                        <button type="button" onClick={() => progressOrder(order)} disabled={working === `order-${order.id}`} className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">
-                          {working === `order-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                          Mark served
+                      <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
+                        {['SENT', 'PREPARING', 'READY'].includes(order.status) ? (
+                          <button type="button" onClick={() => progressOrder(order)} disabled={working === `order-${order.id}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">
+                            {working === `order-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                            Mark served
+                          </button>
+                        ) : null}
+                        <button type="button" onClick={() => downloadOrderReceipts(order)} disabled={working === `order-receipts-${order.id}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-4 text-xs font-black text-app-text disabled:opacity-50">
+                          {working === `order-receipts-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
+                          Receipts
                         </button>
-                      ) : null}
-                      <button type="button" onClick={() => downloadOrderReceipts(order)} disabled={working === `order-receipts-${order.id}`} className="mt-4 ml-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-app-border px-4 text-xs font-black text-app-text disabled:opacity-50">
-                        {working === `order-receipts-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
-                        Receipts
-                      </button>
-                      <button type="button" onClick={() => printOrderReceipts(order)} disabled={working === `order-print-${order.id}`} className="mt-4 ml-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">
-                        {working === `order-print-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-                        Print
-                      </button>
+                        <button type="button" onClick={() => printOrderReceipts(order)} disabled={working === `order-print-${order.id}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">
+                          {working === `order-print-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                          Print
+                        </button>
+                      </div>
                       {order.invoice ? (
                         <p className="mt-4 border-t border-app-border pt-3 text-xs font-bold text-app-muted">
                           {order.invoice.invoice_number} · {money(order.invoice.balance_due)} due
@@ -506,7 +510,57 @@ export default function VisitDetailPage() {
                   <p className="mt-1 text-sm text-app-muted">No orders yet.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-md border border-app-border bg-app-card">
+                <>
+                <div className="grid gap-3 md:hidden">
+                  {visit.orders.map((order) => (
+                    <article key={`mobile-order-${order.id}`} className="rounded-lg border border-app-border bg-app-card p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-black text-app-text">{order.order_number}</p>
+                          <p className="mt-1 text-xs font-bold uppercase text-app-muted">{order.status.replaceAll('_', ' ')}</p>
+                        </div>
+                        <p className="shrink-0 font-black text-brand-600">{money(order.grand_total)}</p>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {order.items.map((item) => (
+                          <div key={item.id} className="flex items-center justify-between gap-3 rounded-md bg-app-elevated px-3 py-2 text-sm">
+                            <span className="min-w-0 truncate">{item.quantity}× {item.product_name}</span>
+                            <span className="shrink-0 font-black">{item.line_total ? money(item.line_total) : ''}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {order.invoice ? (
+                        <p className="mt-3 rounded-md bg-app-elevated px-3 py-2 text-xs font-bold text-app-muted">
+                          {order.invoice.invoice_number} · {money(order.invoice.balance_due)} due
+                        </p>
+                      ) : null}
+                      <div className="mt-4 grid gap-2">
+                        {['SENT', 'PREPARING', 'READY'].includes(order.status) ? (
+                          <button type="button" onClick={() => progressOrder(order)} disabled={working === `order-${order.id}`} className="inline-flex min-h-11 items-center justify-center rounded-md bg-brand-600 px-3 text-sm font-bold text-white">
+                            Mark served
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => openOrderReceipts(order)}
+                          disabled={previewLoading && viewingDocumentKey === `order-receipts-${order.id}`}
+                          className="inline-flex min-h-11 items-center justify-center rounded-md border border-app-border px-3 text-sm font-bold text-app-text"
+                        >
+                          {previewLoading && viewingDocumentKey === `order-receipts-${order.id}` ? 'Loading...' : 'View receipts'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => printOrderReceipts(order)}
+                          disabled={working === `order-print-${order.id}`}
+                          className="inline-flex min-h-11 items-center justify-center rounded-md bg-brand-600 px-3 text-sm font-bold text-white disabled:opacity-50"
+                        >
+                          {working === `order-print-${order.id}` ? 'Printing...' : 'Print receipts'}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto rounded-md border border-app-border bg-app-card md:block">
                   <table className="w-full table-auto text-left">
                     <thead>
                       <tr className="bg-app-elevated">
@@ -629,6 +683,7 @@ export default function VisitDetailPage() {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
             </div>
           )}
@@ -656,9 +711,9 @@ export default function VisitDetailPage() {
                       <p className="font-black">{inv.invoice_number}</p>
                       <p className="text-sm text-app-muted">Total: {money(inv.grand_total)} · Paid: {money(inv.paid_total)} · Due: {money(inv.balance_due)}</p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
                       {inv.balance_due > 0 && (
-                        <button type="button" onClick={() => openCheckout(inv.id)} disabled={working === `invoice-${inv.id}`} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
+                        <button type="button" onClick={() => openCheckout(inv.id)} disabled={working === `invoice-${inv.id}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 text-sm font-bold text-white disabled:opacity-50">
                           {working === `invoice-${inv.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />} Collect payment
                         </button>
                       )}
@@ -666,7 +721,7 @@ export default function VisitDetailPage() {
                         type="button"
                         onClick={() => openPdfDocument(inv, 'invoice')}
                         disabled={previewLoading && viewingDocumentKey === `invoice-${inv.id}`}
-                        className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-3 text-sm font-bold text-app-text disabled:opacity-50"
                       >
                         {previewLoading && viewingDocumentKey === `invoice-${inv.id}` ? 'Loading...' : 'View invoice'}
                       </button>
@@ -674,7 +729,7 @@ export default function VisitDetailPage() {
                         type="button"
                         onClick={() => downloadInvoiceDocument(inv)}
                         disabled={working === `invoice-doc-${inv.id}`}
-                        className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-3 text-sm font-bold text-app-text disabled:opacity-50"
                       >
                         {working === `invoice-doc-${inv.id}` ? 'Downloading...' : 'Download invoice'}
                       </button>
@@ -682,7 +737,7 @@ export default function VisitDetailPage() {
                         type="button"
                         onClick={() => printInvoiceDocument(inv, 'invoice')}
                         disabled={working === `invoice-print-${inv.id}`}
-                        className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-3 text-sm font-bold text-app-text disabled:opacity-50"
                       >
                         {working === `invoice-print-${inv.id}` ? 'Printing...' : 'Print invoice'}
                       </button>
@@ -692,7 +747,7 @@ export default function VisitDetailPage() {
                             type="button"
                             onClick={() => openPdfDocument(inv, 'receipt')}
                             disabled={previewLoading && viewingDocumentKey === `receipt-${inv.id}`}
-                            className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-3 text-sm font-bold text-app-text disabled:opacity-50"
                           >
                             {previewLoading && viewingDocumentKey === `receipt-${inv.id}` ? 'Loading...' : 'View receipt'}
                           </button>
@@ -700,7 +755,7 @@ export default function VisitDetailPage() {
                             type="button"
                             onClick={() => downloadInvoiceReceipt(inv)}
                             disabled={working === `receipt-${inv.id}`}
-                            className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-3 text-sm font-bold text-app-text disabled:opacity-50"
                           >
                             {working === `receipt-${inv.id}` ? 'Downloading...' : 'Download receipt'}
                           </button>
@@ -708,7 +763,7 @@ export default function VisitDetailPage() {
                             type="button"
                             onClick={() => printInvoiceDocument(inv, 'receipt')}
                             disabled={working === `receipt-print-${inv.id}`}
-                            className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-3 text-sm font-bold text-app-text disabled:opacity-50"
                           >
                             {working === `receipt-print-${inv.id}` ? 'Printing...' : 'Print receipt'}
                           </button>
@@ -724,12 +779,12 @@ export default function VisitDetailPage() {
           {tab === 'related' && (
             <div className="mt-4 space-y-3">
               {relatedVisits.length === 0 ? <div className="text-sm text-app-muted">No related visits found.</div> : relatedVisits.map((rv) => (
-                <div key={rv.id} className="rounded-lg border bg-app-elevated p-3 flex items-center justify-between">
-                  <div>
+                <div key={rv.id} className="flex flex-col gap-3 rounded-lg border bg-app-elevated p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
                     <p className="font-black">{rv.visit_number} · {rv.service_area} {rv.table_name}</p>
                     <p className="text-sm text-app-muted">{rv.guest_name || '—'} · {new Date(rv.arrived_at).toLocaleString()}</p>
                   </div>
-                  <Link to={`/frontdesk/visits/${rv.id}`} className="rounded-md bg-brand-600 px-3 py-2 text-sm font-bold text-white">Open</Link>
+                  <Link to={`/frontdesk/visits/${rv.id}`} className="inline-flex min-h-11 items-center justify-center rounded-md bg-brand-600 px-3 text-sm font-bold text-white">Open</Link>
                 </div>
               ))}
             </div>
@@ -761,19 +816,19 @@ function VisitJourneyTimeline({ currentStep }) {
   ];
 
   return (
-    <div className="mt-7 overflow-x-auto pb-2">
-      <div className="flex min-w-[620px] items-start">
+    <div className="mt-7 pb-2">
+      <div className="grid grid-cols-3 gap-y-5 sm:flex sm:items-start">
         {steps.map(([label, Icon], index) => {
           const complete = index <= currentStep;
           return (
-            <div key={label} className="relative flex flex-1 flex-col items-center text-center">
+            <div key={label} className="relative flex flex-col items-center text-center sm:flex-1">
               {index > 0 ? (
-                <span className={`absolute right-1/2 top-5 h-0.5 w-full ${complete ? 'bg-brand-500' : 'bg-app-border'}`} />
+                <span className={`absolute right-1/2 top-5 hidden h-0.5 w-full sm:block ${complete ? 'bg-brand-500' : 'bg-app-border'}`} />
               ) : null}
               <span className={`relative z-[1] flex h-10 w-10 items-center justify-center rounded-full border-2 ${complete ? 'border-brand-500 bg-brand-500 text-white' : 'border-app-border bg-app-card text-app-muted'}`}>
                 {complete ? <Icon className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
               </span>
-              <span className={`mt-2 text-xs font-black uppercase ${complete ? 'text-app-text' : 'text-app-muted'}`}>{label}</span>
+              <span className={`mt-2 text-[10px] font-black uppercase sm:text-xs ${complete ? 'text-app-text' : 'text-app-muted'}`}>{label}</span>
             </div>
           );
         })}

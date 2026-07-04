@@ -73,8 +73,8 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
 
   return (
     <ModalLayer label="Checkout guest visit" onClose={onClose}>
-      <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-app-border bg-app-card shadow-2xl">
-        <div className="relative border-b border-app-border bg-app-elevated px-5 py-5 pr-16">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-app-border bg-app-card shadow-2xl sm:rounded-2xl">
+        <div className="relative shrink-0 border-b border-app-border bg-app-elevated px-4 py-4 pr-16 sm:px-5 sm:py-5">
           <button
             type="button"
             onClick={onClose}
@@ -87,7 +87,7 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-500">Checkout</p>
-              <h2 className="mt-2 text-2xl font-black text-app-text">Guest visit payment</h2>
+              <h2 className="mt-2 text-xl font-black text-app-text sm:text-2xl">Guest visit payment</h2>
               <p className="mt-1 text-sm text-app-muted">{visit.visit_number} · {visit.guest_name || 'Walk-in guest'}</p>
             </div>
             <div className="inline-flex items-center gap-2 rounded-full bg-app-card px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-app-muted shadow-sm">
@@ -96,23 +96,23 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
           </div>
         </div>
 
-        <div className="space-y-4 px-5 py-5">
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-app-border bg-app-elevated px-4 py-4">
+            <div className="rounded-lg border border-app-border bg-app-elevated px-4 py-4 sm:rounded-2xl">
               <p className="text-xs font-black uppercase text-app-muted">Total billed</p>
               <p className="mt-2 text-xl font-black text-app-text">{money(totalInvoiceAmount)}</p>
             </div>
-            <div className="rounded-2xl border border-app-border bg-app-elevated px-4 py-4">
+            <div className="rounded-lg border border-app-border bg-app-elevated px-4 py-4 sm:rounded-2xl">
               <p className="text-xs font-black uppercase text-app-muted">Collected</p>
               <p className="mt-2 text-xl font-black text-app-text">{money(totalPaid)}</p>
             </div>
-            <div className="rounded-2xl border border-app-border bg-app-elevated px-4 py-4">
+            <div className="rounded-lg border border-app-border bg-app-elevated px-4 py-4 sm:rounded-2xl">
               <p className="text-xs font-black uppercase text-app-muted">Balance due</p>
               <p className="mt-2 text-xl font-black text-app-text">{money(totalBalance)}</p>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-app-border bg-app-card p-4">
+          <div className="rounded-lg border border-app-border bg-app-card p-4 sm:rounded-2xl">
             <div className="flex items-start gap-3">
               <MapPin className="mt-1 h-5 w-5 text-brand-500" />
               <div>
@@ -123,13 +123,13 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
           </div>
 
           {!hasCheckoutRequest && invoices.length === 0 ? (
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700">
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700 sm:rounded-2xl">
               This visit has no checkout invoice yet. Request checkout to generate the bill before collecting payment.
             </div>
           ) : null}
 
           {(hasCheckoutRequest || invoices.length > 0) && (
-            <div className="space-y-4 rounded-2xl border border-app-border bg-app-elevated p-4">
+            <div className="space-y-4 rounded-lg border border-app-border bg-app-elevated p-4 sm:rounded-2xl">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <label className="block text-xs font-black uppercase text-app-muted">Invoice</label>
@@ -146,9 +146,9 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs font-black uppercase text-app-muted">Split payment</p>
-                  <button type="button" onClick={addSplit} disabled={splitRemaining <= 0} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-app-border px-3 text-xs font-black text-app-text disabled:opacity-50">
+                  <button type="button" onClick={addSplit} disabled={splitRemaining <= 0} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-app-border px-3 text-xs font-black text-app-text disabled:opacity-50">
                     <Plus className="h-4 w-4" /> Add method
                   </button>
                 </div>
@@ -187,9 +187,9 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
               </div>
 
               {dueInvoices.length === 0 ? (
-                <div className="rounded-2xl border border-app-border bg-app-card p-4 text-sm text-app-muted">There is no outstanding amount to collect on this visit.</div>
+                <div className="rounded-lg border border-app-border bg-app-card p-4 text-sm text-app-muted sm:rounded-2xl">There is no outstanding amount to collect on this visit.</div>
               ) : (
-                <div className={`rounded-2xl border p-4 text-sm ${splitOverpay > 0 ? 'border-red-500/25 bg-red-500/10 text-red-700' : splitRemaining > 0 ? 'border-amber-500/25 bg-amber-500/10 text-amber-700' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700'}`}>
+                <div className={`rounded-lg border p-4 text-sm sm:rounded-2xl ${splitOverpay > 0 ? 'border-red-500/25 bg-red-500/10 text-red-700' : splitRemaining > 0 ? 'border-amber-500/25 bg-amber-500/10 text-amber-700' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700'}`}>
                   Split total: <strong>{money(splitTotal)}</strong>. {splitRemaining > 0 ? <>Remaining: <strong>{money(splitRemaining)}</strong>.</> : splitOverpay > 0 ? <>Over by: <strong>{money(splitOverpay)}</strong>.</> : 'Ready to collect.'}
                 </div>
               )}
@@ -197,17 +197,17 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
           )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-app-border px-5 py-4 sm:flex-row sm:justify-end">
-          <button type="button" onClick={onClose} disabled={disabled} className="rounded-2xl border border-app-border px-4 py-3 text-sm font-bold text-app-text hover:bg-app-elevated disabled:opacity-50">
+        <div className="grid shrink-0 gap-3 border-t border-app-border px-4 py-4 sm:flex sm:flex-row-reverse sm:justify-start sm:px-5">
+          <button type="button" onClick={onClose} disabled={disabled} className="min-h-11 rounded-md border border-app-border px-4 text-sm font-bold text-app-text hover:bg-app-elevated disabled:opacity-50">
             Cancel
           </button>
           {!hasCheckoutRequest && invoices.length === 0 ? (
-            <button type="button" onClick={() => onRequestCheckout(visit)} disabled={disabled} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-600 px-4 py-3 text-sm font-bold text-white transition disabled:opacity-50">
+            <button type="button" onClick={() => onRequestCheckout(visit)} disabled={disabled} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-bold text-white transition disabled:opacity-50">
               {working === 'checkout' ? <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Banknote className="h-4 w-4" />}
               Request checkout
             </button>
           ) : (
-            <button type="button" onClick={handleCollect} disabled={!isCollecting || working.startsWith('invoice-')} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition disabled:opacity-50">
+            <button type="button" onClick={handleCollect} disabled={!isCollecting || working.startsWith('invoice-')} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-bold text-white transition disabled:opacity-50">
               {working.startsWith('invoice-') ? <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Banknote className="h-4 w-4" />}
               Collect split payment
             </button>
