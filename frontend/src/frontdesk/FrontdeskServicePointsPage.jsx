@@ -21,6 +21,24 @@ function lineTotal(line) {
   return Number(line.quantity || 0) * Number(line.price || 0);
 }
 
+async function fetchAllResults(endpoint, params = {}) {
+  const pageSize = params.page_size || 100;
+  let page = 1;
+  const results = [];
+
+  while (true) {
+    const response = await api.get(endpoint, { params: { ...params, page, page_size: pageSize } });
+    const data = response.data || {};
+    const pageResults = Array.isArray(data.results) ? data.results : [];
+    results.push(...pageResults);
+    const totalPages = Number(data.total_pages || 1);
+    if (page >= totalPages) break;
+    page += 1;
+  }
+
+  return results;
+}
+
 export default function FrontdeskServicePointsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,20 +67,20 @@ export default function FrontdeskServicePointsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [pointsResponse, visitsResponse, categoriesResponse, productsResponse, pricelistsResponse, paymentMethodsResponse] = await Promise.all([
-          api.get('/api/users/service-points/', { params: { page_size: 100 } }),
-          api.get('/api/sales/visits/', { params: { page_size: 200 } }),
-          api.get('/api/products/categories/', { params: { page_size: 100 } }),
-          api.get('/api/products/items/', { params: { page_size: 100 } }),
-          api.get('/api/products/sales-pricelists/', { params: { page_size: 100 } }),
-          api.get('/api/payments/methods/', { params: { page_size: 100 } }),
+        const [points, activeVisits, productCategories, productItems, salesPricelists, activePaymentMethods] = await Promise.all([
+          fetchAllResults('/api/users/service-points/'),
+          fetchAllResults('/api/sales/visits/'),
+          fetchAllResults('/api/products/categories/'),
+          fetchAllResults('/api/products/items/'),
+          fetchAllResults('/api/products/sales-pricelists/'),
+          fetchAllResults('/api/payments/methods/'),
         ]);
-        setServicePoints((pointsResponse.data.results || []).filter((point) => point.is_active && salesKinds.has(point.kind)));
-        setVisits((visitsResponse.data.results || []).filter((visit) => visit.status === 'ACTIVE'));
-        setCategories((categoriesResponse.data.results || []).filter((category) => category.is_active));
-        setProducts((productsResponse.data.results || []).filter((product) => product.is_active && product.is_sellable));
-        setPricelists((pricelistsResponse.data.results || []).filter((pricelist) => pricelist.is_active));
-        setPaymentMethods((paymentMethodsResponse.data.results || [])
+        setServicePoints(points.filter((point) => point.is_active && salesKinds.has(point.kind)));
+        setVisits(activeVisits.filter((visit) => visit.status === 'ACTIVE'));
+        setCategories(productCategories.filter((category) => category.is_active));
+        setProducts(productItems.filter((product) => product.is_active && product.is_sellable));
+        setPricelists(salesPricelists.filter((pricelist) => pricelist.is_active));
+        setPaymentMethods(activePaymentMethods
           .filter((method) => method.is_active && !method.requires_room_verification));
       } catch (err) {
         toast.error(err.response?.data?.detail || 'Failed to load service point POS data');
@@ -92,13 +110,16 @@ export default function FrontdeskServicePointsPage() {
     matchingPricelists.forEach((pricelist) => {
       (pricelist.items || []).forEach((item) => {
         const product = productById.get(item.product);
-        if (!product || uniqueItems.has(item.product)) return;
+        if (uniqueItems.has(item.product)) return;
+        if (item.product_is_active === false || item.product_is_sellable === false) return;
+        const categoryId = item.product_category || product?.category || '';
+        const categoryName = item.product_category_name || product?.category_name || 'General';
         uniqueItems.set(item.product, {
           product: item.product,
-          name: item.product_name || product.name,
-          sku: item.product_sku || product.sku,
-          categoryId: product.category ? String(product.category) : '',
-          category: product.category_name || 'General',
+          name: item.product_name || product?.name || 'Unnamed product',
+          sku: item.product_sku || product?.sku || '',
+          categoryId: categoryId ? String(categoryId) : '',
+          category: categoryName,
           price: Number(item.price || 0),
           currency: item.currency || 'KES',
         });

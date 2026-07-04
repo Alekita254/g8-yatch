@@ -1,4 +1,4 @@
-from django.db.models import ProtectedError
+from django.db.models import Prefetch, ProtectedError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from apps.users.permissions import IsPosManager
 from apps.pagination import paginated_response
 
-from .models import Product, ProductCategory, PurchasePricelist, SalesPricelist
+from .models import Product, ProductCategory, PurchasePricelist, SalesPricelist, SalesPricelistItem
 from .serializers import (
     ProductCategorySerializer,
     ProductSerializer,
@@ -96,7 +96,10 @@ class SalesPricelistListCreateView(ListCreateMixin):
     serializer_class = SalesPricelistSerializer
 
     def get_queryset(self):
-        return SalesPricelist.objects.select_related("service_point").prefetch_related("items", "service_points")
+        return SalesPricelist.objects.select_related("service_point").prefetch_related(
+            Prefetch("items", queryset=SalesPricelistItem.objects.select_related("product", "product__category")),
+            "service_points",
+        )
 
 
 class SalesPricelistDetailView(DetailMixin):

@@ -90,10 +90,25 @@ class ProductSerializer(serializers.ModelSerializer):
 class SalesPricelistItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
+    product_category = serializers.IntegerField(source="product.category_id", read_only=True)
+    product_category_name = serializers.CharField(source="product.category.name", read_only=True)
+    product_is_active = serializers.BooleanField(source="product.is_active", read_only=True)
+    product_is_sellable = serializers.BooleanField(source="product.is_sellable", read_only=True)
 
     class Meta:
         model = SalesPricelistItem
-        fields = ["id", "product", "product_name", "product_sku", "price", "currency"]
+        fields = [
+            "id",
+            "product",
+            "product_name",
+            "product_sku",
+            "product_category",
+            "product_category_name",
+            "product_is_active",
+            "product_is_sellable",
+            "price",
+            "currency",
+        ]
 
 
 class SalesPricelistSerializer(serializers.ModelSerializer):
