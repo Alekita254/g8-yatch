@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+import { apiCacheKey, cacheApiResponse, getCachedApiResponse, queueMutation } from './offline/store';
+
 // Create a global Axios instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
@@ -20,6 +22,48 @@ export const setAuthToken = (token) => {
     delete api.defaults.headers.common['Authorization'];
   }
 };
+
+const isNetworkError = (error) => !error.response && error.request;
+const isReadRequest = (config = {}) => String(config.method || 'get').toLowerCase() === 'get';
+const isMutationRequest = (config = {}) => ['post', 'put', 'patch', 'delete'].includes(String(config.method || '').toLowerCase());
+
+api.interceptors.response.use(
+  async (response) => {
+    if (isReadRequest(response.config)) {
+      await cacheApiResponse(apiCacheKey(response.config), response.data);
+    }
+    return response;
+  },
+  async (error) => {
+    const config = error.config || {};
+
+    if (isNetworkError(error) && isReadRequest(config)) {
+      const cached = await getCachedApiResponse(apiCacheKey(config));
+      if (cached) {
+        return {
+          config,
+          data: cached.data,
+          status: 200,
+          statusText: 'Offline cache',
+          headers: { 'x-g8-offline-cache': 'true', 'x-g8-offline-saved-at': cached.savedAt },
+        };
+      }
+    }
+
+    if (isNetworkError(error) && isMutationRequest(config) && config.offlineQueue) {
+      const queued = await queueMutation(config);
+      return {
+        config,
+        data: { offline_queued: true, queued_id: queued.id },
+        status: 202,
+        statusText: 'Queued offline',
+        headers: { 'x-g8-offline-queued': 'true' },
+      };
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 export const emptyPagination = {
   total: 0,

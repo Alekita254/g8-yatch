@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import AdminTopbar from './components/AdminTopbar';
+import NetworkSyncIndicator from './components/NetworkSyncIndicator';
 import Sidebar from './components/Sidebar';
 import ThemeToggle from './components/ThemeToggle';
 import { APP_ACCESS, canAccessApp } from './accessControl';
@@ -475,6 +476,7 @@ export default function App() {
           },
         }}
       />
+      <NetworkSyncIndicator />
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/home" element={<AppChooserPage />} />

@@ -5,6 +5,7 @@ import { AuthProvider } from 'react-oidc-context';
 import { oidcConfig } from './authConfig.js';
 import App from './App.jsx';
 import ThemeProvider from './context/ThemeProvider.jsx';
+import registerServiceWorker from './offline/registerServiceWorker.js';
 import './index.css';
 
 const onSigninCallback = () => {
@@ -26,3 +27,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ThemeProvider>
   </React.StrictMode>
 );
+
+registerServiceWorker();
