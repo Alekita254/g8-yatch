@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   CreditCard,
+  Download,
   GitBranch,
   Landmark,
   Loader2,
@@ -103,6 +104,13 @@ export default function DashboardOverview() {
       status: total(stats, 'paymentRoutingRules') > 0 ? 'Routing active' : 'Needs routing',
     },
     {
+      title: 'Downloads',
+      icon: Download,
+      path: '/downloads',
+      detail: 'Windows app and startup data dump',
+      status: 'Installer ready',
+    },
+    {
       title: 'Organisation',
       icon: Building2,
       path: '/organisation/organizations',
@@ -115,6 +123,7 @@ export default function DashboardOverview() {
     { label: 'Add Product', path: '/products/items', icon: Package },
     { label: 'Add Rooms', path: '/rooms/inventory', icon: BedDouble },
     { label: 'Tax Rules', path: '/taxes-discounts/configurations', icon: BadgePercent },
+    { label: 'Downloads', path: '/downloads', icon: Download },
     { label: 'Payment Routing', path: '/payments/routing-rules', icon: Route },
     { label: 'Branches', path: '/organisation/branches', icon: GitBranch },
   ];

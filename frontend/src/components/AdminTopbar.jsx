@@ -23,6 +23,7 @@ const routeLabels = {
   '/payments/methods': 'Payment Methods',
   '/payments/bank-accounts': 'Bank Details',
   '/payments/routing-rules': 'Payment Routing',
+  '/downloads': 'Downloads',
   '/organisation': 'Organisation Setup',
   '/organisation/organizations': 'Organizations',
   '/organisation/branches': 'Branches',

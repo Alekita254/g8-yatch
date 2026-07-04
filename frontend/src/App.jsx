@@ -33,6 +33,7 @@ import BankAccountsPage from './pages/BankAccountsPage';
 import BranchesPage from './pages/BranchesPage';
 import DashboardOverview from './pages/DashboardOverview';
 import DiscountRulesPage from './pages/DiscountRulesPage';
+import DownloadsSetupPage from './pages/DownloadsSetupPage';
 import MembersTablePage from './pages/MembersTablePage';
 import OrganisationSetupPage from './pages/OrganisationSetupPage';
 import OrganizationsPage from './pages/OrganizationsPage';
@@ -531,6 +532,7 @@ export default function App() {
             <Route path="bank-accounts" element={<BankAccountsPage />} />
             <Route path="routing-rules" element={<PaymentRoutingRulesPage />} />
           </Route>
+          <Route path="/downloads" element={<RequireAppAccess appKey="admin"><DownloadsSetupPage /></RequireAppAccess>} />
           <Route path="/organisation" element={<RequireAppAccess appKey="admin"><OrganisationSetupPage /></RequireAppAccess>}>
             <Route path="organizations" element={<OrganizationsPage />} />
             <Route path="branches" element={<BranchesPage />} />

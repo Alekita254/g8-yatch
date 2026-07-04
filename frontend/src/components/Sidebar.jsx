@@ -11,6 +11,7 @@ import {
   Calculator,
   ChevronDown,
   CreditCard,
+  Download,
   GitBranch,
   Landmark,
   LayoutDashboard,
@@ -89,6 +90,12 @@ const navItems = [
       { name: 'Bank Details', path: '/payments/bank-accounts', icon: Landmark },
       { name: 'Payment Routing', path: '/payments/routing-rules', icon: Route },
     ],
+  },
+  {
+    name: 'Downloads',
+    path: '/downloads',
+    icon: Download,
+    appKey: 'admin',
   },
   {
     name: 'Organisation Setup',
