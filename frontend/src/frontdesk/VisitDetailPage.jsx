@@ -5,7 +5,7 @@ import { Banknote, BellRing, CheckCircle2, Circle, Clock3, Loader2, MapPin, Prin
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import VisitCheckoutModal from './VisitCheckoutModal';
-import { printPdfBlob } from '../utils/printer';
+import { openPrintWindow, printPdfBlob } from '../utils/printer';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -244,12 +244,15 @@ export default function VisitDetailPage() {
   };
 
   const printOrderReceipts = async (order) => {
+    let printWindow;
     try {
+      printWindow = openPrintWindow(`order-receipts-${order.order_number}`);
       setWorking(`order-print-${order.id}`);
       const blob = await fetchOrderReceipts(order);
-      printPdfBlob(blob, `order-receipts-${order.order_number}`);
+      await printPdfBlob(blob, `order-receipts-${order.order_number}`, printWindow);
       toast.success('Order receipts sent to print dialog');
     } catch (err) {
+      if (printWindow && !printWindow.closed) printWindow.close();
       toast.error(err.response?.data?.detail || 'Could not print order receipts');
     } finally {
       setWorking('');
@@ -257,12 +260,15 @@ export default function VisitDetailPage() {
   };
 
   const printInvoiceDocument = async (invoice, type) => {
+    let printWindow;
     try {
+      printWindow = openPrintWindow(`${type}-${invoice.invoice_number}`);
       setWorking(`${type}-print-${invoice.id}`);
       const blob = type === 'invoice' ? await fetchInvoiceDocument(invoice) : await fetchReceipt(invoice);
-      printPdfBlob(blob, `${type}-${invoice.invoice_number}`);
+      await printPdfBlob(blob, `${type}-${invoice.invoice_number}`, printWindow);
       toast.success(`${type === 'invoice' ? 'Invoice' : 'Receipt'} sent to print dialog`);
     } catch (err) {
+      if (printWindow && !printWindow.closed) printWindow.close();
       toast.error(err.response?.data?.detail || `Could not print ${type === 'invoice' ? 'invoice' : 'receipt'}`);
     } finally {
       setWorking('');

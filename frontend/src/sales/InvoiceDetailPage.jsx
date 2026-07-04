@@ -14,7 +14,7 @@ import {
 import { toast } from 'react-hot-toast';
 
 import api from '../api';
-import { printPdfBlob } from '../utils/printer';
+import { openPrintWindow, printPdfBlob } from '../utils/printer';
 
 const money = (value, currency = 'KES') => `${currency} ${Number(value || 0).toLocaleString(undefined, {
   minimumFractionDigits: 2,
@@ -108,16 +108,19 @@ export default function InvoiceDetailPage() {
   };
 
   const printDocument = async (type) => {
+    let printWindow;
     try {
+      printWindow = openPrintWindow(`${type}-${invoice.invoice_number}`);
       if (type === 'invoice') {
         setInvoiceBusy('print');
       } else {
         setReceiptBusy('print');
       }
       const blob = type === 'invoice' ? await fetchInvoiceDocument() : await fetchReceipt();
-      printPdfBlob(blob, `${type}-${invoice.invoice_number}`);
+      await printPdfBlob(blob, `${type}-${invoice.invoice_number}`, printWindow);
       toast.success(`${type === 'invoice' ? 'Invoice' : 'Receipt'} sent to print dialog`);
     } catch (err) {
+      if (printWindow && !printWindow.closed) printWindow.close();
       toast.error(err.response?.data?.detail || `Could not print ${type === 'invoice' ? 'invoice' : 'receipt'}`);
     } finally {
       setReceiptBusy('');

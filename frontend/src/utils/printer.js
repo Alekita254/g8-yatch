@@ -34,35 +34,103 @@ export function savePrinterSettings(settings) {
   }));
 }
 
-export function printPdfBlob(blob, title = 'receipt') {
-  const url = window.URL.createObjectURL(blob);
-  const frame = document.createElement('iframe');
-  frame.title = title;
-  frame.style.position = 'fixed';
-  frame.style.right = '0';
-  frame.style.bottom = '0';
-  frame.style.width = '0';
-  frame.style.height = '0';
-  frame.style.border = '0';
-  frame.src = url;
+export function openPrintWindow(title = 'receipt') {
+  const printWindow = window.open('', '_blank', 'width=460,height=720');
+  if (!printWindow) {
+    throw new Error('Please allow pop-ups so the print window can open.');
+  }
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #172326;
+            background: #f7f4ee;
+          }
+        </style>
+      </head>
+      <body>
+        <strong>Preparing print preview...</strong>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  return printWindow;
+}
 
-  const cleanup = () => {
-    setTimeout(() => {
+export function printPdfBlob(blob, title = 'receipt', printWindow = null) {
+  return new Promise((resolve, reject) => {
+    const url = window.URL.createObjectURL(blob);
+
+    if (printWindow && !printWindow.closed) {
+      printWindow.location.replace(url);
+      window.setTimeout(() => {
+        try {
+          printWindow.focus();
+          printWindow.print();
+          window.setTimeout(() => window.URL.revokeObjectURL(url), 120000);
+          resolve();
+        } catch (error) {
+          window.URL.revokeObjectURL(url);
+          reject(error);
+        }
+      }, 1200);
+      return;
+    }
+
+    const frame = document.createElement('iframe');
+    let cleanedUp = false;
+
+    const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
       frame.remove();
       window.URL.revokeObjectURL(url);
-    }, 1000);
-  };
+    };
 
-  frame.onload = () => {
-    try {
-      frame.contentWindow.focus();
-      frame.contentWindow.print();
-    } finally {
+    frame.title = title;
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '1px';
+    frame.style.height = '1px';
+    frame.style.border = '0';
+    frame.style.opacity = '0';
+    frame.src = url;
+
+    frame.onload = () => {
+      setTimeout(() => {
+        try {
+          const printWindow = frame.contentWindow;
+          if (!printWindow) {
+            throw new Error('The print frame is not available.');
+          }
+          printWindow.focus();
+          printWindow.onafterprint = cleanup;
+          printWindow.print();
+          window.setTimeout(cleanup, 120000);
+          resolve();
+        } catch (error) {
+          cleanup();
+          reject(error);
+        }
+      }, 800);
+    };
+
+    frame.onerror = () => {
       cleanup();
-    }
-  };
+      reject(new Error('Could not load the PDF for printing.'));
+    };
 
-  document.body.appendChild(frame);
+    document.body.appendChild(frame);
+  });
 }
 
 export function printTestReceipt(settings = getPrinterSettings()) {

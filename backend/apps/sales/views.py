@@ -67,6 +67,18 @@ def staff_display_name(keycloak_sub):
 MPESA_TILL_NUMBER = "5869651"
 
 
+def draw_till_block(c, *, y, margin, right, center, line_height, mm):
+    block_top = y + 1.4 * mm
+    block_bottom = y - 11 * mm
+    c.setLineWidth(1.2)
+    c.roundRect(margin, block_bottom, right - margin, block_top - block_bottom, 2 * mm, stroke=1, fill=0)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawCentredString(center, y - 2.4 * mm, "M-PESA TILL")
+    c.setFont("Helvetica-Bold", 18)
+    c.drawCentredString(center, y - 8.6 * mm, MPESA_TILL_NUMBER)
+    return block_bottom - 3 * mm
+
+
 def generate_payment_receipt_pdf(invoice):
     from io import BytesIO
     from reportlab.lib.units import mm
@@ -119,7 +131,7 @@ def generate_payment_receipt_pdf(invoice):
     centered("Embu, Kenya", "Helvetica", 8)
     centered("PAYMENT RECEIPT" if payments else "UNPAID BILL", "Helvetica-Bold", 10)
     centered("PAID" if invoice.balance_due <= 0 and payments else invoice.status.replace("_", " "), "Helvetica-Bold", 9)
-    centered(f"TILL: {MPESA_TILL_NUMBER}", "Helvetica-Bold", 8)
+    y = draw_till_block(c, y=y, margin=margin, right=right, center=center, line_height=line_height, mm=mm)
     rule()
 
     pair("Receipt", receipt_number)
@@ -232,7 +244,7 @@ def generate_sales_invoice_pdf(invoice):
     centered("Embu, Kenya", "Helvetica", 8)
     centered("SALES INVOICE", "Helvetica-Bold", 10)
     centered(invoice.status.replace("_", " "), "Helvetica-Bold", 9)
-    centered(f"TILL: {MPESA_TILL_NUMBER}", "Helvetica-Bold", 8)
+    y = draw_till_block(c, y=y, margin=margin, right=right, center=center, line_height=line_height, mm=mm)
     rule()
 
     pair("Invoice", invoice.invoice_number)
@@ -331,7 +343,7 @@ def generate_order_receipts_pdf(order):
         centered("ORDER RECEIPT", "Helvetica-Bold", 10)
         centered(copy_label, "Helvetica-Bold", 10)
         if copy_label == "CUSTOMER COPY":
-            centered(f"TILL: {MPESA_TILL_NUMBER}", "Helvetica-Bold", 8)
+            y = draw_till_block(c, y=y, margin=margin, right=right, center=center, line_height=line_height, mm=mm)
         rule()
 
         pair("Order", order.order_number)

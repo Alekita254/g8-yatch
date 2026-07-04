@@ -1,9 +1,21 @@
 import os
 import sys
 
+
+def disable_runserver_reloader_by_default():
+    if len(sys.argv) < 2 or sys.argv[1] != "runserver":
+        return
+    if "--reload" in sys.argv:
+        sys.argv.remove("--reload")
+        return
+    if "--noreload" not in sys.argv:
+        sys.argv.append("--noreload")
+
+
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+    disable_runserver_reloader_by_default()
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
