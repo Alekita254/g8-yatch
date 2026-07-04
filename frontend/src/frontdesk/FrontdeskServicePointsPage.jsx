@@ -31,6 +31,7 @@ export default function FrontdeskServicePointsPage() {
   const [selectedPointId, setSelectedPointId] = useState('');
   const [cart, setCart] = useState([]);
   const [itemSearch, setItemSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [sale, setSale] = useState({
@@ -100,25 +101,32 @@ export default function FrontdeskServicePointsPage() {
 
   const visibleSaleItems = useMemo(() => {
     const search = itemSearch.trim().toLowerCase();
-    if (!search) return saleItems;
+    if (!search && !selectedCategory) return [];
 
-    return saleItems.filter((item) => [
-      item.name,
-      item.sku,
-      item.category,
-      item.currency,
-      item.price,
-    ].join(' ').toLowerCase().includes(search));
-  }, [itemSearch, saleItems]);
+    return saleItems.filter((item) => {
+      const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
+      const matchesSearch = search ? [
+        item.name,
+        item.sku,
+        item.category,
+        item.currency,
+        item.price,
+      ].join(' ').toLowerCase().includes(search) : true;
+      return matchesCategory && matchesSearch;
+    });
+  }, [itemSearch, saleItems, selectedCategory]);
 
-  const groupedItems = useMemo(() => {
-    return visibleSaleItems.reduce((groups, item) => {
+  const categories = useMemo(() => {
+    const groups = saleItems.reduce((acc, item) => {
       const key = item.category || 'General';
-      groups[key] = groups[key] || [];
-      groups[key].push(item);
-      return groups;
+      acc[key] = acc[key] || { name: key, count: 0, startingPrice: Number(item.price || 0) };
+      acc[key].count += 1;
+      acc[key].startingPrice = Math.min(acc[key].startingPrice, Number(item.price || 0));
+      return acc;
     }, {});
-  }, [visibleSaleItems]);
+
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+  }, [saleItems]);
 
   const subtotal = cart.reduce((sum, line) => sum + lineTotal(line), 0);
   const selectedPaymentMethod = paymentMethods.find((method) => String(method.id) === String(sale.payment_method));
@@ -130,6 +138,7 @@ export default function FrontdeskServicePointsPage() {
     setSelectedPointId(point.id);
     setCart([]);
     setItemSearch('');
+    setSelectedCategory('');
     setCheckoutOpen(false);
     setReceipt(null);
     setSale({ table_name: '', customer_name: '', payment_method: '', reference: '', amount_received: '' });
@@ -329,12 +338,43 @@ export default function FrontdeskServicePointsPage() {
                 </button>
               ) : null}
             </label>
-            <p className="mt-2 text-xs font-bold text-app-muted">
-              Showing {visibleSaleItems.length} of {saleItems.length} products
-            </p>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-bold text-app-muted">
+                {itemSearch
+                  ? `Showing ${visibleSaleItems.length} matching products`
+                  : selectedCategory
+                    ? `Showing ${visibleSaleItems.length} products in ${selectedCategory}`
+                    : `Choose from ${categories.length} categories`}
+              </p>
+              {selectedCategory ? (
+                <button type="button" onClick={() => setSelectedCategory('')} className="text-xs font-black text-brand-600">
+                  Back to categories
+                </button>
+              ) : null}
+            </div>
           </div>
 
-          {Object.keys(groupedItems).length === 0 ? (
+          {!itemSearch && !selectedCategory && categories.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {categories.map((category) => (
+                <button
+                  key={category.name}
+                  type="button"
+                  onClick={() => setSelectedCategory(category.name)}
+                  className="rounded-lg border border-app-border bg-app-card p-5 text-left transition hover:border-brand-500/60 hover:bg-app-elevated"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
+                      <ShoppingCart className="h-5 w-5" />
+                    </div>
+                    <span className="rounded-md bg-app-elevated px-2 py-1 text-xs font-black uppercase text-app-muted">{category.count} items</span>
+                  </div>
+                  <h3 className="mt-5 text-lg font-black text-app-text">{category.name}</h3>
+                  <p className="mt-2 text-sm font-bold text-brand-600">From {money(category.startingPrice)}</p>
+                </button>
+              ))}
+            </div>
+          ) : visibleSaleItems.length === 0 ? (
             <div className="rounded-lg border border-app-border bg-app-card p-8 text-center">
               <p className="text-sm font-bold text-app-muted">
                 {itemSearch ? 'No products match your search.' : 'No active sales pricelist items match this service point.'}
@@ -345,20 +385,21 @@ export default function FrontdeskServicePointsPage() {
                 <Link to="/products/sales-pricelists" className="mt-4 inline-flex text-sm font-black text-brand-600">Set up sales pricelists</Link>
               )}
             </div>
-          ) : Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="space-y-3">
-              <h3 className="text-xs font-black uppercase tracking-[0.16em] text-app-muted">{category}</h3>
+          ) : (
+            <div className="space-y-3">
+              <h3 className="text-xs font-black uppercase tracking-[0.16em] text-app-muted">{itemSearch ? 'Matching products' : selectedCategory}</h3>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => (
+                {visibleSaleItems.map((item) => (
                   <button key={item.product} type="button" onClick={() => addItem(item)} className="rounded-lg border border-app-border bg-app-card p-4 text-left transition hover:border-brand-500/60 hover:bg-app-elevated">
                     <p className="text-base font-black text-app-text">{item.name}</p>
                     <p className="mt-1 text-xs font-bold uppercase text-app-muted">{item.sku}</p>
+                    {itemSearch ? <p className="mt-2 text-xs font-bold text-app-muted">{item.category}</p> : null}
                     <p className="mt-5 text-lg font-black text-brand-600">{money(item.price)}</p>
                   </button>
                 ))}
               </div>
             </div>
-          ))}
+          )}
         </section>
 
         <form onSubmit={checkout} className="rounded-lg border border-app-border bg-app-card p-5 xl:sticky xl:top-5 xl:self-start">
