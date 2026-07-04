@@ -25,6 +25,7 @@ export default function FrontdeskServicePointsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [servicePoints, setServicePoints] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [pricelists, setPricelists] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -46,13 +47,15 @@ export default function FrontdeskServicePointsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [pointsResponse, productsResponse, pricelistsResponse, paymentMethodsResponse] = await Promise.all([
+        const [pointsResponse, categoriesResponse, productsResponse, pricelistsResponse, paymentMethodsResponse] = await Promise.all([
           api.get('/api/users/service-points/', { params: { page_size: 100 } }),
+          api.get('/api/products/categories/', { params: { page_size: 100 } }),
           api.get('/api/products/items/', { params: { page_size: 100 } }),
           api.get('/api/products/sales-pricelists/', { params: { page_size: 100 } }),
           api.get('/api/payments/methods/', { params: { page_size: 100 } }),
         ]);
         setServicePoints((pointsResponse.data.results || []).filter((point) => point.is_active && salesKinds.has(point.kind)));
+        setCategories((categoriesResponse.data.results || []).filter((category) => category.is_active));
         setProducts((productsResponse.data.results || []).filter((product) => product.is_active && product.is_sellable));
         setPricelists((pricelistsResponse.data.results || []).filter((pricelist) => pricelist.is_active));
         setPaymentMethods((paymentMethodsResponse.data.results || [])
@@ -69,6 +72,7 @@ export default function FrontdeskServicePointsPage() {
 
   const selectedPoint = servicePoints.find((point) => String(point.id) === String(selectedPointId));
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
+  const categoryById = useMemo(() => new Map(categories.map((category) => [String(category.id), category])), [categories]);
 
   const saleItems = useMemo(() => {
     if (!selectedPoint) return [];
@@ -89,6 +93,7 @@ export default function FrontdeskServicePointsPage() {
           product: item.product,
           name: item.product_name || product.name,
           sku: item.product_sku || product.sku,
+          categoryId: product.category ? String(product.category) : '',
           category: product.category_name || 'General',
           price: Number(item.price || 0),
           currency: item.currency || 'KES',
@@ -104,7 +109,7 @@ export default function FrontdeskServicePointsPage() {
     if (!search && !selectedCategory) return [];
 
     return saleItems.filter((item) => {
-      const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
+      const matchesCategory = selectedCategory ? item.categoryId === selectedCategory : true;
       const matchesSearch = search ? [
         item.name,
         item.sku,
@@ -116,23 +121,39 @@ export default function FrontdeskServicePointsPage() {
     });
   }, [itemSearch, saleItems, selectedCategory]);
 
-  const categories = useMemo(() => {
+  const saleCategories = useMemo(() => {
     const groups = saleItems.reduce((acc, item) => {
-      const key = item.category || 'General';
-      acc[key] = acc[key] || { name: key, count: 0, startingPrice: Number(item.price || 0) };
+      const key = item.categoryId || `name:${item.category}`;
+      const backendCategory = item.categoryId ? categoryById.get(item.categoryId) : null;
+      acc[key] = acc[key] || {
+        id: key,
+        name: backendCategory?.name || item.category || 'General',
+        code: backendCategory?.code || '',
+        parentName: backendCategory?.parent_name || '',
+        uiTab: backendCategory?.ui_tab || '',
+        routeStation: backendCategory?.route_station || '',
+        count: 0,
+        startingPrice: Number(item.price || 0),
+      };
       acc[key].count += 1;
       acc[key].startingPrice = Math.min(acc[key].startingPrice, Number(item.price || 0));
       return acc;
     }, {});
 
-    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
-  }, [saleItems]);
+    const categoryOrder = new Map(categories.map((category, index) => [String(category.id), index]));
+    return Object.values(groups).sort((a, b) => {
+      const leftOrder = categoryOrder.has(a.id) ? categoryOrder.get(a.id) : Number.MAX_SAFE_INTEGER;
+      const rightOrder = categoryOrder.has(b.id) ? categoryOrder.get(b.id) : Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder || a.name.localeCompare(b.name);
+    });
+  }, [categories, categoryById, saleItems]);
 
   const subtotal = cart.reduce((sum, line) => sum + lineTotal(line), 0);
   const selectedPaymentMethod = paymentMethods.find((method) => String(method.id) === String(sale.payment_method));
   const isCashPayment = selectedPaymentMethod?.method_type === 'CASH';
   const amountReceived = Number(sale.amount_received || 0);
   const changeDue = isCashPayment ? Math.max(amountReceived - subtotal, 0) : 0;
+  const selectedSaleCategory = saleCategories.find((category) => category.id === selectedCategory);
 
   const selectPoint = (point) => {
     setSelectedPointId(point.id);
@@ -343,8 +364,8 @@ export default function FrontdeskServicePointsPage() {
                 {itemSearch
                   ? `Showing ${visibleSaleItems.length} matching products`
                   : selectedCategory
-                    ? `Showing ${visibleSaleItems.length} products in ${selectedCategory}`
-                    : `Choose from ${categories.length} categories`}
+                    ? `Showing ${visibleSaleItems.length} products in ${selectedSaleCategory?.name || 'this category'}`
+                    : `Choose from ${saleCategories.length} categories`}
               </p>
               {selectedCategory ? (
                 <button type="button" onClick={() => setSelectedCategory('')} className="text-xs font-black text-brand-600">
@@ -354,13 +375,13 @@ export default function FrontdeskServicePointsPage() {
             </div>
           </div>
 
-          {!itemSearch && !selectedCategory && categories.length > 0 ? (
+          {!itemSearch && !selectedCategory && saleCategories.length > 0 ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {categories.map((category) => (
+              {saleCategories.map((category) => (
                 <button
-                  key={category.name}
+                  key={category.id}
                   type="button"
-                  onClick={() => setSelectedCategory(category.name)}
+                  onClick={() => setSelectedCategory(category.id)}
                   className="rounded-lg border border-app-border bg-app-card p-5 text-left transition hover:border-brand-500/60 hover:bg-app-elevated"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -370,6 +391,11 @@ export default function FrontdeskServicePointsPage() {
                     <span className="rounded-md bg-app-elevated px-2 py-1 text-xs font-black uppercase text-app-muted">{category.count} items</span>
                   </div>
                   <h3 className="mt-5 text-lg font-black text-app-text">{category.name}</h3>
+                  {category.uiTab || category.parentName || category.routeStation ? (
+                    <p className="mt-1 text-xs font-bold uppercase text-app-muted">
+                      {[category.uiTab, category.parentName, category.routeStation].filter(Boolean).join(' / ')}
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-sm font-bold text-brand-600">From {money(category.startingPrice)}</p>
                 </button>
               ))}
@@ -387,7 +413,7 @@ export default function FrontdeskServicePointsPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <h3 className="text-xs font-black uppercase tracking-[0.16em] text-app-muted">{itemSearch ? 'Matching products' : selectedCategory}</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.16em] text-app-muted">{itemSearch ? 'Matching products' : selectedSaleCategory?.name}</h3>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {visibleSaleItems.map((item) => (
                   <button key={item.product} type="button" onClick={() => addItem(item)} className="rounded-lg border border-app-border bg-app-card p-4 text-left transition hover:border-brand-500/60 hover:bg-app-elevated">

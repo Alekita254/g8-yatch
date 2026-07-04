@@ -91,7 +91,7 @@ def generate_payment_receipt_pdf(invoice):
         invoice.payments.filter(status=SalesPayment.Status.CLEARED).select_related("payment_method")
     )
     page_width = 80 * mm
-    content_lines = 29 + len(items) + max(len(payments), 1)
+    content_lines = 32 + len(items) + max(len(payments), 1)
     page_height = max(145 * mm, (content_lines * 4.7 + 18) * mm)
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
@@ -157,11 +157,12 @@ def generate_payment_receipt_pdf(invoice):
         y -= line_height
 
     rule()
-    pair("Subtotal", f"KES {invoice.subtotal:,.2f}")
-    if invoice.tax_total:
-        pair("Tax", f"KES {invoice.tax_total:,.2f}")
-    if invoice.discount_total:
-        pair("Discount", f"- KES {invoice.discount_total:,.2f}")
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(margin, y, "BILL SUMMARY")
+    y -= line_height
+    pair("Subtotal (items)", f"KES {invoice.subtotal:,.2f}")
+    pair("Tax", f"KES {invoice.tax_total:,.2f}")
+    pair("Discount", f"- KES {invoice.discount_total:,.2f}")
     pair("TOTAL", f"KES {invoice.grand_total:,.2f}", "Helvetica-Bold", 10)
     rule()
 
@@ -203,7 +204,7 @@ def generate_sales_invoice_pdf(invoice):
         invoice.order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product")
     )
     page_width = 80 * mm
-    content_lines = 26 + len(items)
+    content_lines = 29 + len(items)
     page_height = max(135 * mm, (content_lines * 4.7 + 18) * mm)
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
@@ -266,11 +267,12 @@ def generate_sales_invoice_pdf(invoice):
         y -= line_height
 
     rule()
-    pair("Subtotal", f"KES {invoice.subtotal:,.2f}")
-    if invoice.tax_total:
-        pair("Tax", f"KES {invoice.tax_total:,.2f}")
-    if invoice.discount_total:
-        pair("Discount", f"- KES {invoice.discount_total:,.2f}")
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(margin, y, "BILL SUMMARY")
+    y -= line_height
+    pair("Subtotal (items)", f"KES {invoice.subtotal:,.2f}")
+    pair("Tax", f"KES {invoice.tax_total:,.2f}")
+    pair("Discount", f"- KES {invoice.discount_total:,.2f}")
     pair("INVOICE TOTAL", f"KES {invoice.grand_total:,.2f}", "Helvetica-Bold", 10)
     pair("Amount paid", f"KES {invoice.paid_total:,.2f}", "Helvetica", 8)
     pair("Balance due", f"KES {invoice.balance_due:,.2f}", "Helvetica-Bold", 9)
@@ -292,7 +294,7 @@ def generate_order_receipts_pdf(order):
         order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product")
     )
     page_width = 80 * mm
-    copy_lines = 22 + (len(items) * 2)
+    copy_lines = 25 + (len(items) * 2)
     page_height = max(115 * mm, (copy_lines * 4.7 + 18) * mm)
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
@@ -340,15 +342,17 @@ def generate_order_receipts_pdf(order):
 
         c.setFont("Helvetica-Bold", 8)
         c.drawString(margin, y, "ITEM")
-        c.drawRightString(47 * mm, y, "QTY")
-        c.drawRightString(right, y, "PRICE")
+        c.drawRightString(42 * mm, y, "QTY")
+        c.drawRightString(59 * mm, y, "PRICE")
+        c.drawRightString(right, y, "AMOUNT")
         y -= line_height
         for item in items:
             quantity = f"{item.quantity:g}"
             c.setFont("Helvetica", 8)
-            c.drawString(margin, y, str(item.product.name)[:22])
-            c.drawRightString(47 * mm, y, quantity)
-            c.drawRightString(right, y, f"{item.unit_price:,.2f}")
+            c.drawString(margin, y, str(item.product.name)[:17])
+            c.drawRightString(42 * mm, y, quantity)
+            c.drawRightString(59 * mm, y, f"{item.unit_price:,.2f}")
+            c.drawRightString(right, y, f"{item.line_total:,.2f}")
             y -= line_height
 
         if order.notes:
@@ -362,11 +366,12 @@ def generate_order_receipts_pdf(order):
 
         if copy_label == "CUSTOMER COPY":
             rule()
-            pair("Subtotal", f"KES {order.subtotal:,.2f}")
-            if order.tax_total:
-                pair("Tax", f"KES {order.tax_total:,.2f}")
-            if order.discount_total:
-                pair("Discount", f"- KES {order.discount_total:,.2f}")
+            c.setFont("Helvetica-Bold", 8)
+            c.drawString(margin, y, "BILL SUMMARY")
+            y -= line_height
+            pair("Subtotal (items)", f"KES {order.subtotal:,.2f}")
+            pair("Tax", f"KES {order.tax_total:,.2f}")
+            pair("Discount", f"- KES {order.discount_total:,.2f}")
             pair("ORDER TOTAL", f"KES {order.grand_total:,.2f}", "Helvetica-Bold", 10)
         else:
             rule()

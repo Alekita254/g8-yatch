@@ -82,6 +82,9 @@ class ProductListCreateView(ListCreateMixin):
     model = Product
     serializer_class = ProductSerializer
 
+    def get_queryset(self):
+        return Product.objects.select_related("category")
+
 
 class ProductDetailView(DetailMixin):
     model = Product
