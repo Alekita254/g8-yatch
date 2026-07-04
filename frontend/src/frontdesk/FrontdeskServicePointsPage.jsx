@@ -21,6 +21,10 @@ function lineTotal(line) {
   return Number(line.quantity || 0) * Number(line.price || 0);
 }
 
+function visitTime(visit) {
+  return new Date(visit.updated_at || visit.arrived_at || 0).getTime() || 0;
+}
+
 async function fetchAllResults(endpoint, params = {}) {
   const pageSize = params.page_size || 100;
   let page = 1;
@@ -180,6 +184,11 @@ export default function FrontdeskServicePointsPage() {
   const changeDue = isCashPayment ? Math.max(amountReceived - subtotal, 0) : 0;
   const selectedSaleCategory = saleCategories.find((category) => category.id === selectedCategory);
   const selectedVisit = visits.find((visit) => String(visit.id) === String(selectedVisitId));
+  const sortedVisits = useMemo(() => [...visits].sort((left, right) => {
+    if (String(left.id) === String(selectedVisitId)) return -1;
+    if (String(right.id) === String(selectedVisitId)) return 1;
+    return visitTime(right) - visitTime(left);
+  }), [selectedVisitId, visits]);
 
   const selectPoint = (point) => {
     setSelectedPointId(point.id);
@@ -242,6 +251,17 @@ export default function FrontdeskServicePointsPage() {
       })),
     });
     await api.post(`/api/sales/orders/${orderResponse.data.id}/send/`);
+    if (orderResponse.data.visit) {
+      try {
+        const visitResponse = await api.get(`/api/sales/visits/${orderResponse.data.visit}/`);
+        setVisits((current) => [
+          visitResponse.data,
+          ...current.filter((visit) => String(visit.id) !== String(visitResponse.data.id)),
+        ].filter((visit) => visit.status === 'ACTIVE'));
+      } catch {
+        // The order is already created; the next refresh will pick up the visit details.
+      }
+    }
     return orderResponse.data;
   };
 
@@ -258,6 +278,7 @@ export default function FrontdeskServicePointsPage() {
       setReceipt({ orderNumber: order.order_number, visitId: order.visit, total: subtotal, paid: false });
       resetSale();
       if (order.visit && !selectedVisitId) setSelectedVisitId(String(order.visit));
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
       toast.success('Order sent to service');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to send order');
@@ -302,6 +323,7 @@ export default function FrontdeskServicePointsPage() {
         paid: true,
       });
       resetSale();
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
       toast.success('Payment collected and invoice closed');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to complete checkout');
@@ -370,6 +392,31 @@ export default function FrontdeskServicePointsPage() {
           Service Points
         </button>
       </section>
+
+      {receipt ? (
+        <section className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-lg font-black text-app-text">{receipt.paid ? 'Payment received' : 'Order sent'}</h3>
+              <p className="mt-1 text-sm text-app-muted">
+                Order {receipt.orderNumber}
+                {receipt.invoiceNumber ? ` · Invoice ${receipt.invoiceNumber}` : ''}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <span className="font-bold text-app-text">Total: {money(receipt.total)}</span>
+                {receipt.paymentMethod ? <span className="font-bold text-app-text">Method: {receipt.paymentMethod}</span> : null}
+                {receipt.change > 0 ? <span className="font-black text-emerald-700">Change: {money(receipt.change)}</span> : null}
+              </div>
+            </div>
+            {receipt.visitId && !receipt.paid ? (
+              <Link to={`/frontdesk/visits/${receipt.visitId}`} className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-bold text-white sm:w-auto">
+                Follow this guest visit
+              </Link>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
         <section className="space-y-5">
@@ -463,7 +510,7 @@ export default function FrontdeskServicePointsPage() {
           )}
         </section>
 
-        <form onSubmit={checkout} className="rounded-lg border border-app-border bg-app-card p-5 xl:sticky xl:top-5 xl:self-start">
+        <form onSubmit={checkout} className="order-first rounded-lg border border-app-border bg-app-card p-4 sm:p-5 xl:order-none xl:sticky xl:top-5 xl:self-start">
           <div className="flex items-center gap-3">
             <ReceiptText className="h-5 w-5 text-brand-500" />
             <h3 className="text-xl font-black text-app-text">Current Sale</h3>
@@ -514,7 +561,7 @@ export default function FrontdeskServicePointsPage() {
                 className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="">New visit / table</option>
-                {visits.map((visit) => (
+                {sortedVisits.map((visit) => (
                   <option key={visit.id} value={visit.id}>
                     {visit.visit_number} - {visit.service_area} {visit.table_name}{visit.guest_name ? ` - ${visit.guest_name}` : ''}
                   </option>
@@ -596,30 +643,6 @@ export default function FrontdeskServicePointsPage() {
         </form>
       </div>
 
-      {receipt ? (
-        <section className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-5">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
-            <div className="min-w-0">
-              <h3 className="text-lg font-black text-app-text">{receipt.paid ? 'Payment received' : 'Order sent'}</h3>
-              <p className="mt-1 text-sm text-app-muted">
-                Order {receipt.orderNumber}
-                {receipt.invoiceNumber ? ` · Invoice ${receipt.invoiceNumber}` : ''}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <span className="font-bold text-app-text">Total: {money(receipt.total)}</span>
-                {receipt.paymentMethod ? <span className="font-bold text-app-text">Method: {receipt.paymentMethod}</span> : null}
-                {receipt.change > 0 ? <span className="font-black text-emerald-700">Change: {money(receipt.change)}</span> : null}
-              </div>
-              {receipt.visitId && !receipt.paid ? (
-                <Link to={`/frontdesk/visits/${receipt.visitId}`} className="mt-4 inline-flex min-h-10 items-center rounded-md bg-emerald-600 px-4 text-sm font-bold text-white">
-                  Follow this guest visit
-                </Link>
-              ) : null}
-            </div>
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }

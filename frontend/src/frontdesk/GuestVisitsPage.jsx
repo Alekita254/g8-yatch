@@ -63,7 +63,12 @@ function visitPriority(visit) {
   if (visit.status === 'CHECKOUT_REQUESTED') return 0;
   if (visit.waiter_requested_at && !visit.waiter_acknowledged_at) return 1;
   if (visit.orders.some((order) => order.status === 'READY')) return 2;
-  return 3;
+  if (visit.orders.some((order) => ['SENT', 'PREPARING'].includes(order.status))) return 3;
+  return 4;
+}
+
+function visitTime(visit) {
+  return new Date(visit.updated_at || visit.arrived_at || 0).getTime() || 0;
 }
 
 function visitMatchesFilter(visit, filter) {
@@ -192,23 +197,23 @@ export default function GuestVisitsPage() {
 
   const visibleVisits = visits
     .filter((visit) => visitMatchesFilter(visit, filter))
-    .sort((left, right) => visitPriority(left) - visitPriority(right));
+    .sort((left, right) => visitPriority(left) - visitPriority(right) || visitTime(right) - visitTime(left));
   const attentionCount = visits.filter((visit) => visitMatchesFilter(visit, 'ATTENTION')).length;
   const checkoutCount = visits.filter((visit) => visit.status === 'CHECKOUT_REQUESTED').length;
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-6 sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-4 sm:p-6 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="flex items-center gap-3 text-2xl font-black text-app-text"><UsersRound className="h-6 w-6 text-brand-500" /> Queue</h2>
           <p className="mt-1 text-sm text-app-muted">QR and POS visits appear here. The most urgent staff action is always shown first.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="inline-flex rounded-md border border-app-border bg-app-card p-1">
             <button type="button" onClick={() => setMode('LIVE')} className={`px-3 py-2 text-sm font-bold ${mode === 'LIVE' ? 'bg-brand-600 text-white' : 'text-app-text'}`}>Queue</button>
             <button type="button" onClick={() => setMode('HISTORY')} className={`px-3 py-2 text-sm font-bold ${mode === 'HISTORY' ? 'bg-brand-600 text-white' : 'text-app-text'}`}>History</button>
           </div>
-          <button type="button" onClick={load} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text hover:bg-app-elevated">
+          <button type="button" onClick={load} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-4 text-sm font-bold text-app-text hover:bg-app-elevated">
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
         </div>
@@ -228,7 +233,49 @@ export default function GuestVisitsPage() {
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-app-border bg-app-card">
+      <div className="grid gap-3 md:hidden">
+        {visibleVisits.map((visit) => (
+          <article key={visit.id} className="rounded-lg border border-app-border bg-app-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link to={`/frontdesk/visits/${visit.id}`} className="font-black text-app-text">{visit.visit_number}</Link>
+                <p className="mt-1 truncate text-sm font-bold text-app-muted">{visit.guest_name || 'Walk-in guest'}</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-brand-500/10 px-3 py-1 text-xs font-black text-brand-600">{visitStage(visit)}</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs font-bold uppercase text-app-muted">Point</p>
+                <p className="mt-1 font-bold text-app-text">{visit.service_area}{visit.table_name ? ` · ${visit.table_name}` : ''}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase text-app-muted">Amount</p>
+                <p className="mt-1 font-black text-app-text">KES {visitAmount(visit).toLocaleString('en-KE', { minimumFractionDigits: 2 })}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase text-app-muted">Next</p>
+                <p className="mt-1 font-bold text-app-text">{nextAction(visit)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase text-app-muted">Arrived</p>
+                <p className="mt-1 font-bold text-app-text">{new Date(visit.arrived_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-2">
+              <Link to={`/frontdesk/visits/${visit.id}`} className="inline-flex min-h-11 items-center justify-center rounded-md bg-brand-600 px-3 text-sm font-bold text-white">
+                {visit.status === 'CLOSED' ? 'Review visit' : 'Open journey'}
+              </Link>
+              {visit.status === 'CHECKOUT_REQUESTED' ? (
+                <button type="button" disabled={working === 'checkout'} onClick={() => openCheckout(visit)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 text-sm font-bold text-white disabled:opacity-50">
+                  <ReceiptText className="h-4 w-4" /> Collect payment
+                </button>
+              ) : null}
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-lg border border-app-border bg-app-card md:block">
         <table className="w-full table-auto text-left">
           <thead>
             <tr className="bg-app-elevated">
