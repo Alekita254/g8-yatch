@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Edit3, Loader2, Package, Plus } from 'lucide-react';
+import { Edit3, Loader2, Package, Plus, Trash2 } from 'lucide-react';
 
 import api, { emptyPagination, paginationFromResponse } from '../api';
 import DataTable from '../components/DataTable';
@@ -218,6 +218,21 @@ export default function ProductsItemsPage() {
     }
   };
 
+  const deleteProduct = async (product) => {
+    if (!window.confirm(`Delete ${product.name}? This cannot be undone.`)) return;
+
+    try {
+      setSaving(true);
+      await api.delete(`/api/products/items/${product.id}/`);
+      setProducts((current) => current.filter((item) => item.id !== product.id));
+      toast.success('Product deleted');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to delete product');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
   }
@@ -281,14 +296,25 @@ export default function ProductsItemsPage() {
             headerClassName: 'text-right',
             cellClassName: 'text-right',
             render: (product) => (
-              <button
-                type="button"
-                onClick={() => openEditModal(product)}
-                className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500"
-                title="Edit product"
-              >
-                <Edit3 className="h-4 w-4" />
-              </button>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEditModal(product)}
+                  className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500"
+                  title="Edit product"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteProduct(product)}
+                  disabled={saving}
+                  className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Delete product"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             ),
           },
         ]}

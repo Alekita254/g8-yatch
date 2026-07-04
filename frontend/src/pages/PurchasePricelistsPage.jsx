@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Edit3, Loader2, Plus, Truck } from 'lucide-react';
+import { Edit3, Loader2, Plus, Trash2, Truck } from 'lucide-react';
 
 import api, { emptyPagination, paginationFromResponse } from '../api';
 import DataTable from '../components/DataTable';
@@ -140,6 +140,21 @@ export default function PurchasePricelistsPage() {
     }
   };
 
+  const deletePricelist = async (pricelist) => {
+    if (!window.confirm(`Delete ${pricelist.supplier_name}? This cannot be undone.`)) return;
+
+    try {
+      setSaving(true);
+      await api.delete(`/api/products/purchase-pricelists/${pricelist.id}/`);
+      setPricelists((current) => current.filter((item) => item.id !== pricelist.id));
+      toast.success('Purchase pricelist deleted');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to delete purchase pricelist');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
   }
@@ -231,6 +246,15 @@ export default function PurchasePricelistsPage() {
                   title="Edit pricelist"
                 >
                   <Edit3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deletePricelist(pricelist)}
+                  disabled={saving}
+                  className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Delete pricelist"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             ),

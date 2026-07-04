@@ -1,3 +1,4 @@
+from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
@@ -49,6 +50,22 @@ class DetailMixin(APIView):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         return Response(self.serializer_class(instance).data)
+
+    def delete(self, request, pk):
+        instance = get_object_or_404(self.model, pk=pk)
+        try:
+            instance.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": (
+                        "This record is linked to existing transactions or setup data. "
+                        "Set it inactive instead of deleting it."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProductCategoryListCreateView(ListCreateMixin):
