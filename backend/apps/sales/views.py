@@ -64,6 +64,9 @@ def staff_display_name(keycloak_sub):
     return full_name or identity.username or identity.email or "Staff member"
 
 
+MPESA_TILL_NUMBER = "5869651"
+
+
 def generate_payment_receipt_pdf(invoice):
     from io import BytesIO
     from reportlab.lib.units import mm
@@ -116,6 +119,7 @@ def generate_payment_receipt_pdf(invoice):
     centered("Embu, Kenya", "Helvetica", 8)
     centered("PAYMENT RECEIPT" if payments else "UNPAID BILL", "Helvetica-Bold", 10)
     centered("PAID" if invoice.balance_due <= 0 and payments else invoice.status.replace("_", " "), "Helvetica-Bold", 9)
+    centered(f"TILL: {MPESA_TILL_NUMBER}", "Helvetica-Bold", 8)
     rule()
 
     pair("Receipt", receipt_number)
@@ -131,12 +135,16 @@ def generate_payment_receipt_pdf(invoice):
 
     c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "ITEM")
+    c.drawRightString(42 * mm, y, "QTY")
+    c.drawRightString(59 * mm, y, "PRICE")
     c.drawRightString(right, y, "AMOUNT")
     y -= line_height
     for item in items:
         quantity = f"{item.quantity:g}"
         c.setFont("Helvetica", 8)
-        c.drawString(margin, y, f"{quantity} x {str(item.product.name)[:24]}")
+        c.drawString(margin, y, str(item.product.name)[:17])
+        c.drawRightString(42 * mm, y, quantity)
+        c.drawRightString(59 * mm, y, f"{item.unit_price:,.2f}")
         c.drawRightString(right, y, f"{item.line_total:,.2f}")
         y -= line_height
 
@@ -224,6 +232,7 @@ def generate_sales_invoice_pdf(invoice):
     centered("Embu, Kenya", "Helvetica", 8)
     centered("SALES INVOICE", "Helvetica-Bold", 10)
     centered(invoice.status.replace("_", " "), "Helvetica-Bold", 9)
+    centered(f"TILL: {MPESA_TILL_NUMBER}", "Helvetica-Bold", 8)
     rule()
 
     pair("Invoice", invoice.invoice_number)
@@ -240,12 +249,16 @@ def generate_sales_invoice_pdf(invoice):
 
     c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "ITEM")
+    c.drawRightString(42 * mm, y, "QTY")
+    c.drawRightString(59 * mm, y, "PRICE")
     c.drawRightString(right, y, "AMOUNT")
     y -= line_height
     for item in items:
         quantity = f"{item.quantity:g}"
         c.setFont("Helvetica", 8)
-        c.drawString(margin, y, f"{quantity} x {str(item.product.name)[:24]}")
+        c.drawString(margin, y, str(item.product.name)[:17])
+        c.drawRightString(42 * mm, y, quantity)
+        c.drawRightString(59 * mm, y, f"{item.unit_price:,.2f}")
         c.drawRightString(right, y, f"{item.line_total:,.2f}")
         y -= line_height
 
@@ -317,6 +330,8 @@ def generate_order_receipts_pdf(order):
         centered("G8 YACHT VILLA", "Helvetica-Bold", 13)
         centered("ORDER RECEIPT", "Helvetica-Bold", 10)
         centered(copy_label, "Helvetica-Bold", 10)
+        if copy_label == "CUSTOMER COPY":
+            centered(f"TILL: {MPESA_TILL_NUMBER}", "Helvetica-Bold", 8)
         rule()
 
         pair("Order", order.order_number)
@@ -332,19 +347,16 @@ def generate_order_receipts_pdf(order):
 
         c.setFont("Helvetica-Bold", 8)
         c.drawString(margin, y, "ITEM")
-        c.drawRightString(right, y, "QTY")
+        c.drawRightString(47 * mm, y, "QTY")
+        c.drawRightString(right, y, "PRICE")
         y -= line_height
         for item in items:
             quantity = f"{item.quantity:g}"
             c.setFont("Helvetica", 8)
-            c.drawString(margin, y, str(item.product.name)[:28])
-            c.drawRightString(right, y, quantity)
+            c.drawString(margin, y, str(item.product.name)[:22])
+            c.drawRightString(47 * mm, y, quantity)
+            c.drawRightString(right, y, f"{item.unit_price:,.2f}")
             y -= line_height
-            station = item.routed_station or (item.service_point.name if item.service_point else "")
-            if station:
-                c.setFont("Helvetica-Oblique", 7)
-                c.drawString(margin, y, f"Station: {station}"[:34])
-                y -= line_height
 
         if order.notes:
             rule()
