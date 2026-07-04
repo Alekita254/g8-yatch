@@ -53,9 +53,6 @@ export default function SalesPricelistDetailPage() {
 
   const sortedItems = useMemo(() => {
     return [...(pricelist?.items || [])].sort((a, b) => {
-      if (a.created_at || b.created_at) {
-        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-      }
       return Number(b.id || 0) - Number(a.id || 0);
     });
   }, [pricelist]);

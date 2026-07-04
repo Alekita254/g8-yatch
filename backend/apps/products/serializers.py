@@ -93,8 +93,7 @@ class SalesPricelistItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SalesPricelistItem
-        fields = ["id", "product", "product_name", "product_sku", "price", "currency", "created_at"]
-        read_only_fields = ["id", "product_name", "product_sku", "created_at"]
+        fields = ["id", "product", "product_name", "product_sku", "price", "currency"]
 
 
 class SalesPricelistSerializer(serializers.ModelSerializer):
