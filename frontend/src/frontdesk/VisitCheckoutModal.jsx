@@ -4,6 +4,34 @@ import ModalLayer from '../components/ModalLayer';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const emptySplit = (amount = 0) => ({ payment_method: '', amount, reference: '' });
+const ALL_INVOICES = 'ALL';
+
+function allocateSplitsToInvoices(invoices, splits) {
+  const allocations = invoices.map((invoice) => ({
+    invoice,
+    remaining: Number(invoice.balance_due || 0),
+    payments: [],
+  }));
+
+  splits.forEach((split) => {
+    let available = Number(split.amount || 0);
+    allocations.forEach((allocation) => {
+      if (available <= 0 || allocation.remaining <= 0) return;
+      const amount = Math.min(available, allocation.remaining);
+      allocation.payments.push({
+        payment_method: split.payment_method,
+        amount,
+        reference: split.reference.trim(),
+      });
+      allocation.remaining -= amount;
+      available -= amount;
+    });
+  });
+
+  return allocations
+    .map(({ invoice, payments }) => ({ invoice, payments }))
+    .filter((allocation) => allocation.payments.length > 0);
+}
 
 export default function VisitCheckoutModal({ visit, open, initialInvoiceId = null, onClose, onRequestCheckout, onCollectPayment, paymentMethods, working }) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
@@ -12,10 +40,12 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
   useEffect(() => {
     if (!open || !visit) return;
     const invoices = (visit.orders || []).map((order) => order.invoice).filter(Boolean);
-    const dueInvoice = invoices.find((invoice) => invoice.balance_due > 0) || invoices[0] || null;
+    const dueInvoices = invoices.filter((invoice) => invoice.balance_due > 0);
+    const dueInvoice = dueInvoices[0] || invoices[0] || null;
     const initial = invoices.find((invoice) => invoice.id === initialInvoiceId) || dueInvoice || null;
-    setSelectedInvoiceId(initial?.id ?? null);
-    setPaymentSplits([emptySplit(initial?.balance_due || 0)]);
+    const shouldPayAll = !initialInvoiceId && dueInvoices.length > 1;
+    setSelectedInvoiceId(shouldPayAll ? ALL_INVOICES : initial?.id ?? null);
+    setPaymentSplits([emptySplit(shouldPayAll ? dueInvoices.reduce((sum, invoice) => sum + Number(invoice.balance_due || 0), 0) : initial?.balance_due || 0)]);
   }, [open, visit, initialInvoiceId]);
 
   const invoices = (visit?.orders || []).map((order) => order.invoice).filter(Boolean);
@@ -24,15 +54,17 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
   const totalBalance = invoices.reduce((sum, invoice) => sum + Number(invoice.balance_due || 0), 0);
   const hasCheckoutRequest = visit?.status === 'CHECKOUT_REQUESTED';
   const dueInvoices = invoices.filter((invoice) => invoice.balance_due > 0);
-  const selectedInvoice = invoices.find((invoice) => invoice.id === selectedInvoiceId) || dueInvoices[0] || invoices[0] || null;
+  const payAllInvoices = selectedInvoiceId === ALL_INVOICES && dueInvoices.length > 1;
+  const selectedInvoice = payAllInvoices ? null : invoices.find((invoice) => invoice.id === selectedInvoiceId) || dueInvoices[0] || invoices[0] || null;
+  const payableInvoices = payAllInvoices ? dueInvoices : selectedInvoice ? [selectedInvoice] : [];
   const splitTotal = paymentSplits.reduce((sum, split) => sum + Number(split.amount || 0), 0);
-  const selectedBalance = Number(selectedInvoice?.balance_due || 0);
-  const splitRemaining = Math.max(selectedBalance - splitTotal, 0);
-  const splitOverpay = Math.max(splitTotal - selectedBalance, 0);
-  const isCollecting = selectedInvoice
+  const payableBalance = payAllInvoices ? totalBalance : Number(selectedInvoice?.balance_due || 0);
+  const splitRemaining = Math.max(payableBalance - splitTotal, 0);
+  const splitOverpay = Math.max(splitTotal - payableBalance, 0);
+  const isCollecting = payableInvoices.length > 0
     && paymentSplits.length > 0
     && splitTotal > 0
-    && Math.abs(splitTotal - selectedBalance) < 0.01
+    && Math.abs(splitTotal - payableBalance) < 0.01
     && paymentSplits.every((split) => {
       const method = paymentMethods.find((item) => String(item.id) === String(split.payment_method));
       return method && Number(split.amount || 0) > 0 && (!method.requires_reference || split.reference.trim());
@@ -40,20 +72,23 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
   const disabled = working === 'checkout' || visit?.status === 'CLOSED';
 
   useEffect(() => {
-    if (selectedInvoice) {
-      setPaymentSplits([emptySplit(selectedInvoice.balance_due || 0)]);
+    if (payableBalance > 0) {
+      setPaymentSplits([emptySplit(payableBalance)]);
     }
-  }, [selectedInvoice]);
+  }, [payableBalance]);
 
   if (!open || !visit) return null;
 
   const handleCollect = async () => {
-    if (!selectedInvoice) return;
-    const collected = await onCollectPayment(selectedInvoice, paymentSplits.map((split) => ({
+    if (!payableInvoices.length) return;
+    const payments = paymentSplits.map((split) => ({
       payment_method: split.payment_method,
       amount: Number(split.amount || 0),
       reference: split.reference.trim(),
-    })));
+    }));
+    const collected = payAllInvoices
+      ? await onCollectPayment(allocateSplitsToInvoices(dueInvoices, paymentSplits))
+      : await onCollectPayment(payableInvoices[0], payments);
     if (collected) onClose();
   };
 
@@ -123,7 +158,15 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
               {invoices.length > 1 ? (
                 <label className="block">
                   <span className="text-xs font-black uppercase text-app-muted">Invoice</span>
-                  <select value={selectedInvoice?.id || ''} onChange={(event) => setSelectedInvoiceId(Number(event.target.value))} className="mt-2 min-h-12 w-full rounded-md border border-app-border bg-app-elevated px-3 text-base font-bold text-app-text outline-none focus:ring-2 focus:ring-brand-500">
+                  <select
+                    value={payAllInvoices ? ALL_INVOICES : selectedInvoice?.id || ''}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      setSelectedInvoiceId(nextValue === ALL_INVOICES ? ALL_INVOICES : Number(nextValue));
+                    }}
+                    className="mt-2 min-h-12 w-full rounded-md border border-app-border bg-app-elevated px-3 text-base font-bold text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    {dueInvoices.length > 1 ? <option value={ALL_INVOICES}>All outstanding invoices · Due {money(totalBalance)}</option> : null}
                     {invoices.map((invoice) => (
                       <option key={invoice.id} value={invoice.id}>{invoice.invoice_number} · Due {money(invoice.balance_due)}</option>
                     ))}
@@ -200,7 +243,7 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
           ) : (
             <button type="button" onClick={handleCollect} disabled={!isCollecting || working.startsWith('invoice-')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-bold text-white transition disabled:opacity-50">
               {working.startsWith('invoice-') ? <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Banknote className="h-4 w-4" />}
-              Collect split payment
+              {payAllInvoices ? 'Collect all invoices' : 'Collect split payment'}
             </button>
           )}
           <button type="button" onClick={onClose} disabled={disabled} className="min-h-11 rounded-md border border-app-border px-4 text-sm font-bold text-app-text hover:bg-app-elevated disabled:opacity-50">

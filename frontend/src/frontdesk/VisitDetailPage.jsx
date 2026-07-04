@@ -152,16 +152,20 @@ export default function VisitDetailPage() {
     }
   };
 
-  const collectPayment = async (invoice, paymentsOrAmount, paymentMethod, reference) => {
-    const payments = Array.isArray(paymentsOrAmount)
+  const collectPayment = async (invoiceOrAllocations, paymentsOrAmount, paymentMethod, reference) => {
+    const isVisitPayment = Array.isArray(invoiceOrAllocations) && invoiceOrAllocations.every((allocation) => allocation.invoice && Array.isArray(allocation.payments));
+    const invoice = isVisitPayment ? invoiceOrAllocations[0]?.invoice : invoiceOrAllocations;
+    const payments = !isVisitPayment && Array.isArray(paymentsOrAmount)
       ? paymentsOrAmount
-      : [{
+      : isVisitPayment ? [] : [{
         amount: paymentsOrAmount == null ? invoice.balance_due : paymentsOrAmount,
         payment_method: paymentMethod,
         reference: reference || '',
       }];
+    const allocations = isVisitPayment ? invoiceOrAllocations : [{ invoice, payments }];
+    const allPayments = allocations.flatMap((allocation) => allocation.payments);
 
-    for (const payment of payments) {
+    for (const payment of allPayments) {
       const method = paymentMethods.find((m) => String(m.id) === String(payment.payment_method));
       if (!method) {
         toast.error('Choose a payment method');
@@ -179,39 +183,55 @@ export default function VisitDetailPage() {
 
     let printWindow = null;
     try {
-      try {
-        printWindow = openPrintWindow(`receipt-${invoice.invoice_number}`);
-      } catch {
-        printWindow = null;
+      if (!isVisitPayment) {
+        try {
+          printWindow = openPrintWindow(`receipt-${invoice.invoice_number}`);
+        } catch {
+          printWindow = null;
+        }
       }
 
       setWorking(`invoice-${invoice.id}`);
-      for (const payment of payments) {
-        await api.post('/api/sales/payments/', {
-          invoice: invoice.id,
-          payment_method: payment.payment_method,
-          amount: payment.amount,
-          reference: payment.reference || '',
-        });
+      for (const allocation of allocations) {
+        for (const payment of allocation.payments) {
+          await api.post('/api/sales/payments/', {
+            invoice: allocation.invoice.id,
+            payment_method: payment.payment_method,
+            amount: payment.amount,
+            reference: payment.reference || '',
+          });
+        }
       }
       await load();
       try {
-        const receipt = await fetchReceipt(invoice);
-        if (printWindow) {
-          try {
-            await printPdfBlob(receipt, `receipt-${invoice.invoice_number}`, printWindow);
-            toast.success('Payment collected. Receipt sent to print dialog.');
-          } catch {
-            if (printWindow && !printWindow.closed) printWindow.close();
-            downloadReceiptBlob(invoice, receipt);
-            toast.success('Payment collected. Receipt downloaded.');
+        if (isVisitPayment) {
+          for (const allocation of allocations) {
+            const receipt = await fetchReceipt(allocation.invoice);
+            downloadReceiptBlob(allocation.invoice, receipt);
           }
+          toast.success('Visit payment collected. Receipts downloaded.');
         } else {
-          downloadReceiptBlob(invoice, receipt);
-          toast.success(payments.length > 1 ? 'Split payment collected. Receipt downloaded.' : 'Payment collected. Receipt downloaded.');
+          const receipt = await fetchReceipt(invoice);
+          if (printWindow) {
+            try {
+              await printPdfBlob(receipt, `receipt-${invoice.invoice_number}`, printWindow);
+              toast.success('Payment collected. Receipt sent to print dialog.');
+            } catch {
+              if (printWindow && !printWindow.closed) printWindow.close();
+              downloadReceiptBlob(invoice, receipt);
+              toast.success('Payment collected. Receipt downloaded.');
+            }
+          } else {
+            downloadReceiptBlob(invoice, receipt);
+            toast.success(payments.length > 1 ? 'Split payment collected. Receipt downloaded.' : 'Payment collected. Receipt downloaded.');
+          }
         }
       } catch {
-        toast.error('Payment was collected, but the receipt could not be downloaded. Use Download receipt to try again.');
+        if (isVisitPayment) {
+          toast.error('Payment was collected, but some receipts could not be downloaded. Open the visit to try again.');
+        } else {
+          toast.error('Payment was collected, but the receipt could not be downloaded. Use Download receipt to try again.');
+        }
       }
       return true;
     } catch (err) {
@@ -244,6 +264,42 @@ export default function VisitDetailPage() {
       toast.success('Invoice downloaded');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not download invoice');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const downloadAllInvoiceDocuments = async (invoicesToDownload) => {
+    try {
+      setWorking('all-invoices');
+      for (const invoice of invoicesToDownload) {
+        const blob = await fetchInvoiceDocument(invoice);
+        downloadDocumentBlob(`invoice-${invoice.invoice_number}.pdf`, blob);
+      }
+      toast.success(`${invoicesToDownload.length} invoices downloaded`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not download all invoices');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const downloadAllInvoiceReceipts = async (invoicesToDownload) => {
+    const paidInvoices = invoicesToDownload.filter((invoice) => Number(invoice.paid_total || 0) > 0);
+    if (paidInvoices.length === 0) {
+      toast.error('There are no paid receipts to download yet.');
+      return;
+    }
+
+    try {
+      setWorking('all-receipts');
+      for (const invoice of paidInvoices) {
+        const blob = await fetchReceipt(invoice);
+        downloadReceiptBlob(invoice, blob);
+      }
+      toast.success(`${paidInvoices.length} receipts downloaded`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not download all receipts');
     } finally {
       setWorking('');
     }
@@ -704,6 +760,28 @@ export default function VisitDetailPage() {
                   <p className="mt-2 text-xl font-black text-app-text">{money(totalBalance)}</p>
                 </div>
               </div>
+              {invoices.length > 1 ? (
+                <div className="grid gap-2 rounded-lg border border-app-border bg-app-elevated p-3 sm:flex sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => downloadAllInvoiceDocuments(invoices)}
+                    disabled={working === 'all-invoices'}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-bold text-white disabled:opacity-50"
+                  >
+                    {working === 'all-invoices' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
+                    Download all invoices
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadAllInvoiceReceipts(invoices)}
+                    disabled={working === 'all-receipts' || !invoices.some((invoice) => Number(invoice.paid_total || 0) > 0)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-app-border px-4 text-sm font-bold text-app-text disabled:opacity-50"
+                  >
+                    {working === 'all-receipts' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
+                    Download all receipts
+                  </button>
+                </div>
+              ) : null}
               {invoices.length === 0 ? <div className="text-sm text-app-muted">No invoices for this visit.</div> : invoices.map((inv) => (
                 <div key={inv.id} className="rounded-lg border bg-app-elevated p-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
