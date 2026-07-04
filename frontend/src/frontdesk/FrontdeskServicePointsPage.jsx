@@ -25,11 +25,13 @@ export default function FrontdeskServicePointsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [servicePoints, setServicePoints] = useState([]);
+  const [visits, setVisits] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [pricelists, setPricelists] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPointId, setSelectedPointId] = useState('');
+  const [selectedVisitId, setSelectedVisitId] = useState('');
   const [cart, setCart] = useState([]);
   const [itemSearch, setItemSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -47,14 +49,16 @@ export default function FrontdeskServicePointsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [pointsResponse, categoriesResponse, productsResponse, pricelistsResponse, paymentMethodsResponse] = await Promise.all([
+        const [pointsResponse, visitsResponse, categoriesResponse, productsResponse, pricelistsResponse, paymentMethodsResponse] = await Promise.all([
           api.get('/api/users/service-points/', { params: { page_size: 100 } }),
+          api.get('/api/sales/visits/', { params: { page_size: 200 } }),
           api.get('/api/products/categories/', { params: { page_size: 100 } }),
           api.get('/api/products/items/', { params: { page_size: 100 } }),
           api.get('/api/products/sales-pricelists/', { params: { page_size: 100 } }),
           api.get('/api/payments/methods/', { params: { page_size: 100 } }),
         ]);
         setServicePoints((pointsResponse.data.results || []).filter((point) => point.is_active && salesKinds.has(point.kind)));
+        setVisits((visitsResponse.data.results || []).filter((visit) => visit.status === 'ACTIVE'));
         setCategories((categoriesResponse.data.results || []).filter((category) => category.is_active));
         setProducts((productsResponse.data.results || []).filter((product) => product.is_active && product.is_sellable));
         setPricelists((pricelistsResponse.data.results || []).filter((pricelist) => pricelist.is_active));
@@ -154,9 +158,11 @@ export default function FrontdeskServicePointsPage() {
   const amountReceived = Number(sale.amount_received || 0);
   const changeDue = isCashPayment ? Math.max(amountReceived - subtotal, 0) : 0;
   const selectedSaleCategory = saleCategories.find((category) => category.id === selectedCategory);
+  const selectedVisit = visits.find((visit) => String(visit.id) === String(selectedVisitId));
 
   const selectPoint = (point) => {
     setSelectedPointId(point.id);
+    setSelectedVisitId('');
     setCart([]);
     setItemSearch('');
     setSelectedCategory('');
@@ -184,14 +190,21 @@ export default function FrontdeskServicePointsPage() {
   const resetSale = () => {
     setCart([]);
     setCheckoutOpen(false);
-    setSale({ table_name: '', customer_name: '', payment_method: '', reference: '', amount_received: '' });
+    setSale({
+      table_name: selectedVisit ? selectedVisit.table_name || '' : '',
+      customer_name: selectedVisit ? selectedVisit.guest_name || '' : '',
+      payment_method: '',
+      reference: '',
+      amount_received: '',
+    });
   };
 
   const createOrder = async () => {
     const orderResponse = await api.post('/api/sales/orders/', {
+      visit: selectedVisitId || null,
       service_point: selectedPoint.id,
-      table_name: sale.table_name,
-      customer_name: sale.customer_name,
+      table_name: selectedVisit ? selectedVisit.table_name : sale.table_name,
+      customer_name: selectedVisit ? selectedVisit.guest_name : sale.customer_name,
       subtotal: subtotal.toFixed(2),
       tax_total: '0.00',
       discount_total: '0.00',
@@ -213,7 +226,7 @@ export default function FrontdeskServicePointsPage() {
 
   const sendOrder = async () => {
     if (!selectedPoint || cart.length === 0) return;
-    if (!sale.table_name) {
+    if (!selectedVisitId && !sale.table_name) {
       toast.error('Choose a table before checkout.');
       return;
     }
@@ -223,6 +236,7 @@ export default function FrontdeskServicePointsPage() {
       const order = await createOrder();
       setReceipt({ orderNumber: order.order_number, visitId: order.visit, total: subtotal, paid: false });
       resetSale();
+      if (order.visit && !selectedVisitId) setSelectedVisitId(String(order.visit));
       toast.success('Order sent to service');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to send order');
@@ -461,8 +475,34 @@ export default function FrontdeskServicePointsPage() {
 
           <div className="mt-5 grid gap-3">
             <label className="space-y-2">
+              <span className="text-xs font-bold uppercase text-app-muted">Guest visit</span>
+              <select
+                value={selectedVisitId}
+                onChange={(event) => {
+                  const nextVisitId = event.target.value;
+                  const nextVisit = visits.find((visit) => String(visit.id) === nextVisitId);
+                  setSelectedVisitId(nextVisitId);
+                  if (nextVisit) {
+                    setSale((current) => ({
+                      ...current,
+                      table_name: nextVisit.table_name || '',
+                      customer_name: nextVisit.guest_name || '',
+                    }));
+                  }
+                }}
+                className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">New visit / table</option>
+                {visits.map((visit) => (
+                  <option key={visit.id} value={visit.id}>
+                    {visit.visit_number} - {visit.service_area} {visit.table_name}{visit.guest_name ? ` - ${visit.guest_name}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-2">
               <span className="text-xs font-bold uppercase text-app-muted">Table</span>
-              <select value={sale.table_name} onChange={(event) => setSale((current) => ({ ...current, table_name: event.target.value }))} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
+              <select disabled={Boolean(selectedVisitId)} value={sale.table_name} onChange={(event) => setSale((current) => ({ ...current, table_name: event.target.value }))} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-60">
                 <option value="">Choose table</option>
                 {tableOptions.map((table) => (
                   <option key={table} value={table}>{table}</option>
@@ -471,7 +511,7 @@ export default function FrontdeskServicePointsPage() {
             </label>
             <label className="space-y-2">
               <span className="text-xs font-bold uppercase text-app-muted">Customer</span>
-              <input value={sale.customer_name} onChange={(event) => setSale((current) => ({ ...current, customer_name: event.target.value }))} placeholder="Walk-in guest" className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+              <input disabled={Boolean(selectedVisitId)} value={sale.customer_name} onChange={(event) => setSale((current) => ({ ...current, customer_name: event.target.value }))} placeholder="Walk-in guest" className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-60" />
             </label>
           </div>
 

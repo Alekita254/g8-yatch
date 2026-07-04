@@ -83,6 +83,25 @@ class KeycloakAdminClient:
             json={"type": "password", "value": password, "temporary": temporary},
         )
 
+    def update_user(self, keycloak_user_id, *, email=None, first_name=None, last_name=None, enabled=None):
+        payload = {}
+        if email is not None:
+            payload["email"] = email
+            payload["emailVerified"] = True
+        if first_name is not None:
+            payload["firstName"] = first_name
+        if last_name is not None:
+            payload["lastName"] = last_name
+        if enabled is not None:
+            payload["enabled"] = enabled
+
+        self._request(
+            "PUT",
+            f"{self.base_url}/admin/realms/{self.realm}/users/{keycloak_user_id}",
+            headers=self._headers(),
+            json=payload,
+        )
+
     def get_realm_role(self, role_name):
         response = self._request(
             "GET",

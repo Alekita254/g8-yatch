@@ -291,8 +291,31 @@ def generate_order_receipts_pdf(order):
     from reportlab.pdfgen import canvas
 
     items = list(
-        order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product")
+        order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related(
+            "product",
+            "product__category",
+            "service_point",
+        )
     )
+    bar_markers = ("bar",)
+
+    def is_bar_item(item):
+        category = item.product.category
+        category_text = " ".join(
+            [
+                category.name if category else "",
+                category.ui_tab if category else "",
+                category.route_station if category else "",
+                item.routed_station or "",
+            ]
+        ).lower()
+        return (
+            item.service_point
+            and item.service_point.kind == ServicePoint.Kind.BAR
+        ) or any(marker in category_text for marker in bar_markers)
+
+    bar_items = [item for item in items if is_bar_item(item)]
+    chef_items = [item for item in items if not is_bar_item(item)]
     page_width = 80 * mm
     copy_lines = 25 + (len(items) * 2)
     page_height = max(115 * mm, (copy_lines * 4.7 + 18) * mm)
@@ -303,7 +326,7 @@ def generate_order_receipts_pdf(order):
     center = page_width / 2
     line_height = 4.6 * mm
 
-    def draw_copy(copy_label):
+    def draw_copy(copy_label, copy_items):
         y = page_height - 8 * mm
 
         def centered(text, font="Helvetica", size=8):
@@ -346,7 +369,7 @@ def generate_order_receipts_pdf(order):
         c.drawRightString(59 * mm, y, "PRICE")
         c.drawRightString(right, y, "AMOUNT")
         y -= line_height
-        for item in items:
+        for item in copy_items:
             quantity = f"{item.quantity:g}"
             c.setFont("Helvetica", 8)
             c.drawString(margin, y, str(item.product.name)[:17])
@@ -377,10 +400,17 @@ def generate_order_receipts_pdf(order):
             rule()
             centered("Prepare this order for the guest.", "Helvetica-Bold", 8)
 
-    for index, label in enumerate(("CHEF COPY", "CUSTOMER COPY")):
+    copies = []
+    if chef_items:
+        copies.append(("CHEF COPY", chef_items))
+    if bar_items:
+        copies.append(("BAR COPY", bar_items))
+    copies.append(("CUSTOMER COPY", items))
+
+    for index, (label, copy_items) in enumerate(copies):
         if index:
             c.showPage()
-        draw_copy(label)
+        draw_copy(label, copy_items)
 
     c.save()
     buffer.seek(0)
@@ -476,7 +506,13 @@ class SalesOrderListCreateView(ListCreateMixin):
     def post(self, request):
         data = request.data.copy()
         data["order_number"] = next_number("SO", SalesOrder, "order_number")
-        if not data.get("visit") and data.get("service_point") and str(data.get("table_name", "")).strip():
+        if data.get("visit"):
+            visit = get_object_or_404(GuestVisit, pk=data["visit"])
+            if visit.status != GuestVisit.Status.ACTIVE:
+                return Response({"detail": "This visit is not open for new items."}, status=status.HTTP_400_BAD_REQUEST)
+            data["table_name"] = data.get("table_name") or visit.table_name
+            data["customer_name"] = data.get("customer_name") or visit.guest_name
+        elif data.get("service_point") and str(data.get("table_name", "")).strip():
             service_point = get_object_or_404(ServicePoint, pk=data["service_point"])
             visit = find_or_create_visit(
                 service_point=service_point,

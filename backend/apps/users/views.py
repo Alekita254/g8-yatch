@@ -11,7 +11,9 @@ from .models import Role, ServicePoint, UserIdentity
 from .permissions import IsPosManager
 from .serializers import (
     AdminUserCreateSerializer,
+    AdminUserPasswordResetSerializer,
     AdminUserRoleSerializer,
+    AdminUserUpdateSerializer,
     RoleSerializer,
     ServicePointSerializer,
     UserIdentitySerializer,
@@ -97,6 +99,55 @@ class AdminUserRoleView(APIView):
         identity.realm_roles = roles
         identity.save(update_fields=["realm_roles", "updated_at"])
         return Response(UserIdentitySerializer(identity).data)
+
+
+class AdminUserDetailView(APIView):
+    permission_classes = [IsPosManager]
+
+    def patch(self, request, keycloak_sub):
+        identity = get_object_or_404(UserIdentity, keycloak_sub=keycloak_sub)
+        serializer = AdminUserUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            KeycloakAdminClient().update_user(
+                keycloak_sub,
+                email=data.get("email", identity.email),
+                first_name=data.get("first_name", identity.first_name),
+                last_name=data.get("last_name", identity.last_name),
+                enabled=data.get("is_active", identity.is_active),
+            )
+        except KeycloakAdminError as exc:
+            return Response({"detail": str(exc)}, status=400)
+
+        update_fields = ["updated_at"]
+        for field in ("email", "first_name", "last_name", "is_active"):
+            if field in data:
+                setattr(identity, field, data[field])
+                update_fields.append(field)
+        identity.save(update_fields=update_fields)
+        return Response(UserIdentitySerializer(identity).data)
+
+
+class AdminUserPasswordResetView(APIView):
+    permission_classes = [IsPosManager]
+
+    def post(self, request, keycloak_sub):
+        serializer = AdminUserPasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            KeycloakAdminClient().set_password(
+                keycloak_sub,
+                data["password"],
+                temporary=data["temporary"],
+            )
+        except KeycloakAdminError as exc:
+            return Response({"detail": str(exc)}, status=400)
+
+        return Response({"detail": "Password reset successfully."})
 
 
 class RoleListCreateView(APIView):

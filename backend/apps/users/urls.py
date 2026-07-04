@@ -1,7 +1,9 @@
 from django.urls import path
 
 from .views import (
+    AdminUserDetailView,
     AdminUserListCreateView,
+    AdminUserPasswordResetView,
     AdminUserRoleView,
     MeView,
     RoleDetailView,
@@ -25,5 +27,11 @@ urlpatterns = [
         name="service-points-detail",
     ),
     path("", AdminUserListCreateView.as_view(), name="users-admin-list-create"),
+    path("<str:keycloak_sub>/", AdminUserDetailView.as_view(), name="users-admin-detail"),
     path("<str:keycloak_sub>/roles/", AdminUserRoleView.as_view(), name="users-admin-roles"),
+    path(
+        "<str:keycloak_sub>/password/",
+        AdminUserPasswordResetView.as_view(),
+        name="users-admin-password",
+    ),
 ]

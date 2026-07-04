@@ -3,7 +3,9 @@ import { toast } from 'react-hot-toast';
 import {
   AlertCircle,
   Check,
+  Edit3,
   Loader2,
+  KeyRound,
   Plus,
   RefreshCw,
   Save,
@@ -14,6 +16,7 @@ import {
 
 import api, { emptyPagination, paginationFromResponse } from '../api';
 import DataTable from '../components/DataTable';
+import ModalLayer from '../components/ModalLayer';
 import UserRoleModal from '../components/UserRoleModal';
 
 const emptyForm = {
@@ -25,6 +28,19 @@ const emptyForm = {
   realm_roles: ['WAITER'],
 };
 
+const emptyEditForm = {
+  email: '',
+  first_name: '',
+  last_name: '',
+  is_active: true,
+};
+
+const emptyPasswordForm = {
+  password: '',
+  confirm_password: '',
+  temporary: true,
+};
+
 export default function UsersDashboard({ embedded = false }) {
   const [users, setUsers] = useState([]);
   const [roleOptions, setRoleOptions] = useState([]);
@@ -34,7 +50,11 @@ export default function UsersDashboard({ embedded = false }) {
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [roleModalUser, setRoleModalUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [passwordUser, setPasswordUser] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [editForm, setEditForm] = useState(emptyEditForm);
+  const [passwordForm, setPasswordForm] = useState(emptyPasswordForm);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -87,6 +107,21 @@ export default function UsersDashboard({ embedded = false }) {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  const openEditUser = (user) => {
+    setEditingUser(user);
+    setEditForm({
+      email: user.email || '',
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      is_active: user.is_active !== false,
+    });
+  };
+
+  const openPasswordReset = (user) => {
+    setPasswordUser(user);
+    setPasswordForm(emptyPasswordForm);
+  };
+
   const toggleFormRole = (role) => {
     setForm((current) => {
       const roles = current.realm_roles.includes(role)
@@ -132,6 +167,49 @@ export default function UsersDashboard({ embedded = false }) {
       }
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to create user');
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const saveUserDetails = async (event) => {
+    event.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      setSavingUser(true);
+      const response = await api.patch(`/api/users/${editingUser.keycloak_sub}/`, editForm);
+      setUsers((current) => current.map((user) => (
+        user.keycloak_sub === editingUser.keycloak_sub ? response.data : user
+      )));
+      setEditingUser(null);
+      toast.success('User details updated');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to update user details');
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const resetUserPassword = async (event) => {
+    event.preventDefault();
+    if (!passwordUser) return;
+    if (passwordForm.password !== passwordForm.confirm_password) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    try {
+      setSavingUser(true);
+      await api.post(`/api/users/${passwordUser.keycloak_sub}/password/`, {
+        password: passwordForm.password,
+        temporary: passwordForm.temporary,
+      });
+      setPasswordUser(null);
+      setPasswordForm(emptyPasswordForm);
+      toast.success('Password reset');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to reset password');
     } finally {
       setSavingUser(false);
     }
@@ -332,13 +410,31 @@ export default function UsersDashboard({ embedded = false }) {
             headerClassName: 'text-right',
             cellClassName: 'text-right',
             render: (user) => (
-              <button
-                type="button"
-                onClick={() => setRoleModalUser(user)}
-                className="rounded-md border border-app-border px-3 py-2 text-xs font-black text-app-text transition hover:bg-app-elevated"
-              >
-                Manage
-              </button>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEditUser(user)}
+                  className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-elevated hover:text-brand-500"
+                  title="Edit user details"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openPasswordReset(user)}
+                  className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-elevated hover:text-brand-500"
+                  title="Reset password"
+                >
+                  <KeyRound className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoleModalUser(user)}
+                  className="rounded-md border border-app-border px-3 py-2 text-xs font-black text-app-text transition hover:bg-app-elevated"
+                >
+                  Roles
+                </button>
+              </div>
             ),
           },
         ]}
@@ -372,6 +468,108 @@ export default function UsersDashboard({ embedded = false }) {
         onSave={saveUserRoles}
         isSaving={Boolean(savingRoleFor)}
       />
+
+      {editingUser ? (
+        <ModalLayer label="Edit user details" onClose={() => setEditingUser(null)}>
+          <form onSubmit={saveUserDetails} className="w-full max-w-2xl rounded-lg border border-app-border bg-app-card shadow-2xl">
+            <div className="border-b border-app-border bg-app-elevated px-6 py-5">
+              <div className="flex items-center gap-2 text-brand-500">
+                <Edit3 className="h-5 w-5" />
+                <p className="text-xs font-black uppercase tracking-[0.16em]">Edit user</p>
+              </div>
+              <h2 className="mt-2 text-2xl font-black text-app-text">{editingUser.username}</h2>
+            </div>
+            <div className="grid gap-4 p-6 md:grid-cols-2">
+              {[
+                ['first_name', 'First name', 'text'],
+                ['last_name', 'Last name', 'text'],
+                ['email', 'Email', 'email'],
+              ].map(([field, label, type]) => (
+                <label key={field} className="space-y-2">
+                  <span className="text-xs font-bold uppercase text-app-muted">{label}</span>
+                  <input
+                    type={type}
+                    value={editForm[field]}
+                    required={field === 'email'}
+                    onChange={(event) => setEditForm((current) => ({ ...current, [field]: event.target.value }))}
+                    className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </label>
+              ))}
+              <label className="flex items-center gap-3 rounded-md border border-app-border bg-app-elevated px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_active}
+                  onChange={(event) => setEditForm((current) => ({ ...current, is_active: event.target.checked }))}
+                  className="h-4 w-4 rounded border-app-border text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-sm font-bold text-app-text">Active user</span>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-app-border bg-app-elevated px-6 py-4">
+              <button type="button" onClick={() => setEditingUser(null)} disabled={savingUser} className="rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text">Cancel</button>
+              <button type="submit" disabled={savingUser} className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                {savingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save details
+              </button>
+            </div>
+          </form>
+        </ModalLayer>
+      ) : null}
+
+      {passwordUser ? (
+        <ModalLayer label="Reset user password" onClose={() => setPasswordUser(null)}>
+          <form onSubmit={resetUserPassword} className="w-full max-w-2xl rounded-lg border border-app-border bg-app-card shadow-2xl">
+            <div className="border-b border-app-border bg-app-elevated px-6 py-5">
+              <div className="flex items-center gap-2 text-brand-500">
+                <KeyRound className="h-5 w-5" />
+                <p className="text-xs font-black uppercase tracking-[0.16em]">Reset password</p>
+              </div>
+              <h2 className="mt-2 text-2xl font-black text-app-text">{passwordUser.username}</h2>
+            </div>
+            <div className="grid gap-4 p-6 md:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-xs font-bold uppercase text-app-muted">New password</span>
+                <input
+                  type="password"
+                  minLength={8}
+                  required
+                  value={passwordForm.password}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))}
+                  className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-xs font-bold uppercase text-app-muted">Confirm password</span>
+                <input
+                  type="password"
+                  minLength={8}
+                  required
+                  value={passwordForm.confirm_password}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, confirm_password: event.target.value }))}
+                  className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </label>
+              <label className="flex items-center gap-3 rounded-md border border-app-border bg-app-elevated px-3 py-2 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={passwordForm.temporary}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, temporary: event.target.checked }))}
+                  className="h-4 w-4 rounded border-app-border text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-sm font-bold text-app-text">Require user to change password after login</span>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-app-border bg-app-elevated px-6 py-4">
+              <button type="button" onClick={() => setPasswordUser(null)} disabled={savingUser} className="rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text">Cancel</button>
+              <button type="submit" disabled={savingUser} className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                {savingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                Reset password
+              </button>
+            </div>
+          </form>
+        </ModalLayer>
+      ) : null}
     </div>
   );
 }

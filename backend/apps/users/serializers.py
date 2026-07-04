@@ -75,3 +75,15 @@ class AdminUserRoleSerializer(serializers.Serializer):
         child=serializers.CharField(max_length=80),
         allow_empty=True,
     )
+
+
+class AdminUserUpdateSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=False)
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    is_active = serializers.BooleanField(required=False)
+
+
+class AdminUserPasswordResetSerializer(serializers.Serializer):
+    password = serializers.CharField(max_length=128, min_length=8, write_only=True)
+    temporary = serializers.BooleanField(default=True)
