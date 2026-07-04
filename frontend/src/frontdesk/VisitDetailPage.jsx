@@ -181,7 +181,7 @@ export default function VisitDetailPage() {
     try {
       try {
         printWindow = openPrintWindow(`receipt-${invoice.invoice_number}`);
-      } catch (err) {
+      } catch {
         printWindow = null;
       }
 
@@ -201,7 +201,7 @@ export default function VisitDetailPage() {
           try {
             await printPdfBlob(receipt, `receipt-${invoice.invoice_number}`, printWindow);
             toast.success('Payment collected. Receipt sent to print dialog.');
-          } catch (err) {
+          } catch {
             if (printWindow && !printWindow.closed) printWindow.close();
             downloadReceiptBlob(invoice, receipt);
             toast.success('Payment collected. Receipt downloaded.');
@@ -210,7 +210,7 @@ export default function VisitDetailPage() {
           downloadReceiptBlob(invoice, receipt);
           toast.success(payments.length > 1 ? 'Split payment collected. Receipt downloaded.' : 'Payment collected. Receipt downloaded.');
         }
-      } catch (err) {
+      } catch {
         toast.error('Payment was collected, but the receipt could not be downloaded. Use Download receipt to try again.');
       }
       return true;

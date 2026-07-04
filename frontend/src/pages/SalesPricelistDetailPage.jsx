@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, CalendarDays, Edit3, Loader2, MapPin, Package, Plus, Tags } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Edit3, Loader2, MapPin, Package, Plus, Tags, Trash2 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import api from '../api';
@@ -51,7 +51,16 @@ export default function SalesPricelistDetailPage() {
     [products],
   );
 
-  const visibleItems = (pricelist?.items || []).filter((item) => {
+  const sortedItems = useMemo(() => {
+    return [...(pricelist?.items || [])].sort((a, b) => {
+      if (a.created_at || b.created_at) {
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      }
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+  }, [pricelist]);
+
+  const visibleItems = sortedItems.filter((item) => {
     const product = productsById.get(String(item.product));
     return [
       item.product_name,
@@ -94,6 +103,22 @@ export default function SalesPricelistDetailPage() {
       toast.success('Sales price saved');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to save sales price');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removePriceItem = async (item) => {
+    if (!window.confirm(`Remove ${item.product_name} from this pricelist?`)) return;
+
+    try {
+      setSaving(true);
+      const items = (pricelist.items || []).filter((priceItem) => String(priceItem.product) !== String(item.product));
+      const response = await api.patch(`/api/products/sales-pricelists/${pricelist.id}/`, { items });
+      setPricelist(response.data);
+      toast.success('Product removed from pricelist');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to remove product from pricelist');
     } finally {
       setSaving(false);
     }
@@ -199,9 +224,20 @@ export default function SalesPricelistDetailPage() {
             headerClassName: 'text-right',
             cellClassName: 'text-right',
             render: (item) => (
-              <button type="button" onClick={() => openPriceModal(item)} className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500" title="Edit sales price">
-                <Edit3 className="h-4 w-4" />
-              </button>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => openPriceModal(item)} className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500" title="Edit sales price">
+                  <Edit3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removePriceItem(item)}
+                  disabled={saving}
+                  className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Remove from pricelist"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             ),
           },
         ]}
