@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Banknote, CheckCircle2, ConciergeBell, CreditCard, Loader2, Martini, Minus, Plus, ReceiptText, ShoppingCart, Utensils } from 'lucide-react';
+import { ArrowLeft, Banknote, CheckCircle2, ConciergeBell, CreditCard, Loader2, Martini, Minus, Plus, ReceiptText, Search, ShoppingCart, Utensils, X } from 'lucide-react';
 
 import api from '../api';
 import FrontdeskPosPage from './FrontdeskPosPage';
@@ -33,6 +33,7 @@ export default function FrontdeskServicePointsPage() {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPointId, setSelectedPointId] = useState('');
   const [cart, setCart] = useState([]);
+  const [itemSearch, setItemSearch] = useState('');
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [sale, setSale] = useState({
@@ -100,14 +101,27 @@ export default function FrontdeskServicePointsPage() {
     return Array.from(uniqueItems.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [pricelists, productById, selectedPoint]);
 
+  const visibleSaleItems = useMemo(() => {
+    const search = itemSearch.trim().toLowerCase();
+    if (!search) return saleItems;
+
+    return saleItems.filter((item) => [
+      item.name,
+      item.sku,
+      item.category,
+      item.currency,
+      item.price,
+    ].join(' ').toLowerCase().includes(search));
+  }, [itemSearch, saleItems]);
+
   const groupedItems = useMemo(() => {
-    return saleItems.reduce((groups, item) => {
+    return visibleSaleItems.reduce((groups, item) => {
       const key = item.category || 'General';
       groups[key] = groups[key] || [];
       groups[key].push(item);
       return groups;
     }, {});
-  }, [saleItems]);
+  }, [visibleSaleItems]);
 
   const subtotal = cart.reduce((sum, line) => sum + lineTotal(line), 0);
   const selectedPaymentMethod = paymentMethods.find((method) => String(method.id) === String(sale.payment_method));
@@ -118,6 +132,7 @@ export default function FrontdeskServicePointsPage() {
   const selectPoint = (point) => {
     setSelectedPointId(point.id);
     setCart([]);
+    setItemSearch('');
     setCheckoutOpen(false);
     setReceipt(null);
     setSale({ table_name: '', customer_name: '', payment_method: '', reference: '', amount_received: '' });
@@ -320,10 +335,42 @@ export default function FrontdeskServicePointsPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
         <section className="space-y-5">
+          <div className="rounded-lg border border-app-border bg-app-card p-4">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-app-muted" />
+              <input
+                value={itemSearch}
+                onChange={(event) => setItemSearch(event.target.value)}
+                placeholder="Search products by name, SKU, category, or price"
+                autoComplete="off"
+                className="h-12 w-full rounded-md border border-app-border bg-app-elevated pl-11 pr-12 text-base font-bold text-app-text outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500"
+              />
+              {itemSearch ? (
+                <button
+                  type="button"
+                  onClick={() => setItemSearch('')}
+                  className="absolute right-2 top-1/2 rounded-md p-2 text-app-muted transition -translate-y-1/2 hover:bg-app-card hover:text-app-text"
+                  title="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </label>
+            <p className="mt-2 text-xs font-bold text-app-muted">
+              Showing {visibleSaleItems.length} of {saleItems.length} products
+            </p>
+          </div>
+
           {Object.keys(groupedItems).length === 0 ? (
             <div className="rounded-lg border border-app-border bg-app-card p-8 text-center">
-              <p className="text-sm font-bold text-app-muted">No active sales pricelist items match this service point.</p>
-              <Link to="/products/sales-pricelists" className="mt-4 inline-flex text-sm font-black text-brand-600">Set up sales pricelists</Link>
+              <p className="text-sm font-bold text-app-muted">
+                {itemSearch ? 'No products match your search.' : 'No active sales pricelist items match this service point.'}
+              </p>
+              {itemSearch ? (
+                <button type="button" onClick={() => setItemSearch('')} className="mt-4 inline-flex text-sm font-black text-brand-600">Clear search</button>
+              ) : (
+                <Link to="/products/sales-pricelists" className="mt-4 inline-flex text-sm font-black text-brand-600">Set up sales pricelists</Link>
+              )}
             </div>
           ) : Object.entries(groupedItems).map(([category, items]) => (
             <div key={category} className="space-y-3">
