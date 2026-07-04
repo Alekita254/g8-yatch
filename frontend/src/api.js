@@ -2,9 +2,12 @@ import axios from 'axios';
 
 import { apiCacheKey, cacheApiResponse, getCachedApiResponse, queueMutation } from './offline/store';
 
+const isDesktopApp = window.location.protocol === 'app:';
+const defaultApiUrl = isDesktopApp ? 'https://g8-backend.getotech.co.ke' : 'http://localhost:8000';
+
 // Create a global Axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_URL || defaultApiUrl,
   headers: {
     'Content-Type': 'application/json',
   },
