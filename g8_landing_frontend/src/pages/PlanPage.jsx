@@ -13,6 +13,7 @@ const money = (value) => new Intl.NumberFormat('en-KE', {
   currency: 'KES',
   maximumFractionDigits: 0,
 }).format(value)
+const tableOptions = Array.from({ length: 8 }, (_, index) => `Table ${index + 1}`)
 
 export default function PlanPage() {
   const {
@@ -555,7 +556,15 @@ function GuestFields({ guest, setGuest, waiterOnly = false, arrival = false }) {
           <option>Conference room</option>
         </select>
       </label>
-      <Field label="Table or seating number" value={guest.tableNumber} onChange={(event) => setGuest({ ...guest, tableNumber: event.target.value })} placeholder="Example: Table 4" required={!waiterOnly} />
+      <label className="block text-sm font-bold text-ink dark:text-slate-100">
+        Table
+        <select required={!waiterOnly} value={guest.tableNumber} onChange={(event) => setGuest({ ...guest, tableNumber: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal outline-none focus:border-lake">
+          <option value="">Choose table</option>
+          {tableOptions.map((table) => (
+            <option key={table} value={table}>{table}</option>
+          ))}
+        </select>
+      </label>
       {!waiterOnly && (
         <label className="block text-sm font-bold text-ink dark:text-slate-100">
           Notes optional

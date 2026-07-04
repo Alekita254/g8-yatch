@@ -267,6 +267,116 @@ def generate_sales_invoice_pdf(invoice):
     return buffer
 
 
+def generate_order_receipts_pdf(order):
+    from io import BytesIO
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    items = list(
+        order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product")
+    )
+    page_width = 80 * mm
+    copy_lines = 25 + (len(items) * 2)
+    page_height = max(115 * mm, (copy_lines * 4.7 + 18) * mm)
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+    margin = 6 * mm
+    right = page_width - margin
+    center = page_width / 2
+    line_height = 4.6 * mm
+
+    def draw_copy(copy_label):
+        y = page_height - 8 * mm
+
+        def centered(text, font="Helvetica", size=8):
+            nonlocal y
+            c.setFont(font, size)
+            c.drawCentredString(center, y, str(text))
+            y -= line_height
+
+        def pair(label, value, font="Helvetica", size=8):
+            nonlocal y
+            c.setFont(font, size)
+            c.drawString(margin, y, str(label))
+            c.drawRightString(right, y, str(value))
+            y -= line_height
+
+        def rule():
+            nonlocal y
+            y -= 1 * mm
+            c.setDash(1, 2)
+            c.line(margin, y, right, y)
+            c.setDash()
+            y -= 3.5 * mm
+
+        visit = order.visit
+        location = order.table_name
+        if visit:
+            location = f"{visit.service_area} {visit.table_name}".strip()
+
+        centered("G8 YACHT VILLA", "Helvetica-Bold", 13)
+        centered("ORDER RECEIPT", "Helvetica-Bold", 10)
+        centered(copy_label, "Helvetica-Bold", 10)
+        rule()
+
+        pair("Order", order.order_number)
+        pair("Date", timezone.localtime(order.created_at).strftime("%d %b %Y  %H:%M"))
+        if order.service_point:
+            pair("Point", order.service_point.name[:24])
+        if location:
+            pair("Location", location[:28])
+        pair("Guest", (order.customer_name or (visit.guest_name if visit else "") or "Walk-in guest")[:28])
+        if order.waiter_keycloak_sub:
+            pair("Served by", staff_display_name(order.waiter_keycloak_sub)[:24])
+        rule()
+
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(margin, y, "ITEM")
+        c.drawRightString(right, y, "QTY")
+        y -= line_height
+        for item in items:
+            quantity = f"{item.quantity:g}"
+            c.setFont("Helvetica", 8)
+            c.drawString(margin, y, str(item.product.name)[:28])
+            c.drawRightString(right, y, quantity)
+            y -= line_height
+            station = item.routed_station or (item.service_point.name if item.service_point else "")
+            if station:
+                c.setFont("Helvetica-Oblique", 7)
+                c.drawString(margin, y, f"Station: {station}"[:34])
+                y -= line_height
+
+        if order.notes:
+            rule()
+            c.setFont("Helvetica-Bold", 8)
+            c.drawString(margin, y, "NOTES")
+            y -= line_height
+            c.setFont("Helvetica", 8)
+            c.drawString(margin, y, order.notes[:38])
+            y -= line_height
+
+        if copy_label == "CUSTOMER COPY":
+            rule()
+            pair("Subtotal", f"KES {order.subtotal:,.2f}")
+            if order.tax_total:
+                pair("Tax", f"KES {order.tax_total:,.2f}")
+            if order.discount_total:
+                pair("Discount", f"- KES {order.discount_total:,.2f}")
+            pair("ORDER TOTAL", f"KES {order.grand_total:,.2f}", "Helvetica-Bold", 10)
+        else:
+            rule()
+            centered("Prepare this order for the guest.", "Helvetica-Bold", 8)
+
+    for index, label in enumerate(("CHEF COPY", "CUSTOMER COPY")):
+        if index:
+            c.showPage()
+        draw_copy(label)
+
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
 def generate_invoice_receipt(invoice):
     buffer = generate_payment_receipt_pdf(invoice)
     filename = generate_receipt_filename(invoice)
@@ -276,8 +386,19 @@ def generate_invoice_receipt(invoice):
     invoice.save(update_fields=["receipt_file"])
 
 
-def create_invoice_from_order(order):
-    invoice = SalesInvoice.objects.create(
+def create_invoice_from_order(order, issued_by=""):
+    if hasattr(order, "invoice"):
+        invoice = order.invoice
+        if issued_by and not invoice.issued_by:
+            invoice.issued_by = issued_by
+            invoice.save(update_fields=["issued_by"])
+        return invoice
+
+    create_kwargs = {}
+    if issued_by:
+        create_kwargs["issued_by"] = issued_by
+
+    return SalesInvoice.objects.create(
         invoice_number=next_number("INV", SalesInvoice, "invoice_number"),
         order=order,
         branch=order.branch,
@@ -288,18 +409,12 @@ def create_invoice_from_order(order):
         grand_total=order.grand_total,
         balance_due=order.grand_total,
         fiscal_payload=build_fiscal_payload(order),
+        **create_kwargs,
     )
-    order.status = SalesOrder.Status.INVOICED
-    order.save(update_fields=["status", "updated_at"])
-    return invoice
 
 
 def create_invoice_from_order_with_issuer(order, issued_by=''):
-    invoice = create_invoice_from_order(order)
-    if issued_by:
-        invoice.issued_by = issued_by
-        invoice.save(update_fields=["issued_by"])
-    return invoice
+    return create_invoice_from_order(order, issued_by=issued_by)
 
 
 def find_or_create_visit(*, service_point, table_name, customer_name=""):
@@ -388,8 +503,8 @@ class SalesOrderDetailView(APIView):
 
     def patch(self, request, pk):
         order = get_object_or_404(SalesOrder, pk=pk)
-        if order.status == SalesOrder.Status.INVOICED:
-            return Response({"detail": "Invoiced orders are locked."}, status=status.HTTP_400_BAD_REQUEST)
+        if hasattr(order, "invoice"):
+            return Response({"detail": "Orders with issued invoices are locked."}, status=status.HTTP_400_BAD_REQUEST)
         serializer = SalesOrderSerializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
@@ -410,7 +525,35 @@ class SalesOrderSendView(APIView):
             item.save(update_fields=["status", "sent_at", "routed_station"])
         order.status = SalesOrder.Status.SENT
         order.save(update_fields=["status", "updated_at"])
+        create_invoice_from_order(order)
+        order = SalesOrder.objects.select_related("invoice").get(pk=order.pk)
         return Response(SalesOrderSerializer(order).data)
+
+
+class SalesOrderReceiptsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        order = get_object_or_404(
+            SalesOrder.objects.select_related(
+                "branch",
+                "service_point",
+                "visit",
+            ).prefetch_related(
+                "items__product",
+                "items__service_point",
+            ),
+            pk=pk,
+        )
+        try:
+            document = generate_order_receipts_pdf(order)
+            return FileResponse(
+                document,
+                content_type="application/pdf",
+                filename=f"order-receipts-{order.order_number}.pdf",
+            )
+        except Exception:
+            return Response({"detail": "Failed to generate order receipts."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SalesOrderItemVoidView(APIView):
@@ -509,8 +652,8 @@ class GuestVisitDetailView(APIView):
 class SalesOrderStatusView(APIView):
     permission_classes = [IsAuthenticated]
     transitions = {
-        SalesOrder.Status.SENT: {SalesOrder.Status.PREPARING, SalesOrder.Status.CANCELLED},
-        SalesOrder.Status.PREPARING: {SalesOrder.Status.READY, SalesOrder.Status.CANCELLED},
+        SalesOrder.Status.SENT: {SalesOrder.Status.SERVED, SalesOrder.Status.CANCELLED},
+        SalesOrder.Status.PREPARING: {SalesOrder.Status.SERVED, SalesOrder.Status.CANCELLED},
         SalesOrder.Status.READY: {SalesOrder.Status.SERVED},
         SalesOrder.Status.SERVED: set(),
     }
@@ -550,7 +693,7 @@ class SalesPaymentListCreateView(ListCreateMixin):
         if invoice.status == SalesInvoice.Status.CLOSED and invoice.order.visit_id:
             visit = invoice.order.visit
             outstanding = visit.orders.filter(invoice__balance_due__gt=0).exists()
-            uninvoiced = visit.orders.exclude(status__in=[SalesOrder.Status.INVOICED, SalesOrder.Status.CANCELLED]).exists()
+            uninvoiced = visit.orders.exclude(status=SalesOrder.Status.CANCELLED).filter(invoice__isnull=True).exists()
             if not outstanding and not uninvoiced:
                 visit.status = GuestVisit.Status.CLOSED
                 visit.closed_at = timezone.now()

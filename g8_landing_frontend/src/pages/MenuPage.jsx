@@ -7,6 +7,7 @@ import SectionHeading from '../components/SectionHeading'
 import { usePlan } from '../context/planContext'
 
 const categories = ['Starters', 'Mains', 'Drinks']
+const tableOptions = Array.from({ length: 8 }, (_, index) => `Table ${index + 1}`)
 const money = (value) => new Intl.NumberFormat('en-KE', {
   style: 'currency',
   currency: 'KES',
@@ -260,8 +261,13 @@ function WaiterDialog({ visit, seat, setSeat, status, onClose, onSubmit }) {
               </select>
             </label>
             <label className="block text-sm font-bold text-ink dark:text-slate-100">
-              Table or seating number
-              <input required value={seat.tableNumber} onChange={(event) => setSeat({ ...seat, tableNumber: event.target.value })} placeholder="Example: Table 4" className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 font-normal outline-none focus:border-lake" />
+              Table
+              <select required value={seat.tableNumber} onChange={(event) => setSeat({ ...seat, tableNumber: event.target.value })} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-normal outline-none focus:border-lake">
+                <option value="">Choose table</option>
+                {tableOptions.map((table) => (
+                  <option key={table} value={table}>{table}</option>
+                ))}
+              </select>
             </label>
           </div>
         )}

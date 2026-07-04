@@ -174,6 +174,7 @@ class PublicVisitOrderView(APIView):
             )
             for product, quantity, price, line_total in lines
         ])
+        create_invoice_from_order(order)
         return Response(visit_response(visit), status=status.HTTP_201_CREATED)
 
 

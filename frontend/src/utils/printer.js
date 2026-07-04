@@ -1,0 +1,134 @@
+const SETTINGS_KEY = 'g8_printer_settings';
+
+export const defaultPrinterSettings = {
+  mode: 'browser',
+  printerName: '',
+  paperWidth: '80',
+  autoOpenPrintDialog: true,
+  usbVendorId: '',
+  usbProductId: '',
+};
+
+export function decimalToHexId(value) {
+  if (value === undefined || value === null || value === '') return '';
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return String(value).toLowerCase();
+  return numericValue.toString(16).padStart(4, '0');
+}
+
+export function getPrinterSettings() {
+  try {
+    return {
+      ...defaultPrinterSettings,
+      ...(JSON.parse(window.localStorage.getItem(SETTINGS_KEY)) || {}),
+    };
+  } catch {
+    return defaultPrinterSettings;
+  }
+}
+
+export function savePrinterSettings(settings) {
+  window.localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+    ...defaultPrinterSettings,
+    ...settings,
+  }));
+}
+
+export function printPdfBlob(blob, title = 'receipt') {
+  const url = window.URL.createObjectURL(blob);
+  const frame = document.createElement('iframe');
+  frame.title = title;
+  frame.style.position = 'fixed';
+  frame.style.right = '0';
+  frame.style.bottom = '0';
+  frame.style.width = '0';
+  frame.style.height = '0';
+  frame.style.border = '0';
+  frame.src = url;
+
+  const cleanup = () => {
+    setTimeout(() => {
+      frame.remove();
+      window.URL.revokeObjectURL(url);
+    }, 1000);
+  };
+
+  frame.onload = () => {
+    try {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    } finally {
+      cleanup();
+    }
+  };
+
+  document.body.appendChild(frame);
+}
+
+export function printTestReceipt(settings = getPrinterSettings()) {
+  const paperWidth = settings.paperWidth === '58' ? '58mm' : '80mm';
+  const testWindow = window.open('', '_blank', 'width=420,height=680');
+  if (!testWindow) {
+    throw new Error('Please allow pop-ups to print a test receipt.');
+  }
+
+  testWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>Printer test</title>
+        <style>
+          @page { size: ${paperWidth} auto; margin: 4mm; }
+          * { box-sizing: border-box; }
+          body {
+            width: ${paperWidth};
+            margin: 0;
+            color: #111;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+            font-size: 11px;
+          }
+          .receipt { width: 100%; }
+          .center { text-align: center; }
+          .bold { font-weight: 800; }
+          .rule { border-top: 1px dashed #111; margin: 8px 0; }
+          .row { display: flex; justify-content: space-between; gap: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="center bold">G8 YACHT VILLA</div>
+          <div class="center">THERMAL PRINTER TEST</div>
+          <div class="rule"></div>
+          <div class="row"><span>Printer</span><span>${settings.printerName || 'Browser default'}</span></div>
+          <div class="row"><span>Paper</span><span>${paperWidth}</span></div>
+          <div class="row"><span>Status</span><span>Ready</span></div>
+          <div class="rule"></div>
+          <div>Use your browser print dialog to choose the Xprinter device, then save it as the default for this terminal if your browser offers that option.</div>
+          <div class="rule"></div>
+          <div class="center bold">Thank you.</div>
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            setTimeout(() => window.close(), 600);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  testWindow.document.close();
+}
+
+export async function connectUsbReceiptPrinter() {
+  if (!navigator.usb) {
+    throw new Error('USB printer connection requires a browser with WebUSB support, such as Chrome or Edge.');
+  }
+
+  const device = await navigator.usb.requestDevice({ filters: [] });
+  return {
+    productName: device.productName || 'USB receipt printer',
+    manufacturerName: device.manufacturerName || '',
+    vendorId: device.vendorId,
+    productId: device.productId,
+  };
+}

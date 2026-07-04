@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, FileText, Loader2, MapPin, ReceiptText, UserRound, Utensils } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, MapPin, Printer, ReceiptText, UserRound, Utensils } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import api from '../api';
+import { printPdfBlob } from '../utils/printer';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, {
   minimumFractionDigits: 2,
@@ -20,6 +21,8 @@ export default function OrderDetailPage() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingReceipts, setDownloadingReceipts] = useState(false);
+  const [printingReceipts, setPrintingReceipts] = useState(false);
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -35,6 +38,47 @@ export default function OrderDetailPage() {
     };
     loadOrder();
   }, [id]);
+
+  const downloadOrderReceipts = async () => {
+    if (!order) return;
+    try {
+      setDownloadingReceipts(true);
+      const response = await api.get(`/api/sales/orders/${order.id}/receipts/`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `order-receipts-${order.order_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Order receipts downloaded');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not download order receipts');
+    } finally {
+      setDownloadingReceipts(false);
+    }
+  };
+
+  const printOrderReceipts = async () => {
+    if (!order) return;
+    try {
+      setPrintingReceipts(true);
+      const response = await api.get(`/api/sales/orders/${order.id}/receipts/`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      printPdfBlob(blob, `order-receipts-${order.order_number}`);
+      toast.success('Order receipts sent to print dialog');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not print order receipts');
+    } finally {
+      setPrintingReceipts(false);
+    }
+  };
 
   if (loading) return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
   if (!order) return <EmptyState />;
@@ -54,6 +98,26 @@ export default function OrderDetailPage() {
           <span className={`self-start rounded-full px-3 py-2 text-xs font-black uppercase ${statusClass(order.status)}`}>
             {order.status.replaceAll('_', ' ')}
           </span>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={downloadOrderReceipts}
+            disabled={downloadingReceipts || printingReceipts}
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-app-border px-3 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50"
+          >
+            {downloadingReceipts ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
+            Chef & customer receipts
+          </button>
+          <button
+            type="button"
+            onClick={printOrderReceipts}
+            disabled={downloadingReceipts || printingReceipts}
+            className="inline-flex min-h-10 items-center gap-2 rounded-md bg-brand-600 px-3 text-sm font-black text-white transition hover:bg-brand-700 disabled:opacity-50"
+          >
+            {printingReceipts ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+            Print receipts
+          </button>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <Summary label="Order total" value={money(order.grand_total)} />

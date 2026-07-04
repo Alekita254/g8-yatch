@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
-import { Anchor, Bell, BedDouble, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, Home, Layers, LayoutDashboard, Loader2, LogOut, MapPin, Menu, ReceiptText, UsersRound, X } from 'lucide-react';
+import { Anchor, Bell, BedDouble, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, Home, Layers, LayoutDashboard, Loader2, LogOut, MapPin, Menu, Printer, ReceiptText, UsersRound, X } from 'lucide-react';
 
 import useProfile from '../hooks/useProfile';
 import ThemeToggle from '../components/ThemeToggle';
@@ -17,6 +17,7 @@ const navItems = [
   { name: 'Reservations', path: '/frontdesk/reservations', icon: CalendarDays },
   { name: 'Folios', path: '/frontdesk/folios', icon: ReceiptText },
   { name: 'Service Requests', path: '/frontdesk/requests', icon: ClipboardList },
+  { name: 'Printer Setup', path: '/frontdesk/settings/printer', icon: Printer },
 ];
 
 const routeLabels = {
@@ -29,6 +30,7 @@ const routeLabels = {
   '/frontdesk/reservations': 'Reservations',
   '/frontdesk/folios': 'Folios',
   '/frontdesk/requests': 'Service Requests',
+  '/frontdesk/settings/printer': 'Printer Setup',
 };
 
 export default function FrontdeskShell() {

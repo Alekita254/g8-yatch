@@ -11,6 +11,7 @@ import {
   Loader2,
   LogOut,
   Menu,
+  Printer,
   ReceiptText,
   RefreshCw,
   Utensils,
@@ -27,6 +28,7 @@ const navItems = [
   { name: 'Invoices', path: '/sales/invoices', icon: ReceiptText },
   { name: 'Payments', path: '/sales/payments', icon: Banknote },
   { name: 'Payment Runs', path: '/sales/payment-runs', icon: RefreshCw },
+  { name: 'Printer Setup', path: '/sales/settings/printer', icon: Printer },
 ];
 
 const routeLabels = {
@@ -35,6 +37,7 @@ const routeLabels = {
   '/sales/invoices': 'Invoices',
   '/sales/payments': 'Payments',
   '/sales/payment-runs': 'Payment Runs',
+  '/sales/settings/printer': 'Printer Setup',
 };
 
 function routeLabel(pathname) {

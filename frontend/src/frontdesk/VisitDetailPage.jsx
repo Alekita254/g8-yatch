@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { useParams, Link } from 'react-router-dom';
-import { Banknote, BellRing, CheckCircle2, Circle, Clock3, Loader2, MapPin, ReceiptText, Utensils } from 'lucide-react';
+import { Banknote, BellRing, CheckCircle2, Circle, Clock3, Loader2, MapPin, Printer, ReceiptText, Utensils } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 import VisitCheckoutModal from './VisitCheckoutModal';
+import { printPdfBlob } from '../utils/printer';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -17,6 +18,13 @@ async function fetchReceipt(invoice) {
 
 async function fetchInvoiceDocument(invoice) {
   const response = await api.get(`/api/sales/invoices/${invoice.id}/invoice/`, {
+    responseType: 'blob',
+  });
+  return new Blob([response.data], { type: 'application/pdf' });
+}
+
+async function fetchOrderReceipts(order) {
+  const response = await api.get(`/api/sales/orders/${order.id}/receipts/`, {
     responseType: 'blob',
   });
   return new Blob([response.data], { type: 'application/pdf' });
@@ -50,9 +58,7 @@ function nextActionFor(visit) {
   if (visit.status === 'CLOSED') return ['Visit complete', 'Payment has been collected and this visit is closed.'];
   if (visit.status === 'CHECKOUT_REQUESTED') return ['Collect payment', 'The guest has requested the bill.'];
   if (visit.waiter_requested_at && !visit.waiter_acknowledged_at) return ['Acknowledge the guest', 'The guest is waiting for a waiter at their service point.'];
-  if (visit.orders.some((order) => order.status === 'READY')) return ['Deliver the ready order', 'Food or drinks are ready to be served.'];
-  if (visit.orders.some((order) => order.status === 'PREPARING')) return ['Monitor preparation', 'The kitchen or bar is preparing this order.'];
-  if (visit.orders.some((order) => order.status === 'SENT')) return ['Start preparing the order', 'The kitchen or bar needs to accept this order.'];
+  if (visit.orders.some((order) => ['SENT', 'PREPARING', 'READY'].includes(order.status))) return ['Mark served', 'The order has been sent to the kitchen or bar. Print the copies, then mark it served when delivered.'];
   if (visit.orders.some((order) => order.status === 'SERVED')) return ['Check on the guest', 'Confirm everything is satisfactory before checkout.'];
   return ['Welcome the guest', 'No order or waiter request has been made yet.'];
 }
@@ -134,16 +140,10 @@ export default function VisitDetailPage() {
   };
 
   const progressOrder = async (order) => {
-    const transitions = {
-      SENT: 'PREPARING',
-      PREPARING: 'READY',
-      READY: 'SERVED',
-    };
-    const next = transitions[order.status];
-    if (!next) return;
+    if (!['SENT', 'PREPARING', 'READY'].includes(order.status)) return;
     try {
       setWorking(`order-${order.id}`);
-      await api.post(`/api/sales/orders/${order.id}/status/`, { status: next });
+      await api.post(`/api/sales/orders/${order.id}/status/`, { status: 'SERVED' });
       await load();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not update order');
@@ -152,31 +152,46 @@ export default function VisitDetailPage() {
     }
   };
 
-  const collectPayment = async (invoice, amount, paymentMethod, reference) => {
-    if (amount == null) amount = invoice.balance_due;
+  const collectPayment = async (invoice, paymentsOrAmount, paymentMethod, reference) => {
+    const payments = Array.isArray(paymentsOrAmount)
+      ? paymentsOrAmount
+      : [{
+        amount: paymentsOrAmount == null ? invoice.balance_due : paymentsOrAmount,
+        payment_method: paymentMethod,
+        reference: reference || '',
+      }];
 
-    const method = paymentMethods.find((m) => String(m.id) === String(paymentMethod));
-    if (!method) {
-      toast.error('Choose a payment method');
-      return false;
+    for (const payment of payments) {
+      const method = paymentMethods.find((m) => String(m.id) === String(payment.payment_method));
+      if (!method) {
+        toast.error('Choose a payment method');
+        return false;
+      }
+      if (method.requires_reference && !payment.reference?.trim()) {
+        toast.error(`${method.name} requires a reference`);
+        return false;
+      }
+      if (Number(payment.amount || 0) <= 0) {
+        toast.error('Payment amounts must be greater than zero');
+        return false;
+      }
     }
-    if (method.requires_reference && !reference?.trim()) {
-      toast.error(`${method.name} requires a reference`);
-      return false;
-    }
+
     try {
       setWorking(`invoice-${invoice.id}`);
-      await api.post('/api/sales/payments/', {
-        invoice: invoice.id,
-        payment_method: paymentMethod,
-        amount: amount || invoice.balance_due,
-        reference: reference || '',
-      });
+      for (const payment of payments) {
+        await api.post('/api/sales/payments/', {
+          invoice: invoice.id,
+          payment_method: payment.payment_method,
+          amount: payment.amount,
+          reference: payment.reference || '',
+        });
+      }
       await load();
       try {
         const receipt = await fetchReceipt(invoice);
         downloadReceiptBlob(invoice, receipt);
-        toast.success('Payment collected. Receipt downloaded.');
+        toast.success(payments.length > 1 ? 'Split payment collected. Receipt downloaded.' : 'Payment collected. Receipt downloaded.');
       } catch {
         toast.error('Payment was collected, but the receipt could not be downloaded. Use Download receipt to try again.');
       }
@@ -212,6 +227,68 @@ export default function VisitDetailPage() {
       toast.error(err.response?.data?.detail || 'Could not download invoice');
     } finally {
       setWorking('');
+    }
+  };
+
+  const downloadOrderReceipts = async (order) => {
+    try {
+      setWorking(`order-receipts-${order.id}`);
+      const blob = await fetchOrderReceipts(order);
+      downloadDocumentBlob(`order-receipts-${order.order_number}.pdf`, blob);
+      toast.success('Order receipts downloaded');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not download order receipts');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const printOrderReceipts = async (order) => {
+    try {
+      setWorking(`order-print-${order.id}`);
+      const blob = await fetchOrderReceipts(order);
+      printPdfBlob(blob, `order-receipts-${order.order_number}`);
+      toast.success('Order receipts sent to print dialog');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not print order receipts');
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const printInvoiceDocument = async (invoice, type) => {
+    try {
+      setWorking(`${type}-print-${invoice.id}`);
+      const blob = type === 'invoice' ? await fetchInvoiceDocument(invoice) : await fetchReceipt(invoice);
+      printPdfBlob(blob, `${type}-${invoice.invoice_number}`);
+      toast.success(`${type === 'invoice' ? 'Invoice' : 'Receipt'} sent to print dialog`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || `Could not print ${type === 'invoice' ? 'invoice' : 'receipt'}`);
+    } finally {
+      setWorking('');
+    }
+  };
+
+  const openOrderReceipts = async (order) => {
+    try {
+      setPreviewLoading(true);
+      setViewingDocumentKey(`order-receipts-${order.id}`);
+      const blob = await fetchOrderReceipts(order);
+      const url = window.URL.createObjectURL(blob);
+      const newWindow = window.open(url, '_blank');
+      if (!newWindow) {
+        toast.error('Please allow pop-ups to view the PDF');
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 60000);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not load order receipts');
+    } finally {
+      setPreviewLoading(false);
+      setViewingDocumentKey('');
     }
   };
 
@@ -366,9 +443,17 @@ export default function VisitDetailPage() {
                       {['SENT', 'PREPARING', 'READY'].includes(order.status) ? (
                         <button type="button" onClick={() => progressOrder(order)} disabled={working === `order-${order.id}`} className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">
                           {working === `order-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                          {order.status === 'SENT' ? 'Start preparing' : order.status === 'PREPARING' ? 'Mark ready' : 'Mark served'}
+                          Mark served
                         </button>
                       ) : null}
+                      <button type="button" onClick={() => downloadOrderReceipts(order)} disabled={working === `order-receipts-${order.id}`} className="mt-4 ml-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-app-border px-4 text-xs font-black text-app-text disabled:opacity-50">
+                        {working === `order-receipts-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />}
+                        Receipts
+                      </button>
+                      <button type="button" onClick={() => printOrderReceipts(order)} disabled={working === `order-print-${order.id}`} className="mt-4 ml-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-xs font-black text-white disabled:opacity-50">
+                        {working === `order-print-${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                        Print
+                      </button>
                       {order.invoice ? (
                         <p className="mt-4 border-t border-app-border pt-3 text-xs font-bold text-app-muted">
                           {order.invoice.invoice_number} · {money(order.invoice.balance_due)} due
@@ -429,9 +514,33 @@ export default function VisitDetailPage() {
                               <div className="inline-flex flex-wrap gap-2">
                                 {['SENT', 'PREPARING', 'READY'].includes(order.status) ? (
                                   <button type="button" onClick={() => progressOrder(order)} disabled={working === `order-${order.id}`} className="rounded-md bg-brand-600 px-3 py-2 text-xs font-bold text-white">
-                                    {order.status === 'SENT' ? 'Start' : order.status === 'PREPARING' ? 'Ready' : 'Serve'}
+                                    Mark served
                                   </button>
                                 ) : null}
+                                <button
+                                  type="button"
+                                  onClick={() => openOrderReceipts(order)}
+                                  disabled={previewLoading && viewingDocumentKey === `order-receipts-${order.id}`}
+                                  className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
+                                >
+                                  {previewLoading && viewingDocumentKey === `order-receipts-${order.id}` ? 'Loading...' : 'View receipts'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => downloadOrderReceipts(order)}
+                                  disabled={working === `order-receipts-${order.id}`}
+                                  className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
+                                >
+                                  {working === `order-receipts-${order.id}` ? 'Downloading...' : 'Download receipts'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => printOrderReceipts(order)}
+                                  disabled={working === `order-print-${order.id}`}
+                                  className="rounded-md bg-brand-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                                >
+                                  {working === `order-print-${order.id}` ? 'Printing...' : 'Print receipts'}
+                                </button>
                                 {order.invoice && (
                                   <>
                                     <button
@@ -450,6 +559,14 @@ export default function VisitDetailPage() {
                                     >
                                       {working === `invoice-doc-${order.invoice.id}` ? 'Downloading...' : 'Download invoice'}
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => printInvoiceDocument(order.invoice, 'invoice')}
+                                      disabled={working === `invoice-print-${order.invoice.id}`}
+                                      className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
+                                    >
+                                      {working === `invoice-print-${order.invoice.id}` ? 'Printing...' : 'Print invoice'}
+                                    </button>
                                     {Number(order.invoice.paid_total || 0) > 0 && (
                                       <>
                                         <button
@@ -467,6 +584,14 @@ export default function VisitDetailPage() {
                                           className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
                                         >
                                           {working === `receipt-${order.invoice.id}` ? 'Downloading...' : 'Download receipt'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => printInvoiceDocument(order.invoice, 'receipt')}
+                                          disabled={working === `receipt-print-${order.invoice.id}`}
+                                          className="rounded-md border border-app-border px-3 py-2 text-xs font-bold text-app-text"
+                                        >
+                                          {working === `receipt-print-${order.invoice.id}` ? 'Printing...' : 'Print receipt'}
                                         </button>
                                       </>
                                     )}
@@ -528,6 +653,14 @@ export default function VisitDetailPage() {
                       >
                         {working === `invoice-doc-${inv.id}` ? 'Downloading...' : 'Download invoice'}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => printInvoiceDocument(inv, 'invoice')}
+                        disabled={working === `invoice-print-${inv.id}`}
+                        className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                      >
+                        {working === `invoice-print-${inv.id}` ? 'Printing...' : 'Print invoice'}
+                      </button>
                       {Number(inv.paid_total || 0) > 0 && (
                         <>
                           <button
@@ -545,6 +678,14 @@ export default function VisitDetailPage() {
                             className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
                           >
                             {working === `receipt-${inv.id}` ? 'Downloading...' : 'Download receipt'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => printInvoiceDocument(inv, 'receipt')}
+                            disabled={working === `receipt-print-${inv.id}`}
+                            className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-sm font-bold text-app-text disabled:opacity-50"
+                          >
+                            {working === `receipt-print-${inv.id}` ? 'Printing...' : 'Print receipt'}
                           </button>
                         </>
                       )}

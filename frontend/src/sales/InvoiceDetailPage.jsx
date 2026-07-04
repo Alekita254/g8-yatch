@@ -8,11 +8,13 @@ import {
   FileText,
   Loader2,
   MapPin,
+  Printer,
   UserRound,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import api from '../api';
+import { printPdfBlob } from '../utils/printer';
 
 const money = (value, currency = 'KES') => `${currency} ${Number(value || 0).toLocaleString(undefined, {
   minimumFractionDigits: 2,
@@ -105,6 +107,24 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const printDocument = async (type) => {
+    try {
+      if (type === 'invoice') {
+        setInvoiceBusy('print');
+      } else {
+        setReceiptBusy('print');
+      }
+      const blob = type === 'invoice' ? await fetchInvoiceDocument() : await fetchReceipt();
+      printPdfBlob(blob, `${type}-${invoice.invoice_number}`);
+      toast.success(`${type === 'invoice' ? 'Invoice' : 'Receipt'} sent to print dialog`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || `Could not print ${type === 'invoice' ? 'invoice' : 'receipt'}`);
+    } finally {
+      setReceiptBusy('');
+      setInvoiceBusy('');
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
   }
@@ -149,6 +169,10 @@ export default function InvoiceDetailPage() {
               {invoiceBusy === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               Download invoice
             </button>
+            <button type="button" onClick={() => printDocument('invoice')} disabled={Boolean(invoiceBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-app-border px-4 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50">
+              {invoiceBusy === 'print' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+              Print invoice
+            </button>
             {Number(invoice.paid_total || 0) > 0 && (
               <>
                 <button type="button" onClick={() => viewDocument('receipt')} disabled={Boolean(receiptBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-app-border px-4 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50">
@@ -158,6 +182,10 @@ export default function InvoiceDetailPage() {
                 <button type="button" onClick={() => downloadDocument('receipt')} disabled={Boolean(receiptBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-app-border px-4 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50">
                   {receiptBusy === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                   Download receipt
+                </button>
+                <button type="button" onClick={() => printDocument('receipt')} disabled={Boolean(receiptBusy)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-app-border px-4 text-sm font-black text-app-text transition hover:bg-app-elevated disabled:opacity-50">
+                  {receiptBusy === 'print' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                  Print receipt
                 </button>
               </>
             )}

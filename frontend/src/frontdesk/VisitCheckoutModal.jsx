@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Banknote, MapPin, ReceiptText, X } from 'lucide-react';
+import { Banknote, MapPin, Plus, ReceiptText, Trash2, X } from 'lucide-react';
 import ModalLayer from '../components/ModalLayer';
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const emptySplit = (amount = 0) => ({ payment_method: '', amount, reference: '' });
 
 export default function VisitCheckoutModal({ visit, open, initialInvoiceId = null, onClose, onRequestCheckout, onCollectPayment, paymentMethods, working }) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [reference, setReference] = useState('');
-  const [amount, setAmount] = useState(0);
+  const [paymentSplits, setPaymentSplits] = useState([emptySplit()]);
 
   useEffect(() => {
     if (!open || !visit) return;
@@ -16,9 +15,7 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
     const dueInvoice = invoices.find((invoice) => invoice.balance_due > 0) || invoices[0] || null;
     const initial = invoices.find((invoice) => invoice.id === initialInvoiceId) || dueInvoice || null;
     setSelectedInvoiceId(initial?.id ?? null);
-    setPaymentMethod('');
-    setReference('');
-    setAmount(initial?.balance_due || 0);
+    setPaymentSplits([emptySplit(initial?.balance_due || 0)]);
   }, [open, visit, initialInvoiceId]);
 
   const invoices = (visit?.orders || []).map((order) => order.invoice).filter(Boolean);
@@ -28,13 +25,23 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
   const hasCheckoutRequest = visit?.status === 'CHECKOUT_REQUESTED';
   const dueInvoices = invoices.filter((invoice) => invoice.balance_due > 0);
   const selectedInvoice = invoices.find((invoice) => invoice.id === selectedInvoiceId) || dueInvoices[0] || invoices[0] || null;
-  const selectedMethod = paymentMethods.find((method) => String(method.id) === String(paymentMethod));
-  const isCollecting = selectedInvoice && Boolean(selectedMethod);
+  const splitTotal = paymentSplits.reduce((sum, split) => sum + Number(split.amount || 0), 0);
+  const selectedBalance = Number(selectedInvoice?.balance_due || 0);
+  const splitRemaining = Math.max(selectedBalance - splitTotal, 0);
+  const splitOverpay = Math.max(splitTotal - selectedBalance, 0);
+  const isCollecting = selectedInvoice
+    && paymentSplits.length > 0
+    && splitTotal > 0
+    && Math.abs(splitTotal - selectedBalance) < 0.01
+    && paymentSplits.every((split) => {
+      const method = paymentMethods.find((item) => String(item.id) === String(split.payment_method));
+      return method && Number(split.amount || 0) > 0 && (!method.requires_reference || split.reference.trim());
+    });
   const disabled = working === 'checkout' || visit?.status === 'CLOSED';
 
   useEffect(() => {
     if (selectedInvoice) {
-      setAmount(selectedInvoice.balance_due || 0);
+      setPaymentSplits([emptySplit(selectedInvoice.balance_due || 0)]);
     }
   }, [selectedInvoice]);
 
@@ -42,8 +49,26 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
 
   const handleCollect = async () => {
     if (!selectedInvoice) return;
-    const collected = await onCollectPayment(selectedInvoice, Number(amount), paymentMethod, reference);
+    const collected = await onCollectPayment(selectedInvoice, paymentSplits.map((split) => ({
+      payment_method: split.payment_method,
+      amount: Number(split.amount || 0),
+      reference: split.reference.trim(),
+    })));
     if (collected) onClose();
+  };
+
+  const updateSplit = (index, field, value) => {
+    setPaymentSplits((current) => current.map((split, splitIndex) => (
+      splitIndex === index ? { ...split, [field]: value } : split
+    )));
+  };
+
+  const addSplit = () => {
+    setPaymentSplits((current) => [...current, emptySplit(splitRemaining || 0)]);
+  };
+
+  const removeSplit = (index) => {
+    setPaymentSplits((current) => current.filter((_, splitIndex) => splitIndex !== index));
   };
 
   return (
@@ -114,35 +139,58 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
                     ))}
                   </select>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <label className="block text-xs font-black uppercase text-app-muted">Amount</label>
-                  <input type="number" value={amount} min="0" step="0.01" onChange={(event) => setAmount(event.target.value)} className="mt-2 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+                <div className="rounded-md border border-app-border bg-app-card px-4 py-3 text-sm">
+                  <p className="text-xs font-black uppercase text-app-muted">Due</p>
+                  <p className="mt-1 font-black text-app-text">{money(selectedInvoice?.balance_due)}</p>
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-black uppercase text-app-muted">Payment method</span>
-                  <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} className="mt-2 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
-                    <option value="">Select payment method</option>
-                    {paymentMethods.map((method) => (
-                      <option key={method.id} value={method.id}>{method.name}</option>
-                    ))}
-                  </select>
-                </label>
-                {selectedMethod?.requires_reference ? (
-                  <label className="block">
-                    <span className="text-xs font-black uppercase text-app-muted">Reference</span>
-                    <input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="M-Pesa code, approval text..." className="mt-2 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
-                  </label>
-                ) : null}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-black uppercase text-app-muted">Split payment</p>
+                  <button type="button" onClick={addSplit} disabled={splitRemaining <= 0} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-app-border px-3 text-xs font-black text-app-text disabled:opacity-50">
+                    <Plus className="h-4 w-4" /> Add method
+                  </button>
+                </div>
+
+                {paymentSplits.map((split, index) => {
+                  const method = paymentMethods.find((item) => String(item.id) === String(split.payment_method));
+                  return (
+                    <div key={index} className="rounded-lg border border-app-border bg-app-card p-3">
+                      <div className="grid gap-3 sm:grid-cols-[1fr_0.75fr_auto]">
+                        <label className="block">
+                          <span className="text-xs font-black uppercase text-app-muted">Method</span>
+                          <select value={split.payment_method} onChange={(event) => updateSplit(index, 'payment_method', event.target.value)} className="mt-2 w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="">Select method</option>
+                            {paymentMethods.map((item) => (
+                              <option key={item.id} value={item.id}>{item.name}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="text-xs font-black uppercase text-app-muted">Amount</span>
+                          <input type="number" value={split.amount} min="0" step="0.01" onChange={(event) => updateSplit(index, 'amount', event.target.value)} className="mt-2 w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+                        </label>
+                        <button type="button" onClick={() => removeSplit(index)} disabled={paymentSplits.length === 1} className="mt-6 inline-flex h-10 w-10 items-center justify-center rounded-md border border-app-border text-app-muted hover:text-red-600 disabled:opacity-40" aria-label="Remove split payment">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      {method?.requires_reference ? (
+                        <label className="mt-3 block">
+                          <span className="text-xs font-black uppercase text-app-muted">Reference</span>
+                          <input value={split.reference} onChange={(event) => updateSplit(index, 'reference', event.target.value)} placeholder="M-Pesa code, approval text..." className="mt-2 w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+                        </label>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
 
               {dueInvoices.length === 0 ? (
                 <div className="rounded-2xl border border-app-border bg-app-card p-4 text-sm text-app-muted">There is no outstanding amount to collect on this visit.</div>
               ) : (
-                <div className="rounded-2xl border border-app-border bg-app-card p-4 text-sm text-app-muted">
-                  The selected invoice has {money(selectedInvoice?.balance_due)} due. Submit payment to settle the visit.
+                <div className={`rounded-2xl border p-4 text-sm ${splitOverpay > 0 ? 'border-red-500/25 bg-red-500/10 text-red-700' : splitRemaining > 0 ? 'border-amber-500/25 bg-amber-500/10 text-amber-700' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700'}`}>
+                  Split total: <strong>{money(splitTotal)}</strong>. {splitRemaining > 0 ? <>Remaining: <strong>{money(splitRemaining)}</strong>.</> : splitOverpay > 0 ? <>Over by: <strong>{money(splitOverpay)}</strong>.</> : 'Ready to collect.'}
                 </div>
               )}
             </div>
@@ -161,7 +209,7 @@ export default function VisitCheckoutModal({ visit, open, initialInvoiceId = nul
           ) : (
             <button type="button" onClick={handleCollect} disabled={!isCollecting || working.startsWith('invoice-')} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition disabled:opacity-50">
               {working.startsWith('invoice-') ? <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Banknote className="h-4 w-4" />}
-              Collect payment
+              Collect split payment
             </button>
           )}
         </div>

@@ -39,6 +39,7 @@ import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import PaymentRoutingRulesPage from './pages/PaymentRoutingRulesPage';
 import PaymentSetupPage from './pages/PaymentSetupPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import PrinterSettingsPage from './pages/PrinterSettingsPage';
 import ProductCategoriesPage from './pages/ProductCategoriesPage';
 import ProductsItemsPage from './pages/ProductsItemsPage';
 import ProductsSetupPage from './pages/ProductsSetupPage';
@@ -486,6 +487,7 @@ export default function App() {
           <Route path="payments" element={<SalesListPage type="payments" />} />
           <Route path="payments/:id" element={<PaymentDetailPage />} />
           <Route path="payment-runs" element={<SalesListPage type="paymentRuns" />} />
+          <Route path="settings/printer" element={<PrinterSettingsPage />} />
         </Route>
         <Route path="/frontdesk" element={<RequireAppAccess appKey="frontdesk"><FrontdeskShell /></RequireAppAccess>}>
           <Route index element={<FrontdeskDashboard />} />
@@ -498,6 +500,7 @@ export default function App() {
           <Route path="reservations" element={<FrontdeskListPage type="reservations" />} />
           <Route path="folios" element={<FrontdeskListPage type="folios" />} />
           <Route path="requests" element={<FrontdeskListPage type="requests" />} />
+          <Route path="settings/printer" element={<PrinterSettingsPage />} />
         </Route>
         <Route element={<DashboardShell />}>
           <Route path="/dashboard" element={<RequireAppAccess appKey="admin"><DashboardOverview /></RequireAppAccess>} />

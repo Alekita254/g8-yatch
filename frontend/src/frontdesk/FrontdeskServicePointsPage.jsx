@@ -8,6 +8,7 @@ import FrontdeskPosPage from './FrontdeskPosPage';
 
 const salesKinds = new Set(['BAR', 'RESTAURANT', 'MARINA', 'POS_TERMINAL']);
 const folioKinds = new Set(['FRONTDESK']);
+const tableOptions = Array.from({ length: 8 }, (_, index) => `Table ${index + 1}`);
 
 const iconForKind = {
   BAR: Martini,
@@ -170,6 +171,10 @@ export default function FrontdeskServicePointsPage() {
 
   const sendOrder = async () => {
     if (!selectedPoint || cart.length === 0) return;
+    if (!sale.table_name) {
+      toast.error('Choose a table before checkout.');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -369,8 +374,13 @@ export default function FrontdeskServicePointsPage() {
 
           <div className="mt-5 grid gap-3">
             <label className="space-y-2">
-              <span className="text-xs font-bold uppercase text-app-muted">Table / area</span>
-              <input value={sale.table_name} onChange={(event) => setSale((current) => ({ ...current, table_name: event.target.value }))} placeholder="Bar counter, Table 4..." className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
+              <span className="text-xs font-bold uppercase text-app-muted">Table</span>
+              <select value={sale.table_name} onChange={(event) => setSale((current) => ({ ...current, table_name: event.target.value }))} className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                <option value="">Choose table</option>
+                {tableOptions.map((table) => (
+                  <option key={table} value={table}>{table}</option>
+                ))}
+              </select>
             </label>
             <label className="space-y-2">
               <span className="text-xs font-bold uppercase text-app-muted">Customer</span>

@@ -135,30 +135,45 @@ export default function GuestVisitsPage() {
     }
   };
 
-  const collectPayment = async (invoice, amount, paymentMethod, reference) => {
-    if (amount == null) amount = invoice.balance_due;
+  const collectPayment = async (invoice, paymentsOrAmount, paymentMethod, reference) => {
+    const payments = Array.isArray(paymentsOrAmount)
+      ? paymentsOrAmount
+      : [{
+        amount: paymentsOrAmount == null ? invoice.balance_due : paymentsOrAmount,
+        payment_method: paymentMethod,
+        reference: reference || '',
+      }];
 
-    const method = paymentMethods.find((item) => String(item.id) === String(paymentMethod));
-    if (!method) {
-      toast.error('Choose a payment method');
-      return false;
+    for (const payment of payments) {
+      const method = paymentMethods.find((item) => String(item.id) === String(payment.payment_method));
+      if (!method) {
+        toast.error('Choose a payment method');
+        return false;
+      }
+      if (method.requires_reference && !payment.reference?.trim()) {
+        toast.error(`${method.name} requires a reference`);
+        return false;
+      }
+      if (Number(payment.amount || 0) <= 0) {
+        toast.error('Payment amounts must be greater than zero');
+        return false;
+      }
     }
-    if (method.requires_reference && !reference?.trim()) {
-      toast.error(`${method.name} requires a reference`);
-      return false;
-    }
+
     try {
       setWorking(`invoice-${invoice.id}`);
-      await api.post('/api/sales/payments/', {
-        invoice: invoice.id,
-        payment_method: paymentMethod,
-        amount: amount || invoice.balance_due,
-        reference: reference || '',
-      });
+      for (const payment of payments) {
+        await api.post('/api/sales/payments/', {
+          invoice: invoice.id,
+          payment_method: payment.payment_method,
+          amount: payment.amount,
+          reference: payment.reference || '',
+        });
+      }
       await load();
       try {
         await downloadReceipt(invoice);
-        toast.success('Payment collected. Receipt downloaded.');
+        toast.success(payments.length > 1 ? 'Split payment collected. Receipt downloaded.' : 'Payment collected. Receipt downloaded.');
       } catch {
         toast.error('Payment was collected, but the receipt could not be downloaded. Open the visit to try again.');
       }
