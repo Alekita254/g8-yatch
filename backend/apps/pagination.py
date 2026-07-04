@@ -1,5 +1,6 @@
 from math import ceil
 
+from django.core.exceptions import FieldDoesNotExist
 from rest_framework.pagination import PageNumberPagination
 
 
@@ -9,9 +10,25 @@ class StandardResultsSetPagination(PageNumberPagination):
     max_page_size = 100
 
 
+def field_exists(model, field_name):
+    try:
+        model._meta.get_field(field_name)
+    except FieldDoesNotExist:
+        return False
+    return True
+
+
+def latest_first(queryset):
+    model = queryset.model
+    for field_name in ("created_at", "opened_at", "arrived_at", "id"):
+        if field_exists(model, field_name):
+            return queryset.order_by(f"-{field_name}")
+    return queryset
+
+
 def paginated_response(request, queryset, serializer_class):
     paginator = StandardResultsSetPagination()
-    page = paginator.paginate_queryset(queryset, request)
+    page = paginator.paginate_queryset(latest_first(queryset), request)
     serializer = serializer_class(page, many=True)
     response = paginator.get_paginated_response(serializer.data)
     count = response.data["count"]
