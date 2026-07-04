@@ -177,7 +177,14 @@ export default function VisitDetailPage() {
       }
     }
 
+    let printWindow = null;
     try {
+      try {
+        printWindow = openPrintWindow(`receipt-${invoice.invoice_number}`);
+      } catch (err) {
+        printWindow = null;
+      }
+
       setWorking(`invoice-${invoice.id}`);
       for (const payment of payments) {
         await api.post('/api/sales/payments/', {
@@ -190,9 +197,20 @@ export default function VisitDetailPage() {
       await load();
       try {
         const receipt = await fetchReceipt(invoice);
-        downloadReceiptBlob(invoice, receipt);
-        toast.success(payments.length > 1 ? 'Split payment collected. Receipt downloaded.' : 'Payment collected. Receipt downloaded.');
-      } catch {
+        if (printWindow) {
+          try {
+            await printPdfBlob(receipt, `receipt-${invoice.invoice_number}`, printWindow);
+            toast.success('Payment collected. Receipt sent to print dialog.');
+          } catch (err) {
+            if (printWindow && !printWindow.closed) printWindow.close();
+            downloadReceiptBlob(invoice, receipt);
+            toast.success('Payment collected. Receipt downloaded.');
+          }
+        } else {
+          downloadReceiptBlob(invoice, receipt);
+          toast.success(payments.length > 1 ? 'Split payment collected. Receipt downloaded.' : 'Payment collected. Receipt downloaded.');
+        }
+      } catch (err) {
         toast.error('Payment was collected, but the receipt could not be downloaded. Use Download receipt to try again.');
       }
       return true;
@@ -201,6 +219,7 @@ export default function VisitDetailPage() {
       return false;
     } finally {
       setWorking('');
+      if (printWindow && !printWindow.closed) printWindow.close();
     }
   };
 
