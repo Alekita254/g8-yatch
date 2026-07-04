@@ -58,6 +58,9 @@ REDIRECT_URIS = [
     "http://127.0.0.1:5173/*",
     "http://127.0.0.1:5174/*",
     "http://127.0.0.1:5175/*",
+    "https://g8-yatch.getotech.co.ke",
+    "https://g8-yatch.getotech.co.ke/",
+    "https://g8-yatch.getotech.co.ke/*",
 ]
 WEB_ORIGINS = [
     "http://localhost:5173",
@@ -66,6 +69,7 @@ WEB_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
     "http://127.0.0.1:5175",
+    "https://g8-yatch.getotech.co.ke",
 ]
 REALM_ROLES = ["POS_MANAGER", "WAITER", "NAIROBI_BRANCH"]
 
