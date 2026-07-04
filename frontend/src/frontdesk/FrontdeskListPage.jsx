@@ -56,8 +56,8 @@ const baseConfigs = {
     empty: 'No rooms yet.',
     endpoint: '/api/rooms/',
     addLabel: 'Add Room',
-    emptyForm: { branch: '', room_type: '', number: '', floor: '', status: 'AVAILABLE', is_active: true },
-    columns: [['Room', 'number'], ['Type', 'room_type_name'], ['Branch', 'branch_name'], ['Floor', 'floor'], ['Status', 'status_display']],
+    emptyForm: { number: '', capacity: 1, status: 'AVAILABLE', is_active: true },
+    columns: [['Room', 'number'], ['People', 'capacity'], ['Status', 'status_display']],
   },
   reservations: {
     title: 'Reservations',
@@ -80,33 +80,6 @@ const baseConfigs = {
     },
     columns: [['Reservation', 'reservation_number'], ['Guest', 'guest_name'], ['Room', 'room_number'], ['Check-in', 'check_in_date'], ['Check-out', 'check_out_date'], ['Status', 'status']],
   },
-  folios: {
-    title: 'Folios',
-    description: 'Open guest balances and checkout lock control.',
-    empty: 'No folios yet.',
-    endpoint: '/api/folios/',
-    addLabel: 'Open Folio',
-    emptyForm: { reservation: '', business_partner: '', room: '', status: 'OPEN' },
-    columns: [['Folio', 'folio_number'], ['Guest', 'guest_name'], ['Room', 'room_number'], ['Status', 'status'], ['Balance', 'balance_due']],
-  },
-  requests: {
-    title: 'Service Requests',
-    description: 'Housekeeping, maintenance, concierge, and SLA-driven internal requests.',
-    empty: 'No service requests yet.',
-    endpoint: '/api/concierge/requests/',
-    addLabel: 'Add Request',
-    emptyForm: {
-      room: '',
-      business_partner: '',
-      department: 'HOUSEKEEPING',
-      priority: 'NORMAL',
-      status: 'OPEN',
-      title: '',
-      description: '',
-      sla_minutes: 15,
-    },
-    columns: [['Ticket', 'ticket_number'], ['Title', 'title'], ['Room', 'room_number'], ['Department', 'department'], ['Priority', 'priority'], ['Status', 'status']],
-  },
 };
 
 function valueFor(item, key) {
@@ -121,8 +94,6 @@ function optionList(items, labelKey, valueKey = 'id') {
 
 export default function FrontdeskListPage({ type }) {
   const { data, loading, refresh } = useFrontdeskData();
-  const [roomTypes, setRoomTypes] = useState([]);
-  const [branches, setBranches] = useState([]);
   const [saving, setSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -134,22 +105,6 @@ export default function FrontdeskListPage({ type }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [pagination, setPagination] = useState(emptyPagination);
-
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const [roomTypeResponse, branchResponse] = await Promise.all([
-          api.get('/api/rooms/types/', { params: { page_size: 100 } }),
-          api.get('/api/organisation/branches/', { params: { page_size: 100 } }),
-        ]);
-        setRoomTypes(roomTypeResponse.data.results || []);
-        setBranches(branchResponse.data.results || []);
-      } catch (err) {
-        toast.error(err.response?.data?.detail || 'Failed to load frontdesk options');
-      }
-    };
-    fetchOptions();
-  }, []);
 
   useEffect(() => {
     const fetchRows = async () => {
@@ -171,18 +126,8 @@ export default function FrontdeskListPage({ type }) {
   const dynamicFields = useMemo(() => {
     if (type === 'rooms') {
       return [
-        { name: 'number', label: 'Room number', required: true },
-        { name: 'room_type', label: 'Room type', type: 'select', required: true, placeholder: 'Select room type', options: optionList(roomTypes, 'name') },
-        { name: 'branch', label: 'Branch', type: 'select', placeholder: 'Select branch', options: optionList(branches, 'name') },
-        { name: 'floor', label: 'Floor' },
-        { name: 'status', label: 'Status', type: 'select', options: [
-          { value: 'AVAILABLE', label: 'Available' },
-          { value: 'OCCUPIED', label: 'Occupied' },
-          { value: 'DIRTY', label: 'Dirty' },
-          { value: 'MAINTENANCE_BLOCK', label: 'Maintenance Block' },
-          { value: 'OUT_OF_ORDER', label: 'Out of Order' },
-        ] },
-        { name: 'is_active', label: 'Active', type: 'checkbox' },
+        { name: 'number', label: 'Room title', required: true },
+        { name: 'capacity', label: 'People', type: 'number', min: '1', required: true },
       ];
     }
 
@@ -202,30 +147,8 @@ export default function FrontdeskListPage({ type }) {
       ];
     }
 
-    if (type === 'folios') {
-      return [
-        { name: 'reservation', label: 'Reservation', type: 'select', required: true, placeholder: 'Select reservation', options: data.reservations.map((item) => ({ value: item.id, label: `${item.reservation_number} - ${item.guest_name}` })) },
-        { name: 'business_partner', label: 'Guest / customer', type: 'select', required: true, placeholder: 'Select guest', options: optionList(data.partners, 'display_name') },
-        { name: 'room', label: 'Room', type: 'select', placeholder: 'Select room', options: optionList(data.rooms, 'number') },
-        { name: 'status', label: 'Status', type: 'select', options: ['OPEN', 'LOCKED', 'CLOSED'].map((value) => ({ value, label: value })) },
-      ];
-    }
-
-    if (type === 'requests') {
-      return [
-        { name: 'title', label: 'Title', required: true },
-        { name: 'room', label: 'Room', type: 'select', placeholder: 'Select room', options: optionList(data.rooms, 'number') },
-        { name: 'business_partner', label: 'Guest / customer', type: 'select', placeholder: 'Select guest', options: optionList(data.partners, 'display_name') },
-        { name: 'department', label: 'Department', type: 'select', options: ['HOUSEKEEPING', 'MAINTENANCE', 'CONCIERGE', 'SECURITY'].map((value) => ({ value, label: value })) },
-        { name: 'priority', label: 'Priority', type: 'select', options: ['LOW', 'NORMAL', 'HIGH', 'CRITICAL'].map((value) => ({ value, label: value })) },
-        { name: 'status', label: 'Status', type: 'select', options: ['OPEN', 'DISPATCHED', 'RESOLVED', 'ESCALATED'].map((value) => ({ value, label: value })) },
-        { name: 'sla_minutes', label: 'SLA minutes', type: 'number', min: '1' },
-        { name: 'description', label: 'Description', type: 'textarea' },
-      ];
-    }
-
     return config.fields;
-  }, [branches, config.fields, data.partners, data.reservations, data.rooms, roomTypes, type]);
+  }, [config.fields, data.partners, data.rooms, type]);
 
   const visibleRows = rows.filter((row) => config.columns
     .map(([, key]) => valueFor(row, key))

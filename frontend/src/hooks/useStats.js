@@ -20,6 +20,7 @@ export default function useStats(isAuthenticated) {
         categories: '/api/products/categories/',
         salesPricelists: '/api/products/sales-pricelists/',
         purchasePricelists: '/api/products/purchase-pricelists/',
+        rooms: '/api/rooms/',
         taxConfigurations: '/api/taxes/configurations/',
         taxCategories: '/api/taxes/categories/',
         taxOffices: '/api/taxes/offices/',

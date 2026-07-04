@@ -5,6 +5,7 @@ import { canAccessApp } from '../accessControl';
 import { 
   Anchor,
   BadgePercent,
+  BedDouble,
   BookOpenCheck,
   Building2,
   Calculator,
@@ -49,6 +50,15 @@ const navItems = [
       { name: 'Products & Items', path: '/products/items', icon: Package },
       { name: 'Sales Pricelists', path: '/products/sales-pricelists', icon: Tags },
       { name: 'Purchase Pricelists', path: '/products/purchase-pricelists', icon: Truck },
+    ],
+  },
+  {
+    name: 'Rooms',
+    path: '/rooms',
+    icon: BedDouble,
+    appKey: 'admin',
+    children: [
+      { name: 'Rooms', path: '/rooms/inventory', icon: BedDouble },
     ],
   },
   {

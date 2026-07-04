@@ -91,7 +91,7 @@ def generate_payment_receipt_pdf(invoice):
         invoice.payments.filter(status=SalesPayment.Status.CLEARED).select_related("payment_method")
     )
     page_width = 80 * mm
-    content_lines = 31 + len(items) + max(len(payments), 1)
+    content_lines = 29 + len(items) + max(len(payments), 1)
     page_height = max(145 * mm, (content_lines * 4.7 + 18) * mm)
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
@@ -125,7 +125,6 @@ def generate_payment_receipt_pdf(invoice):
     latest_payment = payments[-1] if payments else None
     receipt_number = f"RCT-{latest_payment.id:06d}" if latest_payment else invoice.invoice_number
     receipt_time = latest_payment.created_at if latest_payment else invoice.created_at
-    visit = invoice.order.visit
 
     centered("G8 YACHT VILLA", "Helvetica-Bold", 13)
     centered("Embu, Kenya", "Helvetica", 8)
@@ -140,9 +139,6 @@ def generate_payment_receipt_pdf(invoice):
     pair("Order", invoice.order.order_number)
     if invoice.branch:
         pair("Branch", invoice.branch.name[:24])
-    if visit:
-        pair("Location", f"{visit.service_area} {visit.table_name}".strip()[:28])
-    pair("Guest", (invoice.customer_name or (visit.guest_name if visit else "") or "Walk-in guest")[:28])
     rule()
 
     c.setFont("Helvetica-Bold", 8)
@@ -207,7 +203,7 @@ def generate_sales_invoice_pdf(invoice):
         invoice.order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product")
     )
     page_width = 80 * mm
-    content_lines = 28 + len(items)
+    content_lines = 26 + len(items)
     page_height = max(135 * mm, (content_lines * 4.7 + 18) * mm)
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
@@ -238,8 +234,6 @@ def generate_sales_invoice_pdf(invoice):
         c.setDash()
         y -= 3.5 * mm
 
-    visit = invoice.order.visit
-
     centered("G8 YACHT VILLA", "Helvetica-Bold", 13)
     centered("Embu, Kenya", "Helvetica", 8)
     centered("SALES INVOICE", "Helvetica-Bold", 10)
@@ -252,9 +246,6 @@ def generate_sales_invoice_pdf(invoice):
     pair("Order", invoice.order.order_number)
     if invoice.branch:
         pair("Branch", invoice.branch.name[:24])
-    if visit:
-        pair("Location", f"{visit.service_area} {visit.table_name}".strip()[:28])
-    pair("Guest", (invoice.customer_name or (visit.guest_name if visit else "") or "Walk-in guest")[:28])
     if invoice.issued_by:
         pair("Issued by", staff_display_name(invoice.issued_by)[:24])
     rule()
@@ -301,7 +292,7 @@ def generate_order_receipts_pdf(order):
         order.items.exclude(status=SalesOrderItem.Status.VOIDED).select_related("product")
     )
     page_width = 80 * mm
-    copy_lines = 25 + (len(items) * 2)
+    copy_lines = 22 + (len(items) * 2)
     page_height = max(115 * mm, (copy_lines * 4.7 + 18) * mm)
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
@@ -334,11 +325,6 @@ def generate_order_receipts_pdf(order):
             c.setDash()
             y -= 3.5 * mm
 
-        visit = order.visit
-        location = order.table_name
-        if visit:
-            location = f"{visit.service_area} {visit.table_name}".strip()
-
         centered("G8 YACHT VILLA", "Helvetica-Bold", 13)
         centered("ORDER RECEIPT", "Helvetica-Bold", 10)
         centered(copy_label, "Helvetica-Bold", 10)
@@ -348,11 +334,6 @@ def generate_order_receipts_pdf(order):
 
         pair("Order", order.order_number)
         pair("Date", timezone.localtime(order.created_at).strftime("%d %b %Y  %H:%M"))
-        if order.service_point:
-            pair("Point", order.service_point.name[:24])
-        if location:
-            pair("Location", location[:28])
-        pair("Guest", (order.customer_name or (visit.guest_name if visit else "") or "Walk-in guest")[:28])
         if order.waiter_keycloak_sub:
             pair("Served by", staff_display_name(order.waiter_keycloak_sub)[:24])
         rule()

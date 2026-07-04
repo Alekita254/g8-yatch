@@ -1,13 +1,11 @@
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
-  Banknote,
   BedDouble,
   BellRing,
   CalendarCheck2,
   CalendarDays,
   CheckCircle2,
-  ClipboardList,
   Clock3,
   Loader2,
   MapPin,
@@ -55,8 +53,6 @@ export default function FrontdeskDashboard() {
   const occupiedRooms = data.rooms.filter((room) => room.status === 'OCCUPIED').length;
   const arrivalsToday = data.reservations.filter((reservation) => reservation.check_in_date === currentDate && !['CANCELLED', 'CHECKED_IN', 'CHECKED_OUT'].includes(reservation.status));
   const departuresToday = data.reservations.filter((reservation) => reservation.check_out_date === currentDate && reservation.status === 'CHECKED_IN');
-  const openFolios = data.folios.filter((folio) => folio.status === 'OPEN').length;
-  const openRequests = data.requests.filter((request) => request.status !== 'RESOLVED').length;
   const activeVisits = data.visits.filter((visit) => visit.status !== 'CLOSED');
   const waiterCalls = activeVisits.filter((visit) => visit.waiter_requested_at && !visit.waiter_acknowledged_at).length;
   const readyOrders = activeVisits.filter((visit) => visit.orders.some((order) => order.status === 'READY')).length;
@@ -90,11 +86,10 @@ export default function FrontdeskDashboard() {
           </div>
           <Link to="/frontdesk/reservations" className="text-sm font-black text-brand-600">Reservations <ArrowRight className="ml-1 inline h-4 w-4" /></Link>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           <StatCard icon={CalendarCheck2} label="Arrivals Today" value={arrivalsToday.length} color="blue" />
           <StatCard icon={CalendarDays} label="Departures Today" value={departuresToday.length} color="purple" />
           <StatCard icon={BedDouble} label="Occupied Rooms" value={occupiedRooms} color="emerald" />
-          <StatCard icon={ReceiptText} label="Open Folios" value={openFolios} color="amber" />
         </div>
       </section>
 
@@ -147,10 +142,9 @@ export default function FrontdeskDashboard() {
         </Link>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <OperationalLink to="/frontdesk/requests" icon={ClipboardList} label="Service requests" value={openRequests} text="Housekeeping, maintenance, concierge and security requests." />
+      <section className="grid gap-4 md:grid-cols-2">
         <OperationalLink to="/frontdesk/service-points" icon={MapPin} label="Active service visits" value={activeVisits.length} text="Start or manage restaurant, bar, marina and front-desk sales." />
-        <OperationalLink to="/frontdesk/folios" icon={Banknote} label="Guest folios" value={openFolios} text="Review room balances separately from restaurant walk-in visits." />
+        <OperationalLink to="/frontdesk/reservations" icon={CalendarDays} label="Reservations" value={data.reservations.length} text="Review upcoming arrivals, departures, and room movements." />
       </section>
     </div>
   );

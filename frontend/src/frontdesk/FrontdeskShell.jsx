@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
-import { Anchor, Bell, BedDouble, BriefcaseBusiness, CalendarDays, ChevronRight, ClipboardList, Home, Layers, LayoutDashboard, Loader2, LogOut, MapPin, Menu, Printer, ReceiptText, UsersRound, X } from 'lucide-react';
+import { Anchor, Bell, BedDouble, BriefcaseBusiness, CalendarDays, ChevronRight, Home, LayoutDashboard, Loader2, LogOut, MapPin, Menu, Printer, UsersRound, X } from 'lucide-react';
 
 import useProfile from '../hooks/useProfile';
 import ThemeToggle from '../components/ThemeToggle';
@@ -12,11 +12,8 @@ const navItems = [
   { name: 'Queue', path: '/frontdesk/visits', icon: UsersRound },
   { name: 'Service Points', path: '/frontdesk/service-points', icon: MapPin },
   { name: 'Guests & Customers', path: '/frontdesk/business-partners', icon: BriefcaseBusiness },
-  { name: 'Room Types', path: '/frontdesk/room-types', icon: Layers },
   { name: 'Rooms', path: '/frontdesk/rooms', icon: BedDouble },
   { name: 'Reservations', path: '/frontdesk/reservations', icon: CalendarDays },
-  { name: 'Folios', path: '/frontdesk/folios', icon: ReceiptText },
-  { name: 'Service Requests', path: '/frontdesk/requests', icon: ClipboardList },
   { name: 'Printer Setup', path: '/frontdesk/settings/printer', icon: Printer },
 ];
 
@@ -25,11 +22,8 @@ const routeLabels = {
   '/frontdesk/service-points': 'Service Points',
   '/frontdesk/visits': 'Queue',
   '/frontdesk/business-partners': 'Guests & Customers',
-  '/frontdesk/room-types': 'Room Types',
   '/frontdesk/rooms': 'Rooms',
   '/frontdesk/reservations': 'Reservations',
-  '/frontdesk/folios': 'Folios',
-  '/frontdesk/requests': 'Service Requests',
   '/frontdesk/settings/printer': 'Printer Setup',
 };
 

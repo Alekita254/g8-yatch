@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Banknote, CheckCircle2, ConciergeBell, CreditCard, Loader2, Martini, Minus, Plus, ReceiptText, Search, ShoppingCart, Utensils, X } from 'lucide-react';
+import { ArrowLeft, Banknote, CheckCircle2, CreditCard, Loader2, Martini, Minus, Plus, ReceiptText, Search, ShoppingCart, Utensils, X } from 'lucide-react';
 
 import api from '../api';
-import FrontdeskPosPage from './FrontdeskPosPage';
 
 const salesKinds = new Set(['BAR', 'RESTAURANT', 'MARINA', 'POS_TERMINAL']);
-const folioKinds = new Set(['FRONTDESK']);
 const tableOptions = Array.from({ length: 8 }, (_, index) => `Table ${index + 1}`);
 
 const iconForKind = {
@@ -15,7 +13,6 @@ const iconForKind = {
   RESTAURANT: Utensils,
   MARINA: ShoppingCart,
   POS_TERMINAL: ShoppingCart,
-  FRONTDESK: ConciergeBell,
 };
 
 const money = (value) => `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -54,7 +51,7 @@ export default function FrontdeskServicePointsPage() {
           api.get('/api/products/sales-pricelists/', { params: { page_size: 100 } }),
           api.get('/api/payments/methods/', { params: { page_size: 100 } }),
         ]);
-        setServicePoints((pointsResponse.data.results || []).filter((point) => point.is_active));
+        setServicePoints((pointsResponse.data.results || []).filter((point) => point.is_active && salesKinds.has(point.kind)));
         setProducts((productsResponse.data.results || []).filter((product) => product.is_active && product.is_sellable));
         setPricelists((pricelistsResponse.data.results || []).filter((pricelist) => pricelist.is_active));
         setPaymentMethods((paymentMethodsResponse.data.results || [])
@@ -263,7 +260,7 @@ export default function FrontdeskServicePointsPage() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {servicePoints.map((point) => {
             const Icon = iconForKind[point.kind] || ShoppingCart;
-            const mode = folioKinds.has(point.kind) ? 'Folio POS' : salesKinds.has(point.kind) ? 'Sales POS' : 'Service desk';
+            const mode = 'Sales POS';
             return (
               <button
                 key={point.id}
@@ -290,30 +287,6 @@ export default function FrontdeskServicePointsPage() {
   }
 
   const SelectedIcon = iconForKind[selectedPoint.kind] || ShoppingCart;
-
-  if (folioKinds.has(selectedPoint.kind)) {
-    return (
-      <div className="space-y-6">
-        <section className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
-              <SelectedIcon className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-app-text">{selectedPoint.name} POS</h2>
-              <p className="text-sm text-app-muted">Hotel folio posting for room charges, payments, and adjustments.</p>
-            </div>
-          </div>
-          <button type="button" onClick={() => selectPoint({ id: '' })} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated">
-            <ArrowLeft className="h-4 w-4" />
-            Service Points
-          </button>
-        </section>
-
-        <FrontdeskPosPage />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

@@ -46,6 +46,8 @@ import ProductsItemsPage from './pages/ProductsItemsPage';
 import ProductsSetupPage from './pages/ProductsSetupPage';
 import PurchasePricelistsPage from './pages/PurchasePricelistsPage';
 import RolesSetupPage from './pages/RolesSetupPage';
+import RoomsPage from './pages/RoomsPage';
+import RoomsSetupPage from './pages/RoomsSetupPage';
 import SalesPricelistDetailPage from './pages/SalesPricelistDetailPage';
 import SalesPricelistsPage from './pages/SalesPricelistsPage';
 import ServicePointsSetupPage from './pages/ServicePointsSetupPage';
@@ -63,7 +65,6 @@ import FrontdeskServicePointsPage from './frontdesk/FrontdeskServicePointsPage';
 import GuestVisitsPage from './frontdesk/GuestVisitsPage';
 import VisitDetailPage from './frontdesk/VisitDetailPage';
 import FrontdeskShell from './frontdesk/FrontdeskShell';
-import RoomTypesPage from './frontdesk/RoomTypesPage';
 import SalesDashboard from './sales/SalesDashboard';
 import InvoiceDetailPage from './sales/InvoiceDetailPage';
 import OrderDetailPage from './sales/OrderDetailPage';
@@ -497,11 +498,8 @@ export default function App() {
           <Route path="visits" element={<GuestVisitsPage />} />
           <Route path="visits/:id" element={<VisitDetailPage />} />
           <Route path="business-partners" element={<FrontdeskListPage type="partners" />} />
-          <Route path="room-types" element={<RoomTypesPage />} />
           <Route path="rooms" element={<FrontdeskListPage type="rooms" />} />
           <Route path="reservations" element={<FrontdeskListPage type="reservations" />} />
-          <Route path="folios" element={<FrontdeskListPage type="folios" />} />
-          <Route path="requests" element={<FrontdeskListPage type="requests" />} />
           <Route path="settings/printer" element={<PrinterSettingsPage />} />
         </Route>
         <Route element={<DashboardShell />}>
@@ -518,6 +516,9 @@ export default function App() {
             <Route path="sales-pricelists" element={<SalesPricelistsPage />} />
             <Route path="sales-pricelists/:pricelistId" element={<SalesPricelistDetailPage />} />
             <Route path="purchase-pricelists" element={<PurchasePricelistsPage />} />
+          </Route>
+          <Route path="/rooms" element={<RequireAppAccess appKey="admin"><RoomsSetupPage /></RequireAppAccess>}>
+            <Route path="inventory" element={<RoomsPage />} />
           </Route>
           <Route path="/taxes-discounts" element={<RequireAppAccess appKey="admin"><TaxesDiscountsSetupPage /></RequireAppAccess>}>
             <Route path="configurations" element={<TaxConfigurationsPage />} />

@@ -25,8 +25,9 @@ class Room(models.Model):
         OUT_OF_ORDER = "OUT_OF_ORDER", "Out of Order"
 
     branch = models.ForeignKey("organisation.Branch", related_name="rooms", null=True, blank=True, on_delete=models.PROTECT)
-    room_type = models.ForeignKey(RoomType, related_name="rooms", on_delete=models.PROTECT)
+    room_type = models.ForeignKey(RoomType, related_name="rooms", null=True, blank=True, on_delete=models.PROTECT)
     number = models.CharField(max_length=40, unique=True)
+    capacity = models.PositiveIntegerField(default=1)
     floor = models.CharField(max_length=40, blank=True)
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.AVAILABLE)
     is_active = models.BooleanField(default=True)

@@ -1,6 +1,7 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   BadgePercent,
+  BedDouble,
   Building2,
   CheckCircle2,
   ChevronRight,
@@ -53,6 +54,7 @@ export default function DashboardOverview() {
     { label: 'Users and roles configured', done: total(stats, 'users') > 0 && total(stats, 'roles') > 0, path: '/users' },
     { label: 'Service points registered', done: total(stats, 'servicePoints') > 0, path: '/users/service-points' },
     { label: 'Products and categories ready', done: total(stats, 'products') > 0 && total(stats, 'categories') > 0, path: '/products/items' },
+    { label: 'Rooms created', done: total(stats, 'rooms') > 0, path: '/rooms/inventory' },
     { label: 'Tax engine configured', done: total(stats, 'taxConfigurations') > 0 && total(stats, 'taxCategories') > 0, path: '/taxes-discounts/configurations' },
     { label: 'Payment routing mapped', done: total(stats, 'paymentMethods') > 0 && total(stats, 'paymentRoutingRules') > 0, path: '/payments/routing-rules' },
     { label: 'Branches created', done: total(stats, 'organizations') > 0 && total(stats, 'branches') > 0, path: '/organisation/branches' },
@@ -80,6 +82,13 @@ export default function DashboardOverview() {
       status: total(stats, 'products') > 0 ? 'Catalog ready' : 'Needs products',
     },
     {
+      title: 'Rooms',
+      icon: BedDouble,
+      path: '/rooms/inventory',
+      detail: `${total(stats, 'rooms')} rooms configured`,
+      status: total(stats, 'rooms') > 0 ? 'Inventory ready' : 'Needs rooms',
+    },
+    {
       title: 'Taxes & Discount',
       icon: Percent,
       path: '/taxes-discounts/configurations',
@@ -104,6 +113,7 @@ export default function DashboardOverview() {
 
   const quickLinks = [
     { label: 'Add Product', path: '/products/items', icon: Package },
+    { label: 'Add Rooms', path: '/rooms/inventory', icon: BedDouble },
     { label: 'Tax Rules', path: '/taxes-discounts/configurations', icon: BadgePercent },
     { label: 'Payment Routing', path: '/payments/routing-rules', icon: Route },
     { label: 'Branches', path: '/organisation/branches', icon: GitBranch },

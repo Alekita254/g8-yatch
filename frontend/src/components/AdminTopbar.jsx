@@ -12,6 +12,8 @@ const routeLabels = {
   '/products/items': 'Products & Items',
   '/products/sales-pricelists': 'Sales Pricelists',
   '/products/purchase-pricelists': 'Purchase Pricelists',
+  '/rooms': 'Rooms',
+  '/rooms/inventory': 'Rooms',
   '/taxes-discounts': 'Taxes & Discount',
   '/taxes-discounts/configurations': 'Tax Configurations',
   '/taxes-discounts/categories': 'Tax Categories',
@@ -54,6 +56,14 @@ function breadcrumbFor(pathname) {
     return [
       { label: 'Admin Console', path: '/dashboard' },
       { label: 'Products', path: '/products' },
+      { label: routeLabels[pathname] || 'Details' },
+    ];
+  }
+
+  if (pathname.startsWith('/rooms/')) {
+    return [
+      { label: 'Admin Console', path: '/dashboard' },
+      { label: 'Rooms', path: '/rooms' },
       { label: routeLabels[pathname] || 'Details' },
     ];
   }

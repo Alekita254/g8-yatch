@@ -11,6 +11,6 @@ class RoomTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ("number", "room_type", "branch", "floor", "status", "is_active")
+    list_display = ("number", "capacity", "room_type", "branch", "floor", "status", "is_active")
     list_filter = ("status", "room_type", "branch", "is_active")
     search_fields = ("number", "floor")
