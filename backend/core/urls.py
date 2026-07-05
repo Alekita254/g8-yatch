@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/business-partners/', include('apps.business_partners.urls')),
     path('api/concierge/', include('apps.concierge.urls')),
     path('api/folios/', include('apps.folios.urls')),
+    path('api/inventory/', include('apps.inventory.urls')),
     path('api/organisation/', include('apps.organisation.urls')),
     path('api/payments/', include('apps.payments.urls')),
     path('api/products/', include('apps.products.urls')),

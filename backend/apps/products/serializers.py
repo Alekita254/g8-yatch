@@ -44,6 +44,7 @@ class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     product_type_display = serializers.CharField(source="get_product_type_display", read_only=True)
     bom_items = BillOfMaterialsItemSerializer(many=True, required=False)
+    inventory_threshold = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -63,8 +64,20 @@ class ProductSerializer(serializers.ModelSerializer):
             "is_sellable",
             "is_inventory_tracked",
             "is_active",
+            "inventory_threshold",
             "bom_items",
         ]
+
+    def get_inventory_threshold(self, obj):
+        threshold = getattr(obj, "inventory_threshold", None)
+        if not threshold:
+            return None
+        return {
+            "id": threshold.id,
+            "minimum_quantity": threshold.minimum_quantity,
+            "reorder_quantity": threshold.reorder_quantity,
+            "is_active": threshold.is_active,
+        }
 
     def create(self, validated_data):
         bom_items = validated_data.pop("bom_items", [])

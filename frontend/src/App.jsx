@@ -14,6 +14,7 @@ import {
   LogIn,
   Martini,
   MonitorCog,
+  Warehouse,
   Sailboat,
   ShieldCheck,
   Sparkles,
@@ -34,6 +35,7 @@ import BranchesPage from './pages/BranchesPage';
 import DashboardOverview from './pages/DashboardOverview';
 import DiscountRulesPage from './pages/DiscountRulesPage';
 import DownloadsSetupPage from './pages/DownloadsSetupPage';
+import InventoryPage from './pages/InventoryPage';
 import MembersTablePage from './pages/MembersTablePage';
 import OrganisationSetupPage from './pages/OrganisationSetupPage';
 import OrganizationsPage from './pages/OrganizationsPage';
@@ -45,7 +47,9 @@ import PrinterSettingsPage from './pages/PrinterSettingsPage';
 import ProductCategoriesPage from './pages/ProductCategoriesPage';
 import ProductsItemsPage from './pages/ProductsItemsPage';
 import ProductsSetupPage from './pages/ProductsSetupPage';
+import PurchasePricelistDetailPage from './pages/PurchasePricelistDetailPage';
 import PurchasePricelistsPage from './pages/PurchasePricelistsPage';
+import RequestForPurchasePage from './pages/RequestForPurchasePage';
 import RolesSetupPage from './pages/RolesSetupPage';
 import RoomsPage from './pages/RoomsPage';
 import RoomsSetupPage from './pages/RoomsSetupPage';
@@ -66,6 +70,7 @@ import FrontdeskServicePointsPage from './frontdesk/FrontdeskServicePointsPage';
 import GuestVisitsPage from './frontdesk/GuestVisitsPage';
 import VisitDetailPage from './frontdesk/VisitDetailPage';
 import FrontdeskShell from './frontdesk/FrontdeskShell';
+import InventoryShell from './inventory/InventoryShell';
 import SalesDashboard from './sales/SalesDashboard';
 import InvoiceDetailPage from './sales/InvoiceDetailPage';
 import OrderDetailPage from './sales/OrderDetailPage';
@@ -286,6 +291,14 @@ function AppChooserPage() {
       path: '/sales',
       accent: 'bg-[#d7b56d] text-[#172326]',
     },
+    {
+      icon: Warehouse,
+      title: 'Inventory',
+      appKey: 'inventory',
+      description: 'Products, supplier purchase prices, low-stock requests, receiving, and stock updates.',
+      path: '/inventory',
+      accent: 'bg-[#0f5132] text-white',
+    },
   ];
   const visibleApps = apps.filter((app) => canAccessApp(profile.djangoUser, app.appKey));
 
@@ -341,7 +354,7 @@ function AppChooserPage() {
         </div>
 
         {visibleApps.length ? (
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
             {visibleApps.map((app) => (
             <Link
               key={app.title}
@@ -503,6 +516,16 @@ export default function App() {
           <Route path="reservations" element={<FrontdeskListPage type="reservations" />} />
           <Route path="settings/printer" element={<PrinterSettingsPage />} />
         </Route>
+        <Route path="/inventory" element={<RequireAppAccess appKey="inventory"><InventoryShell /></RequireAppAccess>}>
+          <Route index element={<InventoryPage />} />
+          <Route path="products" element={<ProductsItemsPage />} />
+          <Route path="categories" element={<ProductCategoriesPage />} />
+          <Route path="purchase-pricelists" element={<PurchasePricelistsPage basePath="/inventory/purchase-pricelists" />} />
+          <Route path="purchase-pricelists/:pricelistId" element={<PurchasePricelistDetailPage basePath="/inventory/purchase-pricelists" />} />
+          <Route path="sales-pricelists" element={<SalesPricelistsPage basePath="/inventory/sales-pricelists" />} />
+          <Route path="sales-pricelists/:pricelistId" element={<SalesPricelistDetailPage basePath="/inventory/sales-pricelists" />} />
+          <Route path="request-for-purchase" element={<RequestForPurchasePage />} />
+        </Route>
         <Route element={<DashboardShell />}>
           <Route path="/dashboard" element={<RequireAppAccess appKey="admin"><DashboardOverview /></RequireAppAccess>} />
           <Route path="/accounting" element={<RequireAppAccess appKey="accounting"><AccountingDashboard /></RequireAppAccess>} />
@@ -517,6 +540,7 @@ export default function App() {
             <Route path="sales-pricelists" element={<SalesPricelistsPage />} />
             <Route path="sales-pricelists/:pricelistId" element={<SalesPricelistDetailPage />} />
             <Route path="purchase-pricelists" element={<PurchasePricelistsPage />} />
+            <Route path="purchase-pricelists/:pricelistId" element={<PurchasePricelistDetailPage />} />
           </Route>
           <Route path="/rooms" element={<RequireAppAccess appKey="admin"><RoomsSetupPage /></RequireAppAccess>}>
             <Route path="inventory" element={<RoomsPage />} />

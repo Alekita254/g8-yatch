@@ -15,6 +15,10 @@ export const APP_ACCESS = {
     label: 'Accounting',
     permissions: ['app.accounting'],
   },
+  inventory: {
+    label: 'Inventory',
+    permissions: ['app.inventory'],
+  },
 };
 
 export const APP_PERMISSION_OPTIONS = Object.entries(APP_ACCESS).map(([value, access]) => ({

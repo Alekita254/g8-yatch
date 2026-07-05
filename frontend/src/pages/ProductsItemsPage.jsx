@@ -54,6 +54,8 @@ const emptyProduct = {
   purchase_pricelist: '',
   purchase_price: '',
   purchase_currency: 'KES',
+  minimum_quantity: '',
+  reorder_quantity: '',
   sales_pricelist: '',
   sales_price: '',
   sales_currency: 'KES',
@@ -141,6 +143,8 @@ export default function ProductsItemsPage() {
       pack_size: product.pack_size || '1.000',
       quantity: product.quantity || '0.000',
       description: product.description || '',
+      minimum_quantity: product.inventory_threshold?.minimum_quantity || '',
+      reorder_quantity: product.inventory_threshold?.reorder_quantity || '',
       purchase_pricelist: '',
       purchase_price: '',
       purchase_currency: 'KES',
@@ -169,6 +173,8 @@ export default function ProductsItemsPage() {
         sales_pricelist,
         sales_price,
         sales_currency,
+        minimum_quantity,
+        reorder_quantity,
         ...productPayload
       } = form;
       const response = editingProduct
@@ -188,6 +194,16 @@ export default function ProductsItemsPage() {
         ];
         const purchaseUpdate = await api.patch(`/api/products/purchase-pricelists/${purchase_pricelist}/`, { items });
         setPurchasePricelists((current) => current.map((item) => (item.id === purchaseUpdate.data.id ? purchaseUpdate.data : item)));
+      }
+
+      if (productPayload.is_inventory_tracked && (minimum_quantity !== '' || reorder_quantity !== '')) {
+        const thresholdResponse = await api.post('/api/inventory/thresholds/', {
+          product: response.data.id,
+          minimum_quantity: minimum_quantity || '0',
+          reorder_quantity: reorder_quantity || minimum_quantity || '0',
+          is_active: true,
+        });
+        response.data.inventory_threshold = thresholdResponse.data;
       }
 
       if (sales_pricelist && sales_price) {
@@ -274,7 +290,20 @@ export default function ProductsItemsPage() {
           },
           { key: 'type', header: 'Type', render: (product) => product.product_type_display || product.product_type },
           { key: 'category', header: 'Category', render: (product) => product.category_name || '-' },
-          { key: 'stock', header: 'Quantity', render: (product) => `${product.quantity || '0.000'} ${packageLabels[product.package_type] || 'package'} x ${product.pack_size || '1.000'} ${product.unit}` },
+          {
+            key: 'stock',
+            header: 'Inventory',
+            render: (product) => (
+              <>
+                <p>{product.quantity || '0.000'} {packageLabels[product.package_type] || 'package'} x {product.pack_size || '1.000'} {product.unit}</p>
+                {product.inventory_threshold ? (
+                  <p className="mt-1 text-xs font-bold text-app-muted">
+                    Min {product.inventory_threshold.minimum_quantity} · Request {product.inventory_threshold.reorder_quantity}
+                  </p>
+                ) : null}
+              </>
+            ),
+          },
           {
             key: 'flags',
             header: 'Flags',

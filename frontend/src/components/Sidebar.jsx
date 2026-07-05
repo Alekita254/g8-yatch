@@ -20,6 +20,7 @@ import {
   MapPin,
   X,
   Package,
+  PackageCheck,
   Percent,
   Route,
   ShieldCheck,
@@ -96,6 +97,12 @@ const navItems = [
     path: '/downloads',
     icon: Download,
     appKey: 'admin',
+  },
+  {
+    name: 'Inventory',
+    path: '/inventory',
+    icon: PackageCheck,
+    appKey: 'inventory',
   },
   {
     name: 'Organisation Setup',

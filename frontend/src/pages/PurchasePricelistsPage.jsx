@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Edit3, Loader2, Plus, Trash2, Truck } from 'lucide-react';
+import { Edit3, Eye, Loader2, Plus, Trash2, Truck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import api, { emptyPagination, paginationFromResponse } from '../api';
 import DataTable from '../components/DataTable';
@@ -21,7 +22,7 @@ const emptyPriceItem = {
   unit: 'EACH',
 };
 
-export default function PurchasePricelistsPage() {
+export default function PurchasePricelistsPage({ basePath = '/products/purchase-pricelists' }) {
   const [pricelists, setPricelists] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -231,6 +232,13 @@ export default function PurchasePricelistsPage() {
             cellClassName: 'text-right',
             render: (pricelist) => (
               <div className="flex justify-end gap-2">
+                <Link
+                  to={`${basePath}/${pricelist.id}`}
+                  className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase text-app-text transition hover:border-brand-500 hover:text-brand-500"
+                >
+                  <Eye className="h-4 w-4" />
+                  Details
+                </Link>
                 <button
                   type="button"
                   onClick={() => openPriceModal(pricelist)}

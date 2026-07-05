@@ -24,6 +24,7 @@ const routeLabels = {
   '/payments/bank-accounts': 'Bank Details',
   '/payments/routing-rules': 'Payment Routing',
   '/downloads': 'Downloads',
+  '/inventory': 'Inventory',
   '/organisation': 'Organisation Setup',
   '/organisation/organizations': 'Organizations',
   '/organisation/branches': 'Branches',
@@ -41,6 +42,15 @@ function breadcrumbFor(pathname) {
       { label: 'Admin Console', path: '/dashboard' },
       { label: 'Products', path: '/products' },
       { label: 'Sales Pricelists', path: '/products/sales-pricelists' },
+      { label: 'Pricelist Details' },
+    ];
+  }
+
+  if (pathname.startsWith('/products/purchase-pricelists/')) {
+    return [
+      { label: 'Admin Console', path: '/dashboard' },
+      { label: 'Products', path: '/products' },
+      { label: 'Purchase Pricelists', path: '/products/purchase-pricelists' },
       { label: 'Pricelist Details' },
     ];
   }

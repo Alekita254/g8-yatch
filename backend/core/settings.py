@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "apps.accounting",
     "apps.concierge",
     "apps.folios",
+    "apps.inventory",
     "apps.organisation",
     "apps.payments",
     "apps.products",

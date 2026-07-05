@@ -24,7 +24,7 @@ const emptyPriceItem = {
   currency: 'KES',
 };
 
-export default function SalesPricelistsPage() {
+export default function SalesPricelistsPage({ basePath = '/products/sales-pricelists' }) {
   const [pricelists, setPricelists] = useState([]);
   const [products, setProducts] = useState([]);
   const [servicePoints, setServicePoints] = useState([]);
@@ -234,7 +234,7 @@ export default function SalesPricelistsPage() {
       render: (pricelist) => (
         <div className="flex justify-end gap-2">
           <Link
-            to={`/products/sales-pricelists/${pricelist.id}`}
+            to={`${basePath}/${pricelist.id}`}
             className="inline-flex items-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase text-app-text transition hover:border-brand-500 hover:text-brand-500"
           >
             <Eye className="h-4 w-4" />

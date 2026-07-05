@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, CalendarDays, Edit3, Loader2, MapPin, Package, Plus, Tags, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Edit3, Loader2, Package, Plus, Tags, Trash2, Truck } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import api from '../api';
@@ -11,14 +11,15 @@ const emptyPriceItem = {
   product: '',
   price: '',
   currency: 'KES',
+  unit: 'EACH',
 };
 
 const formatDate = (value) => {
   if (!value) return 'No limit';
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value));
 };
 
-export default function SalesPricelistDetailPage({ basePath = '/products/sales-pricelists' }) {
+export default function PurchasePricelistDetailPage({ basePath = '/products/purchase-pricelists' }) {
   const { pricelistId } = useParams();
   const [pricelist, setPricelist] = useState(null);
   const [products, setProducts] = useState([]);
@@ -32,13 +33,13 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
     const fetchPricelist = async () => {
       try {
         const [pricelistResponse, productsResponse] = await Promise.all([
-          api.get(`/api/products/sales-pricelists/${pricelistId}/`),
+          api.get(`/api/products/purchase-pricelists/${pricelistId}/`),
           api.get('/api/products/items/', { params: { page_size: 100 } }),
         ]);
         setPricelist(pricelistResponse.data);
         setProducts(Array.isArray(productsResponse.data.results) ? productsResponse.data.results : []);
       } catch (err) {
-        toast.error(err.response?.data?.detail || 'Failed to load sales pricelist');
+        toast.error(err.response?.data?.detail || 'Failed to load purchase pricelist');
       } finally {
         setLoading(false);
       }
@@ -52,9 +53,7 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
   );
 
   const sortedItems = useMemo(() => {
-    return [...(pricelist?.items || [])].sort((a, b) => {
-      return Number(b.id || 0) - Number(a.id || 0);
-    });
+    return [...(pricelist?.items || [])].sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
   }, [pricelist]);
 
   const visibleItems = sortedItems.filter((item) => {
@@ -64,6 +63,7 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
       item.product_sku,
       item.currency,
       item.price,
+      item.unit,
       product?.category_name,
       product?.product_type_display,
       product?.unit,
@@ -75,6 +75,7 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
       product: item.product || '',
       price: item.price || '',
       currency: item.currency || 'KES',
+      unit: item.unit || 'EACH',
     });
     setShowPriceModal(true);
   };
@@ -94,12 +95,12 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
         ...(pricelist.items || []).filter((item) => String(item.product) !== String(priceForm.product)),
         priceForm,
       ];
-      const response = await api.patch(`/api/products/sales-pricelists/${pricelist.id}/`, { items });
+      const response = await api.patch(`/api/products/purchase-pricelists/${pricelist.id}/`, { items });
       setPricelist(response.data);
       closePriceModal();
-      toast.success('Sales price saved');
+      toast.success('Purchase price saved');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to save sales price');
+      toast.error(err.response?.data?.detail || 'Failed to save purchase price');
     } finally {
       setSaving(false);
     }
@@ -111,7 +112,7 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
     try {
       setSaving(true);
       const items = (pricelist.items || []).filter((priceItem) => String(priceItem.product) !== String(item.product));
-      const response = await api.patch(`/api/products/sales-pricelists/${pricelist.id}/`, { items });
+      const response = await api.patch(`/api/products/purchase-pricelists/${pricelist.id}/`, { items });
       setPricelist(response.data);
       toast.success('Product removed from pricelist');
     } catch (err) {
@@ -128,33 +129,29 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
   if (!pricelist) {
     return (
       <div className="rounded-lg border border-app-border bg-app-card p-10 text-center">
-        <p className="font-bold text-app-muted">Sales pricelist not found.</p>
-        <Link to={basePath} className="mt-4 inline-flex text-sm font-black text-brand-500">Back to sales pricelists</Link>
+        <p className="font-bold text-app-muted">Purchase pricelist not found.</p>
+        <Link to={basePath} className="mt-4 inline-flex text-sm font-black text-brand-500">Back to purchase pricelists</Link>
       </div>
     );
   }
-
-  const servicePointLabel = pricelist.service_point_names?.length
-    ? pricelist.service_point_names.join(', ')
-    : pricelist.service_point_name || pricelist.service_point_kind || 'All service points';
 
   return (
     <div className="space-y-6">
       <div>
         <Link to={basePath} className="inline-flex items-center gap-2 text-sm font-black text-brand-500 transition hover:text-brand-600">
           <ArrowLeft className="h-4 w-4" />
-          Back to sales pricelists
+          Back to purchase pricelists
         </Link>
       </div>
 
       <div className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-6 md:flex-row md:items-start md:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
-            <Tags className="h-5 w-5" />
+            <Truck className="h-5 w-5" />
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-2xl font-black text-app-text">{pricelist.name}</h2>
+              <h2 className="text-2xl font-black text-app-text">{pricelist.supplier_name}</h2>
               <span className={`rounded-md px-2 py-1 text-xs font-black uppercase ${pricelist.is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
                 {pricelist.is_active ? 'Active' : 'Inactive'}
               </span>
@@ -176,9 +173,9 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
           <p className="mt-1 text-2xl font-black text-app-text">{(pricelist.items || []).length}</p>
         </div>
         <div className="rounded-lg border border-app-border bg-app-card p-5">
-          <MapPin className="h-5 w-5 text-brand-500" />
-          <p className="mt-4 text-xs font-black uppercase tracking-[0.12em] text-app-muted">Service Points</p>
-          <p className="mt-1 text-sm font-black leading-6 text-app-text">{servicePointLabel}</p>
+          <Tags className="h-5 w-5 text-brand-500" />
+          <p className="mt-4 text-xs font-black uppercase tracking-[0.12em] text-app-muted">Supplier Code</p>
+          <p className="mt-1 text-sm font-black leading-6 text-app-text">{pricelist.code}</p>
         </div>
         <div className="rounded-lg border border-app-border bg-app-card p-5">
           <CalendarDays className="h-5 w-5 text-brand-500" />
@@ -212,8 +209,8 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
           },
           {
             key: 'price',
-            header: 'Sales Price',
-            render: (item) => <span className="font-black text-app-text">{item.currency} {item.price}</span>,
+            header: 'Purchase Price',
+            render: (item) => <span className="font-black text-app-text">{item.currency} {item.price} / {item.unit}</span>,
           },
           {
             key: 'actions',
@@ -222,7 +219,7 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
             cellClassName: 'text-right',
             render: (item) => (
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => openPriceModal(item)} className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500" title="Edit sales price">
+                <button type="button" onClick={() => openPriceModal(item)} className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-brand-500" title="Edit purchase price">
                   <Edit3 className="h-4 w-4" />
                 </button>
                 <button
@@ -240,7 +237,7 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
         ]}
         getRowKey={(item) => item.id}
         title={`${visibleItems.length} priced products`}
-        description="Search the complete sales pricelist by product, SKU, category, type, or price."
+        description="Search the complete purchase pricelist by product, SKU, category, type, unit, or price."
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Search product prices"
@@ -250,7 +247,7 @@ export default function SalesPricelistDetailPage({ basePath = '/products/sales-p
 
       <PricelistItemFormModal
         isOpen={showPriceModal}
-        mode="sales"
+        mode="purchase"
         form={priceForm}
         products={products}
         onChange={updatePriceForm}

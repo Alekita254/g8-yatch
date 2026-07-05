@@ -114,6 +114,32 @@ export default function ProductFormModal({
             <input type="checkbox" checked={form.is_inventory_tracked} onChange={(e) => onChange('is_inventory_tracked', e.target.checked)} className="h-4 w-4 rounded border-app-border text-brand-600 focus:ring-brand-500" />
             <span className="text-sm font-bold text-app-text">Inventory tracked</span>
           </label>
+          <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
+            <label className="space-y-2">
+              <span className="text-xs font-bold uppercase text-app-muted">Minimum stock</span>
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={form.minimum_quantity}
+                onChange={(e) => onChange('minimum_quantity', e.target.value)}
+                disabled={!form.is_inventory_tracked}
+                className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-xs font-bold uppercase text-app-muted">Reorder quantity</span>
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={form.reorder_quantity}
+                onChange={(e) => onChange('reorder_quantity', e.target.value)}
+                disabled={!form.is_inventory_tracked}
+                className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </label>
+          </div>
           <div className="rounded-md border border-brand-500/30 bg-brand-500/10 px-3 py-2 md:col-span-2">
             <p className="text-xs font-black uppercase tracking-[0.12em] text-brand-500">Inventory unit preview</p>
             <p className="mt-1 text-sm font-bold text-app-text">{inventoryPreview}</p>
