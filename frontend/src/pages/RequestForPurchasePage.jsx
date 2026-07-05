@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { CheckCircle2, ClipboardCheck, Download, FilePlus2, Loader2, Package, Plus, RefreshCcw, Send, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  ClipboardCheck,
+  Download,
+  FilePlus2,
+  Loader2,
+  Package,
+  Plus,
+  RefreshCcw,
+  Search,
+  Send,
+  ShoppingCart,
+  Trash2,
+} from 'lucide-react';
 
 import api from '../api';
 import DataTable from '../components/DataTable';
@@ -10,13 +23,6 @@ const emptyRequest = {
   supplier_name: '',
   notes: '',
   lines: [],
-};
-
-const emptyLine = {
-  product: '',
-  requested_quantity: '',
-  unit_cost: '',
-  notes: '',
 };
 
 const statusStyles = {
@@ -40,17 +46,13 @@ function money(value) {
   return Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function productLabel(product) {
-  return `${product.name} (${product.sku})`;
-}
-
 export default function RequestForPurchasePage() {
   const [products, setProducts] = useState([]);
   const [purchasePricelists, setPurchasePricelists] = useState([]);
   const [lowStock, setLowStock] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [requestForm, setRequestForm] = useState(emptyRequest);
-  const [lineForm, setLineForm] = useState(emptyLine);
+  const [catalogSearch, setCatalogSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [workingDocument, setWorkingDocument] = useState('');
@@ -78,6 +80,7 @@ export default function RequestForPurchasePage() {
           product_unit: product?.unit || item.unit,
           product_category_name: product?.category_name || '-',
           suggested_quantity: product?.inventory_threshold?.reorder_quantity || product?.inventory_threshold?.minimum_quantity || '1',
+          minimum_quantity: product?.inventory_threshold?.minimum_quantity || null,
         };
       })
       .filter((item) => item.productRecord || item.product_name);
@@ -93,6 +96,19 @@ export default function RequestForPurchasePage() {
       ? lowStock.filter((product) => selectedPricelistProductIds.has(String(product.id)))
       : []
   ), [lowStock, selectedPricelistProductIds, selectedPurchasePricelist]);
+
+  const filteredCatalogItems = useMemo(() => {
+    const search = catalogSearch.trim().toLowerCase();
+    if (!search) return selectedPricelistItems;
+    return selectedPricelistItems.filter((item) => [
+      item.product_name,
+      item.product_sku,
+      item.product_category_name,
+      item.product_unit,
+      item.unit,
+      item.price,
+    ].join(' ').toLowerCase().includes(search));
+  }, [catalogSearch, selectedPricelistItems]);
 
   const requestTotal = requestForm.lines.reduce((total, line) => (
     total + (Number(line.requested_quantity || 0) * Number(line.unit_cost || 0))
@@ -123,67 +139,30 @@ export default function RequestForPurchasePage() {
     fetchData();
   }, []);
 
-  const purchasePriceForProduct = (productId) => {
-    const priceItem = selectedPurchasePricelist?.items?.find((item) => String(item.product) === String(productId));
-    return priceItem?.price || '';
+  const selectPricelist = (pricelistId) => {
+    const pricelist = purchasePricelists.find((item) => String(item.id) === String(pricelistId));
+    const allowedProductIds = new Set((pricelist?.items || []).map((item) => String(item.product)));
+    setRequestForm((current) => ({
+      ...current,
+      purchase_pricelist: pricelistId,
+      supplier_name: pricelist?.supplier_name || '',
+      lines: current.lines
+        .filter((line) => !pricelistId || allowedProductIds.has(String(line.product)))
+        .map((line) => ({
+          ...line,
+          unit_cost: line.unit_cost && Number(line.unit_cost) > 0
+            ? line.unit_cost
+            : pricelist?.items?.find((item) => String(item.product) === String(line.product))?.price || line.unit_cost,
+        })),
+    }));
+    setCatalogSearch('');
   };
 
-  const addLine = (event) => {
-    event.preventDefault();
+  const addPricelistItemLine = (item, quantity = item.suggested_quantity) => {
     if (!selectedPurchasePricelist) {
       toast.error('Choose a purchase pricelist first');
       return;
     }
-    if (!lineForm.product || !lineForm.requested_quantity) {
-      toast.error('Choose a product and quantity');
-      return;
-    }
-    if (!selectedPricelistProductIds.has(String(lineForm.product))) {
-      toast.error('This product is not in the selected purchase pricelist');
-      return;
-    }
-
-    const product = productsById[String(lineForm.product)];
-    setRequestForm((current) => ({
-      ...current,
-      lines: [
-        ...current.lines.filter((line) => String(line.product) !== String(lineForm.product)),
-        {
-          ...lineForm,
-          unit_cost: lineForm.unit_cost || purchasePriceForProduct(lineForm.product) || '0',
-          product_name: product?.name || '',
-          product_sku: product?.sku || '',
-          product_unit: product?.unit || '',
-        },
-      ],
-    }));
-    setLineForm(emptyLine);
-  };
-
-  const addLowStockLine = (product) => {
-    if (selectedPurchasePricelist && !selectedPricelistProductIds.has(String(product.id))) {
-      toast.error('This product is not in the selected purchase pricelist');
-      return;
-    }
-    const quantity = product.inventory_threshold?.reorder_quantity || product.inventory_threshold?.minimum_quantity || '1';
-    setRequestForm((current) => ({
-      ...current,
-      lines: [
-        ...current.lines.filter((line) => String(line.product) !== String(product.id)),
-        {
-          product: product.id,
-          requested_quantity: quantity,
-          unit_cost: purchasePriceForProduct(product.id) || '0',
-          notes: 'Low stock replenishment',
-          product_name: product.name,
-          product_sku: product.sku,
-          product_unit: product.unit,
-        },
-      ],
-    }));
-  };
-
-  const addPricelistItemLine = (item) => {
     if (!item.product_is_active) {
       toast.error('This product is inactive');
       return;
@@ -194,9 +173,11 @@ export default function RequestForPurchasePage() {
         ...current.lines.filter((line) => String(line.product) !== String(item.product)),
         {
           product: item.product,
-          requested_quantity: item.suggested_quantity,
+          requested_quantity: quantity || '1',
           unit_cost: item.price || '0',
-          notes: 'Purchase pricelist item',
+          notes: visibleLowStock.some((product) => String(product.id) === String(item.product))
+            ? 'Low stock replenishment'
+            : 'Purchase pricelist item',
           product_name: item.product_name,
           product_sku: item.product_sku,
           product_unit: item.product_unit || item.unit,
@@ -212,8 +193,42 @@ export default function RequestForPurchasePage() {
     }));
   };
 
+  const updateLine = (productId, field, value) => {
+    setRequestForm((current) => ({
+      ...current,
+      lines: current.lines.map((line) => (
+        String(line.product) === String(productId) ? { ...line, [field]: value } : line
+      )),
+    }));
+  };
+
+  const addAllLowStock = () => {
+    if (!visibleLowStock.length) return;
+    const catalogByProduct = Object.fromEntries(selectedPricelistItems.map((item) => [String(item.product), item]));
+    setRequestForm((current) => {
+      const existing = current.lines.filter((line) => !visibleLowStock.some((product) => String(product.id) === String(line.product)));
+      const lowStockLines = visibleLowStock.map((product) => {
+        const priceItem = catalogByProduct[String(product.id)];
+        return {
+          product: product.id,
+          requested_quantity: product.inventory_threshold?.reorder_quantity || product.inventory_threshold?.minimum_quantity || '1',
+          unit_cost: priceItem?.price || '0',
+          notes: 'Low stock replenishment',
+          product_name: product.name,
+          product_sku: product.sku,
+          product_unit: product.unit,
+        };
+      });
+      return { ...current, lines: [...existing, ...lowStockLines] };
+    });
+  };
+
   const createPurchaseRequest = async (event) => {
     event.preventDefault();
+    if (!selectedPurchasePricelist) {
+      toast.error('Choose a purchase pricelist first');
+      return;
+    }
     if (!requestForm.lines.length) {
       toast.error('Add at least one item to the request');
       return;
@@ -224,7 +239,7 @@ export default function RequestForPurchasePage() {
       await api.post('/api/inventory/documents/', {
         document_type: 'PURCHASE_REQUEST',
         status: 'SUBMITTED',
-        supplier_name: requestForm.supplier_name || selectedPurchasePricelist?.supplier_name || '',
+        supplier_name: requestForm.supplier_name || selectedPurchasePricelist.supplier_name || '',
         notes: requestForm.notes,
         lines: requestForm.lines.map((line) => ({
           product: line.product,
@@ -234,6 +249,7 @@ export default function RequestForPurchasePage() {
         })),
       });
       setRequestForm(emptyRequest);
+      setCatalogSearch('');
       await fetchData();
       toast.success('Request for purchase generated');
     } catch (err) {
@@ -282,250 +298,261 @@ export default function RequestForPurchasePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-lg border border-app-border bg-app-card p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
-            <FilePlus2 className="h-5 w-5" />
+      <section className="rounded-lg border border-app-border bg-app-card p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
+              <FilePlus2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-app-text sm:text-2xl">Request for Purchase</h2>
+              <p className="mt-1 text-sm text-app-muted">Choose a supplier pricelist, add products from that supplier catalog, then generate the request PDF.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-black text-app-text sm:text-2xl">Request for Purchase</h2>
-            <p className="text-sm text-app-muted">Create the request, download it as PDF, approve it, then generate the requisition document.</p>
-          </div>
+          <button type="button" onClick={fetchData} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-elevated">
+            <RefreshCcw className="h-4 w-4" />
+            Refresh
+          </button>
         </div>
-        <button type="button" onClick={fetchData} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-bold text-app-text transition hover:bg-app-card">
-          <RefreshCcw className="h-4 w-4" />
-          Refresh
-        </button>
-      </div>
 
-      <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <form onSubmit={createPurchaseRequest} className="space-y-5 rounded-lg border border-app-border bg-app-card p-4 sm:p-5">
-          <div>
-            <h3 className="font-black text-app-text">Request Details</h3>
-            <p className="mt-1 text-sm text-app-muted">Choose the supplier price list first so item costs can be filled automatically.</p>
-          </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {[
+            ['1', 'Choose supplier', selectedPurchasePricelist ? selectedPurchasePricelist.supplier_name : 'Waiting'],
+            ['2', 'Build request', `${requestForm.lines.length} item${requestForm.lines.length === 1 ? '' : 's'}`],
+            ['3', 'Generate document', requestForm.lines.length ? `KES ${money(requestTotal)}` : 'No total yet'],
+          ].map(([step, label, value]) => (
+            <div key={step} className="rounded-lg border border-app-border bg-app-bg p-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-app-muted">Step {step}</p>
+              <p className="mt-2 font-black text-app-text">{label}</p>
+              <p className="mt-1 truncate text-sm text-app-muted">{value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-          <label className="block text-sm font-bold text-app-text">
-            Purchase Pricelist
-            <select
-              value={requestForm.purchase_pricelist}
-              onChange={(event) => {
-                const pricelist = purchasePricelists.find((item) => String(item.id) === String(event.target.value));
-                const allowedProductIds = new Set((pricelist?.items || []).map((item) => String(item.product)));
-                setRequestForm((current) => ({
-                  ...current,
-                  purchase_pricelist: event.target.value,
-                  supplier_name: pricelist?.supplier_name || current.supplier_name,
-                  lines: current.lines
-                    .filter((line) => !event.target.value || allowedProductIds.has(String(line.product)))
-                    .map((line) => ({
-                      ...line,
-                      unit_cost: line.unit_cost && Number(line.unit_cost) > 0
-                        ? line.unit_cost
-                        : pricelist?.items?.find((item) => String(item.product) === String(line.product))?.price || line.unit_cost,
-                    })),
-                }));
-                setLineForm(emptyLine);
-              }}
-              className="mt-1 w-full rounded-md border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            >
-              <option value="">Choose purchase pricelist</option>
-              {purchasePricelists.filter((pricelist) => pricelist.is_active).map((pricelist) => (
-                <option key={pricelist.id} value={pricelist.id}>{pricelist.supplier_name} - {pricelist.code}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-sm font-bold text-app-text">
-            Supplier
-            <input
-              value={requestForm.supplier_name}
-              onChange={(event) => setRequestForm((current) => ({ ...current, supplier_name: event.target.value }))}
-              className="mt-1 w-full rounded-md border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            />
-          </label>
-
-          <label className="block text-sm font-bold text-app-text">
-            Notes
-            <textarea
-              rows={3}
-              value={requestForm.notes}
-              onChange={(event) => setRequestForm((current) => ({ ...current, notes: event.target.value }))}
-              className="mt-1 w-full rounded-md border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            />
-          </label>
-
-          <div className="rounded-lg border border-app-border bg-app-bg p-4">
-            <h4 className="font-black text-app-text">Add Product</h4>
-            <div className="mt-4 space-y-4">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="space-y-6">
+          <div className="rounded-lg border border-app-border bg-app-card p-4 sm:p-5">
+            <div className="grid gap-4 lg:grid-cols-[1fr_0.8fr]">
               <label className="block text-sm font-bold text-app-text">
-                Product
+                Purchase Pricelist
                 <select
-                  value={lineForm.product}
-                  onChange={(event) => {
-                    const productId = event.target.value;
-                    setLineForm((current) => ({
-                      ...current,
-                      product: productId,
-                      unit_cost: purchasePriceForProduct(productId) || current.unit_cost,
-                    }));
-                  }}
-                  className="mt-1 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  value={requestForm.purchase_pricelist}
+                  onChange={(event) => selectPricelist(event.target.value)}
+                  className="mt-1 w-full rounded-md border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 >
-                  <option value="">Choose product</option>
-                  {selectedPricelistItems
-                    .filter((item) => item.product_is_active)
-                    .map((item) => item.productRecord || productsById[String(item.product)])
-                    .filter(Boolean)
-                    .map((product) => (
-                    <option key={product.id} value={product.id}>{productLabel(product)}</option>
+                  <option value="">Choose purchase pricelist</option>
+                  {purchasePricelists.filter((pricelist) => pricelist.is_active).map((pricelist) => (
+                    <option key={pricelist.id} value={pricelist.id}>{pricelist.supplier_name} - {pricelist.code}</option>
                   ))}
                 </select>
               </label>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-bold text-app-text">
-                  Quantity
-                  <input
-                    type="number"
-                    min="0.001"
-                    step="0.001"
-                    value={lineForm.requested_quantity}
-                    onChange={(event) => setLineForm((current) => ({ ...current, requested_quantity: event.target.value }))}
-                    className="mt-1 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  />
-                </label>
-                <label className="block text-sm font-bold text-app-text">
-                  Unit Cost
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={lineForm.unit_cost}
-                    onChange={(event) => setLineForm((current) => ({ ...current, unit_cost: event.target.value }))}
-                    className="mt-1 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  />
-                </label>
-              </div>
-
               <label className="block text-sm font-bold text-app-text">
-                Line Notes
+                Supplier
                 <input
-                  value={lineForm.notes}
-                  onChange={(event) => setLineForm((current) => ({ ...current, notes: event.target.value }))}
-                  className="mt-1 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  value={requestForm.supplier_name}
+                  onChange={(event) => setRequestForm((current) => ({ ...current, supplier_name: event.target.value }))}
+                  className="mt-1 w-full rounded-md border border-app-border bg-app-bg px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 />
               </label>
-
-              <button type="button" onClick={addLine} className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-app-border px-4 py-2 text-sm font-black text-app-text transition hover:bg-app-card sm:w-auto">
-                <Plus className="h-4 w-4" />
-                Add to Table
-              </button>
             </div>
-          </div>
 
-          <DataTable
-            rows={requestForm.lines}
-            columns={[
-              { key: 'product', header: 'Product', render: (line) => <><p className="font-black text-app-text">{line.product_name}</p><p className="text-xs font-bold uppercase text-brand-500">{line.product_sku}</p></> },
-              { key: 'qty', header: 'Qty', render: (line) => `${formatQty(line.requested_quantity)} ${line.product_unit || ''}` },
-              { key: 'cost', header: 'Unit Cost', render: (line) => `KES ${money(line.unit_cost)}` },
-              { key: 'total', header: 'Total', render: (line) => <span className="font-black text-app-text">KES {money(Number(line.requested_quantity || 0) * Number(line.unit_cost || 0))}</span> },
-              { key: 'actions', header: 'Actions', headerClassName: 'text-right', cellClassName: 'text-right', render: (line) => (
-                <button type="button" onClick={() => removeLine(line.product)} className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-red-500" title="Remove item">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              ) },
-            ]}
-            getRowKey={(line) => line.product}
-            title={`${requestForm.lines.length} request items`}
-            description={`Estimated total: KES ${money(requestTotal)}`}
-            emptyMessage="Add products to build the request for purchase."
-            minWidth="720px"
-          />
-
-          <button type="submit" disabled={saving || !requestForm.lines.length} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-brand-700 disabled:opacity-50 sm:w-auto">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Generate Request for Purchase
-          </button>
-        </form>
-
-        <div className="space-y-6">
-        <div className="rounded-lg border border-app-border bg-app-card p-4 sm:p-5">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
-              <Package className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-black text-app-text">Pricelist Store Items</h3>
-              <p className="text-sm text-app-muted">Only products from the selected purchase pricelist appear here.</p>
-            </div>
-          </div>
-          <DataTable
-            rows={selectedPricelistItems}
-            columns={[
-              { key: 'product', header: 'Product', render: (item) => <><p className="font-black text-app-text">{item.product_name}</p><p className="text-xs font-bold uppercase text-brand-500">{item.product_sku}</p></> },
-              { key: 'category', header: 'Category', render: (item) => item.product_category_name },
-              { key: 'stock', header: 'In Store', render: (item) => `${formatQty(item.product_quantity)} ${item.product_unit || item.unit}` },
-              { key: 'price', header: 'Purchase Price', render: (item) => <span className="font-black text-app-text">KES {money(item.price)} / {item.unit}</span> },
-              { key: 'status', header: 'Status', render: (item) => (
-                <span className={`rounded-md px-2 py-1 text-xs font-black uppercase ${item.product_is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                  {item.product_is_active ? 'Active' : 'Inactive'}
-                </span>
-              ) },
-              { key: 'actions', header: 'Action', headerClassName: 'text-right', cellClassName: 'text-right', render: (item) => {
-                const added = requestForm.lines.some((line) => String(line.product) === String(item.product));
-                return (
-                  <button
-                    type="button"
-                    onClick={() => addPricelistItemLine(item)}
-                    disabled={!item.product_is_active}
-                    className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-black uppercase tracking-widest transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                      added
-                        ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
-                        : 'border border-app-border text-app-text hover:bg-app-card'
-                    }`}
-                  >
-                    <Plus className="h-4 w-4" />
-                    {added ? 'Added' : 'Request'}
-                  </button>
-                );
-              } },
-            ]}
-            getRowKey={(item) => item.id || item.product}
-            title={selectedPurchasePricelist ? `${selectedPricelistItems.length} supplier products` : 'Choose a purchase pricelist'}
-            description={selectedPurchasePricelist ? `Products listed under ${selectedPurchasePricelist.supplier_name}.` : 'Select a purchase pricelist to show its available products.'}
-            emptyMessage={selectedPurchasePricelist ? 'This purchase pricelist has no products yet.' : 'Choose a purchase pricelist above.'}
-            minWidth="860px"
-          />
-        </div>
-
-        <div className="rounded-lg border border-app-border bg-app-card p-4 sm:p-5">
-          <h3 className="font-black text-app-text">Below Minimum</h3>
-          <p className="mt-1 text-sm text-app-muted">
-            {selectedPurchasePricelist
-              ? 'Low-stock products are limited to the selected purchase pricelist.'
-              : 'Choose a purchase pricelist to keep the request tied to one supplier.'}
-          </p>
-          <div className="mt-4 space-y-3">
-            {visibleLowStock.length ? visibleLowStock.map((product) => (
-              <div key={product.id} className="flex flex-col gap-3 rounded-lg border border-app-border bg-app-bg p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-black text-app-text">{product.name}</p>
-                  <p className="text-xs font-bold uppercase tracking-widest text-app-muted">{product.sku} · {product.unit}</p>
-                  <p className="mt-1 text-sm text-app-muted">Current {formatQty(product.quantity)} · Minimum {formatQty(product.inventory_threshold?.minimum_quantity)}</p>
+            {selectedPurchasePricelist ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-app-border bg-app-bg p-3">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-app-muted">Supplier Items</p>
+                  <p className="mt-1 text-2xl font-black text-app-text">{selectedPricelistItems.length}</p>
                 </div>
-                <button type="button" onClick={() => addLowStockLine(product)} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase tracking-widest text-app-text transition hover:bg-app-card">
-                  <Plus className="h-4 w-4" />
-                  Add
-                </button>
+                <div className="rounded-lg border border-app-border bg-app-bg p-3">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-app-muted">Below Minimum</p>
+                  <p className="mt-1 text-2xl font-black text-app-text">{visibleLowStock.length}</p>
+                </div>
+                <div className="rounded-lg border border-app-border bg-app-bg p-3">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-app-muted">Code</p>
+                  <p className="mt-1 truncate text-sm font-black text-app-text">{selectedPurchasePricelist.code}</p>
+                </div>
               </div>
-            )) : (
-              <div className="rounded-lg border border-dashed border-app-border p-5 text-center text-sm font-bold text-app-muted">No selected-pricelist items are currently below minimum stock.</div>
+            ) : null}
+          </div>
+
+          <div className="rounded-lg border border-app-border bg-app-card">
+            <div className="flex flex-col gap-4 border-b border-app-border bg-app-elevated p-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500/10 text-brand-500">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-app-text">Supplier Catalog</h3>
+                  <p className="text-sm text-app-muted">Only products in the selected purchase pricelist are available.</p>
+                </div>
+              </div>
+              <label className="relative w-full lg:w-80">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted" />
+                <input
+                  value={catalogSearch}
+                  onChange={(event) => setCatalogSearch(event.target.value)}
+                  placeholder="Search supplier catalog"
+                  className="w-full rounded-md border border-app-border bg-app-card py-2 pl-9 pr-3 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </label>
+            </div>
+
+            {!selectedPurchasePricelist ? (
+              <div className="p-10 text-center">
+                <ShoppingCart className="mx-auto h-9 w-9 text-app-muted" />
+                <p className="mt-4 font-black text-app-text">Choose a purchase pricelist first</p>
+                <p className="mt-2 text-sm text-app-muted">The supplier catalog will appear here once a pricelist is selected.</p>
+              </div>
+            ) : filteredCatalogItems.length ? (
+              <div className="divide-y divide-app-border">
+                {filteredCatalogItems.map((item) => {
+                  const added = requestForm.lines.some((line) => String(line.product) === String(item.product));
+                  const low = visibleLowStock.some((product) => String(product.id) === String(item.product));
+                  return (
+                    <div key={item.id || item.product} className="grid gap-4 p-4 lg:grid-cols-[1fr_160px_170px_auto] lg:items-center">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-black text-app-text">{item.product_name}</p>
+                          {low ? <span className="rounded-md bg-red-500/10 px-2 py-1 text-[11px] font-black uppercase text-red-600">Low stock</span> : null}
+                          <span className={`rounded-md px-2 py-1 text-[11px] font-black uppercase ${item.product_is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                            {item.product_is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-brand-500">{item.product_sku}</p>
+                        <p className="mt-1 text-sm text-app-muted">{item.product_category_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-app-muted">In Store</p>
+                        <p className="mt-1 font-black text-app-text">{formatQty(item.product_quantity)} {item.product_unit || item.unit}</p>
+                        {item.minimum_quantity ? <p className="text-xs text-app-muted">Min {formatQty(item.minimum_quantity)}</p> : null}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-app-muted">Purchase Price</p>
+                        <p className="mt-1 font-black text-app-text">KES {money(item.price)}</p>
+                        <p className="text-xs text-app-muted">per {item.unit}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addPricelistItemLine(item)}
+                        disabled={!item.product_is_active}
+                        className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                          added
+                            ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
+                            : 'bg-brand-600 text-white hover:bg-brand-700'
+                        }`}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {added ? 'Added' : 'Request'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-10 text-center text-sm font-bold text-app-muted">No supplier products match your search.</div>
             )}
           </div>
         </div>
-        </div>
+
+        <form onSubmit={createPurchaseRequest} className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+          <div className="rounded-lg border border-app-border bg-app-card">
+            <div className="border-b border-app-border bg-app-elevated p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-black text-app-text">Request Cart</h3>
+                  <p className="text-sm text-app-muted">{requestForm.lines.length} item{requestForm.lines.length === 1 ? '' : 's'} selected</p>
+                </div>
+                {visibleLowStock.length ? (
+                  <button type="button" onClick={addAllLowStock} className="rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase tracking-widest text-app-text transition hover:bg-app-card">
+                    Add Low Stock
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="max-h-[48rem] overflow-y-auto p-4">
+              {requestForm.lines.length ? (
+                <div className="space-y-3">
+                  {requestForm.lines.map((line) => (
+                    <div key={line.product} className="rounded-lg border border-app-border bg-app-bg p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-black text-app-text">{line.product_name}</p>
+                          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-brand-500">{line.product_sku}</p>
+                        </div>
+                        <button type="button" onClick={() => removeLine(line.product)} className="rounded-md border border-app-border p-2 text-app-muted transition hover:bg-app-card hover:text-red-500" title="Remove item">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                        <label className="block text-xs font-black uppercase tracking-[0.12em] text-app-muted">
+                          Quantity
+                          <input
+                            type="number"
+                            min="0.001"
+                            step="0.001"
+                            value={line.requested_quantity}
+                            onChange={(event) => updateLine(line.product, 'requested_quantity', event.target.value)}
+                            className="mt-1 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm font-bold text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                          />
+                        </label>
+                        <label className="block text-xs font-black uppercase tracking-[0.12em] text-app-muted">
+                          Unit Cost
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={line.unit_cost}
+                            onChange={(event) => updateLine(line.product, 'unit_cost', event.target.value)}
+                            className="mt-1 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm font-bold text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                          />
+                        </label>
+                      </div>
+                      <label className="mt-3 block text-xs font-black uppercase tracking-[0.12em] text-app-muted">
+                        Notes
+                        <input
+                          value={line.notes || ''}
+                          onChange={(event) => updateLine(line.product, 'notes', event.target.value)}
+                          className="mt-1 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm font-bold text-app-text outline-none focus:ring-2 focus:ring-brand-500"
+                        />
+                      </label>
+                      <div className="mt-3 flex items-center justify-between rounded-md bg-app-card px-3 py-2 text-sm">
+                        <span className="font-bold text-app-muted">Line total</span>
+                        <span className="font-black text-app-text">KES {money(Number(line.requested_quantity || 0) * Number(line.unit_cost || 0))}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-app-border p-8 text-center">
+                  <ShoppingCart className="mx-auto h-8 w-8 text-app-muted" />
+                  <p className="mt-3 font-black text-app-text">No products requested yet</p>
+                  <p className="mt-2 text-sm text-app-muted">Add items from the supplier catalog to build this request.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-app-border bg-app-elevated p-4">
+              <label className="block text-sm font-bold text-app-text">
+                Request Notes
+                <textarea
+                  rows={3}
+                  value={requestForm.notes}
+                  onChange={(event) => setRequestForm((current) => ({ ...current, notes: event.target.value }))}
+                  className="mt-1 w-full rounded-md border border-app-border bg-app-card px-3 py-2 text-sm text-app-text focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </label>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-sm font-black uppercase tracking-[0.14em] text-app-muted">Estimated Total</span>
+                <span className="text-2xl font-black text-app-text">KES {money(requestTotal)}</span>
+              </div>
+              <button type="submit" disabled={saving || !requestForm.lines.length || !selectedPurchasePricelist} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-black text-white transition hover:bg-brand-700 disabled:opacity-50">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Generate Request for Purchase
+              </button>
+            </div>
+          </div>
+        </form>
       </section>
 
       <section className="rounded-lg border border-app-border bg-app-card p-4 sm:p-5">
