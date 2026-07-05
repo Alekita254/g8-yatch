@@ -36,7 +36,9 @@ import DashboardOverview from './pages/DashboardOverview';
 import DiscountRulesPage from './pages/DiscountRulesPage';
 import DownloadsSetupPage from './pages/DownloadsSetupPage';
 import InventoryPage from './pages/InventoryPage';
+import InventoryDocumentDetailPage from './pages/InventoryDocumentDetailPage';
 import MembersTablePage from './pages/MembersTablePage';
+import NewRequestForPurchasePage from './pages/NewRequestForPurchasePage';
 import OrganisationSetupPage from './pages/OrganisationSetupPage';
 import OrganizationsPage from './pages/OrganizationsPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
@@ -525,6 +527,8 @@ export default function App() {
           <Route path="sales-pricelists" element={<SalesPricelistsPage basePath="/inventory/sales-pricelists" />} />
           <Route path="sales-pricelists/:pricelistId" element={<SalesPricelistDetailPage basePath="/inventory/sales-pricelists" />} />
           <Route path="request-for-purchase" element={<RequestForPurchasePage />} />
+          <Route path="request-for-purchase/new" element={<NewRequestForPurchasePage />} />
+          <Route path="request-for-purchase/:documentId" element={<InventoryDocumentDetailPage />} />
         </Route>
         <Route element={<DashboardShell />}>
           <Route path="/dashboard" element={<RequireAppAccess appKey="admin"><DashboardOverview /></RequireAppAccess>} />

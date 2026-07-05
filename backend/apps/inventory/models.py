@@ -38,6 +38,13 @@ class InventoryDocument(models.Model):
     document_type = models.CharField(max_length=30, choices=DocumentType.choices)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     supplier_name = models.CharField(max_length=160, blank=True)
+    purchase_pricelist = models.ForeignKey(
+        "products.PurchasePricelist",
+        related_name="inventory_documents",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
     source_document = models.ForeignKey(
         "self",
         related_name="generated_documents",

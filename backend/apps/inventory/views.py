@@ -34,7 +34,7 @@ def generate_inventory_document_pdf(document):
     from reportlab.pdfgen import canvas
 
     document = (
-        InventoryDocument.objects.select_related("source_document", "created_by")
+        InventoryDocument.objects.select_related("source_document", "created_by", "purchase_pricelist")
         .prefetch_related("lines", "lines__product", "lines__product__category")
         .get(pk=document.pk)
     )
@@ -195,7 +195,7 @@ class InventoryDocumentListCreateView(APIView):
     permission_classes = [IsPosManager]
 
     def get_queryset(self):
-        return InventoryDocument.objects.select_related("source_document").prefetch_related(
+        return InventoryDocument.objects.select_related("source_document", "purchase_pricelist").prefetch_related(
             "lines",
             "lines__product",
             "lines__product__category",
@@ -223,7 +223,7 @@ class InventoryDocumentDetailView(APIView):
     permission_classes = [IsPosManager]
 
     def get_queryset(self):
-        return InventoryDocument.objects.select_related("source_document").prefetch_related(
+        return InventoryDocument.objects.select_related("source_document", "purchase_pricelist").prefetch_related(
             "lines",
             "lines__product",
             "lines__product__category",
@@ -247,10 +247,16 @@ class InventoryDocumentPdfView(APIView):
     permission_classes = [IsPosManager]
 
     def get(self, request, pk):
-        document = get_object_or_404(
-            InventoryDocument.objects.prefetch_related("lines", "lines__product"),
-            pk=pk,
+        document = (
+            InventoryDocument.objects.prefetch_related("lines", "lines__product")
+            .filter(pk=pk)
+            .first()
         )
+        if not document:
+            return Response(
+                {"detail": f"Inventory document {pk} was not found. Refresh the page and try the latest document."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         if document.document_type not in [
             InventoryDocument.DocumentType.PURCHASE_REQUEST,
             InventoryDocument.DocumentType.REQUISITION,
@@ -305,6 +311,7 @@ class InventoryDocumentRequisitionView(APIView):
             document_type=InventoryDocument.DocumentType.REQUISITION,
             status=InventoryDocument.Status.APPROVED,
             supplier_name=source.supplier_name,
+            purchase_pricelist=source.purchase_pricelist,
             source_document=source,
             notes=source.notes,
             created_by=getattr(request.user, "identity", None),
@@ -326,6 +333,7 @@ class InventoryDocumentDeliveryNoteView(APIView):
             document_type=InventoryDocument.DocumentType.GOODS_DELIVERY_NOTE,
             status=InventoryDocument.Status.SUBMITTED,
             supplier_name=source.supplier_name,
+            purchase_pricelist=source.purchase_pricelist,
             source_document=source,
             notes=source.notes,
             created_by=getattr(request.user, "identity", None),
@@ -352,6 +360,7 @@ class InventoryDocumentReceiveView(APIView):
             document_type=InventoryDocument.DocumentType.GOODS_RECEIVED_NOTE,
             status=InventoryDocument.Status.RECEIVED,
             supplier_name=source.supplier_name,
+            purchase_pricelist=source.purchase_pricelist,
             source_document=source,
             notes=request.data.get("notes", source.notes),
             created_by=getattr(request.user, "identity", None),

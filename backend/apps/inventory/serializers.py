@@ -69,6 +69,8 @@ class InventoryDocumentSerializer(serializers.ModelSerializer):
     lines = InventoryDocumentLineSerializer(many=True)
     document_type_display = serializers.CharField(source="get_document_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    purchase_pricelist_supplier = serializers.CharField(source="purchase_pricelist.supplier_name", read_only=True)
+    purchase_pricelist_code = serializers.CharField(source="purchase_pricelist.code", read_only=True)
     source_document_number = serializers.CharField(source="source_document.document_number", read_only=True)
 
     class Meta:
@@ -81,6 +83,9 @@ class InventoryDocumentSerializer(serializers.ModelSerializer):
             "status",
             "status_display",
             "supplier_name",
+            "purchase_pricelist",
+            "purchase_pricelist_supplier",
+            "purchase_pricelist_code",
             "source_document",
             "source_document_number",
             "notes",

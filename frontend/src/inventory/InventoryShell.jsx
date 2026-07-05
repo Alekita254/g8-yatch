@@ -51,6 +51,10 @@ export default function InventoryShell() {
     ? 'Sales Pricelist Details'
     : location.pathname.startsWith('/inventory/purchase-pricelists/')
       ? 'Purchase Pricelist Details'
+      : location.pathname === '/inventory/request-for-purchase/new'
+        ? 'New Request for Purchase'
+        : location.pathname.startsWith('/inventory/request-for-purchase/')
+          ? 'RFP Document'
       : routeLabels[location.pathname] || 'Inventory';
 
   if (profile.auth.isLoading || profile.loading) {
