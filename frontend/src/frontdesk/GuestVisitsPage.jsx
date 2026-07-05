@@ -112,8 +112,6 @@ export default function GuestVisitsPage() {
   useEffect(() => {
     if (auth.isLoading || !auth.isAuthenticated) return;
     load();
-    const interval = window.setInterval(load, 5000);
-    return () => window.clearInterval(interval);
   }, [auth.isLoading, auth.isAuthenticated, load]);
 
   const openCheckout = (visit) => {

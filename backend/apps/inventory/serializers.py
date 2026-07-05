@@ -48,6 +48,8 @@ class InventoryDocumentLineSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_unit = serializers.CharField(source="product.unit", read_only=True)
     current_quantity = serializers.DecimalField(source="product.quantity", max_digits=14, decimal_places=3, read_only=True)
+    purchase_pricelist_supplier = serializers.CharField(source="purchase_pricelist.supplier_name", read_only=True)
+    purchase_pricelist_code = serializers.CharField(source="purchase_pricelist.code", read_only=True)
 
     class Meta:
         model = InventoryDocumentLine
@@ -58,6 +60,9 @@ class InventoryDocumentLineSerializer(serializers.ModelSerializer):
             "product_sku",
             "product_unit",
             "current_quantity",
+            "purchase_pricelist",
+            "purchase_pricelist_supplier",
+            "purchase_pricelist_code",
             "requested_quantity",
             "received_quantity",
             "unit_cost",

@@ -30,12 +30,27 @@ export default function useStats(isAuthenticated) {
         paymentMethods: '/api/payments/methods/',
         bankAccounts: '/api/payments/bank-accounts/',
         paymentRoutingRules: '/api/payments/routing-rules/',
+        inventoryLowStock: { url: '/api/inventory/low-stock/', params: { page_size: 4 } },
+        inventoryDraftRequests: {
+          url: '/api/inventory/documents/',
+          params: { document_type: 'PURCHASE_REQUEST', status: 'DRAFT', page_size: 4 },
+        },
+        inventorySubmittedRequests: {
+          url: '/api/inventory/documents/',
+          params: { document_type: 'PURCHASE_REQUEST', status: 'SUBMITTED', page_size: 4 },
+        },
+        inventoryRequisitions: {
+          url: '/api/inventory/documents/',
+          params: { document_type: 'REQUISITION', page_size: 4 },
+        },
       };
 
       const entries = await Promise.all(
-        Object.entries(endpoints).map(async ([key, url]) => {
+        Object.entries(endpoints).map(async ([key, endpoint]) => {
           try {
-            const response = await api.get(url);
+            const url = typeof endpoint === 'string' ? endpoint : endpoint.url;
+            const params = typeof endpoint === 'string' ? undefined : endpoint.params;
+            const response = await api.get(url, { params });
             return [key, {
               total: response.data.total ?? response.data.results?.length ?? 0,
               results: response.data.results ?? [],

@@ -37,6 +37,7 @@ import DiscountRulesPage from './pages/DiscountRulesPage';
 import DownloadsSetupPage from './pages/DownloadsSetupPage';
 import InventoryPage from './pages/InventoryPage';
 import InventoryDocumentDetailPage from './pages/InventoryDocumentDetailPage';
+import InventoryDocumentListPage from './pages/InventoryDocumentListPage';
 import MembersTablePage from './pages/MembersTablePage';
 import NewRequestForPurchasePage from './pages/NewRequestForPurchasePage';
 import OrganisationSetupPage from './pages/OrganisationSetupPage';
@@ -528,6 +529,8 @@ export default function App() {
           <Route path="sales-pricelists/:pricelistId" element={<SalesPricelistDetailPage basePath="/inventory/sales-pricelists" />} />
           <Route path="request-for-purchase" element={<RequestForPurchasePage />} />
           <Route path="request-for-purchase/new" element={<NewRequestForPurchasePage />} />
+          <Route path="request-for-purchase/requests" element={<InventoryDocumentListPage type="requests" />} />
+          <Route path="request-for-purchase/requisitions" element={<InventoryDocumentListPage type="requisitions" />} />
           <Route path="request-for-purchase/:documentId" element={<InventoryDocumentDetailPage />} />
         </Route>
         <Route element={<DashboardShell />}>

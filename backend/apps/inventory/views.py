@@ -35,7 +35,7 @@ def generate_inventory_document_pdf(document):
 
     document = (
         InventoryDocument.objects.select_related("source_document", "created_by", "purchase_pricelist")
-        .prefetch_related("lines", "lines__product", "lines__product__category")
+        .prefetch_related("lines", "lines__product", "lines__product__category", "lines__purchase_pricelist")
         .get(pk=document.pk)
     )
     lines = list(document.lines.select_related("product", "product__category"))
@@ -108,7 +108,11 @@ def generate_inventory_document_pdf(document):
         c.setFont("Helvetica-Bold", 9)
         c.drawString(margin, y, line.product.name[:45])
         c.setFont("Helvetica", 8)
-        c.drawString(margin, y - 4 * mm, f"{line.product.sku} · {line.product.unit}")
+        price_source = line.purchase_pricelist.code if line.purchase_pricelist else ""
+        detail = f"{line.product.sku} · {line.product.unit}"
+        if price_source:
+            detail = f"{detail} · {price_source}"
+        c.drawString(margin, y - 4 * mm, detail[:65])
         c.drawRightString(116 * mm, y, f"{line.requested_quantity:g}")
         c.drawRightString(145 * mm, y, f"{line.unit_cost:,.2f}")
         c.drawRightString(right, y, f"{amount:,.2f}")
@@ -199,6 +203,7 @@ class InventoryDocumentListCreateView(APIView):
             "lines",
             "lines__product",
             "lines__product__category",
+            "lines__purchase_pricelist",
         )
 
     def get(self, request):
@@ -227,6 +232,7 @@ class InventoryDocumentDetailView(APIView):
             "lines",
             "lines__product",
             "lines__product__category",
+            "lines__purchase_pricelist",
         )
 
     def get(self, request, pk):
@@ -273,10 +279,11 @@ class InventoryDocumentPdfView(APIView):
 
 
 def copy_lines(source, target, received=False):
-    for line in source.lines.select_related("product").all():
+    for line in source.lines.select_related("product", "purchase_pricelist").all():
         InventoryDocumentLine.objects.create(
             document=target,
             product=line.product,
+            purchase_pricelist=line.purchase_pricelist,
             requested_quantity=line.requested_quantity,
             received_quantity=line.requested_quantity if received else Decimal("0"),
             unit_cost=line.unit_cost,

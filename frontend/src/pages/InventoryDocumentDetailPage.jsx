@@ -189,6 +189,7 @@ export default function InventoryDocumentDetailPage() {
               <>
                 <p className="font-black text-app-text">{line.product_name}</p>
                 <p className="mt-1 text-xs font-bold uppercase text-brand-500">{line.product_sku}</p>
+                <p className="mt-1 text-xs text-app-muted">{line.purchase_pricelist_supplier || 'No supplier'} · {line.purchase_pricelist_code || 'No pricelist'}</p>
               </>
             ),
           },

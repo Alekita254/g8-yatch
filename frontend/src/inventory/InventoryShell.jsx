@@ -14,7 +14,6 @@ import {
   Package,
   Tags,
   Truck,
-  Warehouse,
   X,
 } from 'lucide-react';
 
@@ -23,12 +22,13 @@ import useDesktopViewport from '../hooks/useDesktopViewport';
 import useProfile from '../hooks/useProfile';
 
 const navItems = [
-  { name: 'Inventory', path: '/inventory', icon: Warehouse },
+  { name: 'Dashboard', path: '/inventory/request-for-purchase', icon: FilePlus2, exact: true },
   { name: 'Products', path: '/inventory/products', icon: Package },
   { name: 'Categories', path: '/inventory/categories', icon: ListTree },
   { name: 'Purchase Prices', path: '/inventory/purchase-pricelists', icon: Truck },
   { name: 'Sales Prices', path: '/inventory/sales-pricelists', icon: Tags },
-  { name: 'Request Purchase', path: '/inventory/request-for-purchase', icon: FilePlus2 },
+  { name: 'Requests', path: '/inventory/request-for-purchase/requests', icon: FilePlus2 },
+  { name: 'Requisitions', path: '/inventory/request-for-purchase/requisitions', icon: ClipboardCheck },
 ];
 
 const routeLabels = {
@@ -38,7 +38,19 @@ const routeLabels = {
   '/inventory/purchase-pricelists': 'Purchase Pricelists',
   '/inventory/sales-pricelists': 'Sales Pricelists',
   '/inventory/request-for-purchase': 'Request for Purchase',
+  '/inventory/request-for-purchase/requests': 'Requests for Purchase',
+  '/inventory/request-for-purchase/requisitions': 'Requisitions',
 };
+
+function titleFor(pathname) {
+  if (pathname === '/inventory/request-for-purchase/requests') return 'Requests for Purchase';
+  if (pathname === '/inventory/request-for-purchase/requisitions') return 'Requisitions';
+  if (pathname.startsWith('/inventory/sales-pricelists/')) return 'Sales Pricelist Details';
+  if (pathname.startsWith('/inventory/purchase-pricelists/')) return 'Purchase Pricelist Details';
+  if (pathname === '/inventory/request-for-purchase/new') return 'New Request for Purchase';
+  if (pathname.startsWith('/inventory/request-for-purchase/')) return 'RFP Document';
+  return routeLabels[pathname] || 'Inventory';
+}
 
 export default function InventoryShell() {
   const profile = useProfile();
@@ -47,15 +59,7 @@ export default function InventoryShell() {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const isDesktop = useDesktopViewport();
   const navigationHidden = !isDesktop && !navigationOpen;
-  const routeLabel = location.pathname.startsWith('/inventory/sales-pricelists/')
-    ? 'Sales Pricelist Details'
-    : location.pathname.startsWith('/inventory/purchase-pricelists/')
-      ? 'Purchase Pricelist Details'
-      : location.pathname === '/inventory/request-for-purchase/new'
-        ? 'New Request for Purchase'
-        : location.pathname.startsWith('/inventory/request-for-purchase/')
-          ? 'RFP Document'
-      : routeLabels[location.pathname] || 'Inventory';
+  const routeLabel = titleFor(location.pathname);
 
   if (profile.auth.isLoading || profile.loading) {
     return <div className="flex min-h-screen items-center justify-center bg-app-bg"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
@@ -84,7 +88,9 @@ export default function InventoryShell() {
 
         <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-6 sm:py-8">
           {navItems.map((item) => {
-            const active = location.pathname === item.path || (item.path !== '/inventory' && location.pathname.startsWith(`${item.path}/`));
+            const active = item.exact
+              ? location.pathname === item.path
+              : location.pathname === item.path || (item.path !== '/inventory' && location.pathname.startsWith(`${item.path}/`));
             return (
               <Link
                 key={item.path}

@@ -5,15 +5,17 @@ import {
   Building2,
   CheckCircle2,
   ChevronRight,
+  ClipboardCheck,
   CreditCard,
   Download,
+  FilePlus2,
   GitBranch,
   Landmark,
   Loader2,
   Package,
+  PackageX,
   Percent,
   Route,
-  ShieldCheck,
   Tags,
   Users,
   WalletCards,
@@ -27,6 +29,10 @@ function total(stats, key) {
 
 function activeCount(stats, key) {
   return stats?.[key]?.results?.filter((item) => item.is_active !== false).length ?? 0;
+}
+
+function statResults(stats, key) {
+  return stats?.[key]?.results ?? [];
 }
 
 function setupScore(checks) {
@@ -56,6 +62,7 @@ export default function DashboardOverview() {
     { label: 'Service points registered', done: total(stats, 'servicePoints') > 0, path: '/users/service-points' },
     { label: 'Products and categories ready', done: total(stats, 'products') > 0 && total(stats, 'categories') > 0, path: '/products/items' },
     { label: 'Rooms created', done: total(stats, 'rooms') > 0, path: '/rooms/inventory' },
+    { label: 'RFP workflow ready', done: total(stats, 'purchasePricelists') > 0, path: '/inventory/request-for-purchase' },
     { label: 'Tax engine configured', done: total(stats, 'taxConfigurations') > 0 && total(stats, 'taxCategories') > 0, path: '/taxes-discounts/configurations' },
     { label: 'Payment routing mapped', done: total(stats, 'paymentMethods') > 0 && total(stats, 'paymentRoutingRules') > 0, path: '/payments/routing-rules' },
     { label: 'Branches created', done: total(stats, 'organizations') > 0 && total(stats, 'branches') > 0, path: '/organisation/branches' },
@@ -64,8 +71,17 @@ export default function DashboardOverview() {
   const readiness = setupScore(checks);
   const activeUsers = activeCount(stats, 'users');
   const activeProducts = activeCount(stats, 'products');
-  const activeTaxRules = activeCount(stats, 'taxConfigurations');
   const activePaymentMethods = activeCount(stats, 'paymentMethods');
+  const lowStockCount = total(stats, 'inventoryLowStock');
+  const pendingRfpCount = total(stats, 'inventoryDraftRequests') + total(stats, 'inventorySubmittedRequests');
+  const requisitionCount = total(stats, 'inventoryRequisitions');
+  const latestRfpDocuments = [
+    ...statResults(stats, 'inventorySubmittedRequests'),
+    ...statResults(stats, 'inventoryDraftRequests'),
+    ...statResults(stats, 'inventoryRequisitions'),
+  ]
+    .sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0))
+    .slice(0, 4);
 
   const moduleCards = [
     {
@@ -81,6 +97,13 @@ export default function DashboardOverview() {
       path: '/products/items',
       detail: `${total(stats, 'products')} products, ${total(stats, 'salesPricelists')} sales pricelists`,
       status: total(stats, 'products') > 0 ? 'Catalog ready' : 'Needs products',
+    },
+    {
+      title: 'Inventory RFP',
+      icon: FilePlus2,
+      path: '/inventory/request-for-purchase',
+      detail: `${pendingRfpCount} pending RFPs, ${requisitionCount} requisitions`,
+      status: lowStockCount > 0 ? `${lowStockCount} items need stock` : 'Stock stable',
     },
     {
       title: 'Rooms',
@@ -121,6 +144,7 @@ export default function DashboardOverview() {
 
   const quickLinks = [
     { label: 'Add Product', path: '/products/items', icon: Package },
+    { label: 'RFP Dashboard', path: '/inventory/request-for-purchase', icon: FilePlus2 },
     { label: 'Add Rooms', path: '/rooms/inventory', icon: BedDouble },
     { label: 'Tax Rules', path: '/taxes-discounts/configurations', icon: BadgePercent },
     { label: 'Downloads', path: '/downloads', icon: Download },
@@ -167,9 +191,73 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Users} label="Active Users" value={activeUsers} color="emerald" />
         <StatCard icon={Package} label="Active Products" value={activeProducts} color="blue" />
-        <StatCard icon={ShieldCheck} label="Active Tax Rules" value={activeTaxRules} color="amber" />
+        <StatCard icon={PackageX} label="Low Stock Items" value={lowStockCount} color="amber" />
         <StatCard icon={CreditCard} label="Payment Methods" value={activePaymentMethods} color="purple" />
       </div>
+
+      <section className="rounded-lg border border-app-border bg-app-card p-4 sm:p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-500">Inventory purchasing</p>
+            <h3 className="mt-2 text-xl font-black text-app-text">Request for Purchase Dashboard</h3>
+            <p className="mt-1 max-w-2xl text-sm text-app-muted">
+              The same buying signals from the RFP workspace are shown here for quick action from the main dashboard.
+            </p>
+          </div>
+          <Link to="/inventory/request-for-purchase" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-black text-white transition hover:bg-brand-700">
+            <FilePlus2 className="h-4 w-4" />
+            Open RFP
+          </Link>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          {[
+            ['Below / At Minimum', lowStockCount, 'Products that need attention', PackageX],
+            ['Pending RFPs', pendingRfpCount, 'Draft and submitted requests', FilePlus2],
+            ['Requisitions', requisitionCount, 'Documents generated after approval', ClipboardCheck],
+          ].map(([label, value, description, Icon]) => (
+            <Link key={label} to="/inventory/request-for-purchase" className="rounded-lg border border-app-border bg-app-bg p-4 transition hover:border-brand-500 hover:bg-app-elevated">
+              <Icon className="h-5 w-5 text-brand-500" />
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-app-muted">{label}</p>
+              <p className="mt-2 text-3xl font-black text-app-text">{value}</p>
+              <p className="mt-1 text-sm text-app-muted">{description}</p>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-5">
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <h4 className="font-black text-app-text">Latest RFP Documents</h4>
+            <Link to="/inventory/request-for-purchase/requests" className="text-xs font-black uppercase tracking-[0.12em] text-brand-500 transition hover:text-brand-700">
+              View all
+            </Link>
+          </div>
+          {latestRfpDocuments.length ? (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {latestRfpDocuments.map((document) => (
+                <Link key={`${document.document_type}-${document.id}`} to={`/inventory/request-for-purchase/${document.id}`} className="flex flex-col gap-3 rounded-lg border border-app-border bg-app-bg p-4 transition hover:border-brand-500 hover:bg-app-elevated sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate font-black text-app-text">{document.document_number}</p>
+                    <p className="mt-1 truncate text-sm text-app-muted">{document.supplier_name || document.purchase_pricelist_supplier || 'No supplier selected'}</p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:justify-end">
+                    <span className="rounded-full border border-app-border bg-app-card px-2 py-1 text-[10px] font-black uppercase tracking-widest text-app-muted">
+                      {document.document_type_display || document.document_type}
+                    </span>
+                    <span className="rounded-full border border-brand-500/25 bg-brand-500/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-brand-600">
+                      {document.status_display || document.status}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-app-border p-6 text-center text-sm font-bold text-app-muted">
+              No RFP or requisition documents yet.
+            </div>
+          )}
+        </div>
+      </section>
 
       <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="space-y-4">

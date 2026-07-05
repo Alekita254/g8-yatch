@@ -88,6 +88,13 @@ class InventoryDocument(models.Model):
 class InventoryDocumentLine(models.Model):
     document = models.ForeignKey(InventoryDocument, related_name="lines", on_delete=models.CASCADE)
     product = models.ForeignKey("products.Product", related_name="inventory_document_lines", on_delete=models.PROTECT)
+    purchase_pricelist = models.ForeignKey(
+        "products.PurchasePricelist",
+        related_name="inventory_document_lines",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
     requested_quantity = models.DecimalField(max_digits=14, decimal_places=3)
     received_quantity = models.DecimalField(max_digits=14, decimal_places=3, default=0)
     unit_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)

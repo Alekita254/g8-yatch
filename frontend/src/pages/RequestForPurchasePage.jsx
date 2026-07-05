@@ -2,10 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
-  CheckCircle2,
   ClipboardCheck,
-  Download,
-  Eye,
   FilePlus2,
   Loader2,
   PackageX,
@@ -13,7 +10,6 @@ import {
 } from 'lucide-react';
 
 import api from '../api';
-import DataTable from '../components/DataTable';
 
 const statusStyles = {
   DRAFT: 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200',
@@ -37,24 +33,10 @@ function documentTotal(document) {
   ), 0);
 }
 
-function errorDetail(error, fallback) {
-  const data = error.response?.data;
-  if (data instanceof ArrayBuffer) {
-    try {
-      const text = new TextDecoder().decode(data);
-      return JSON.parse(text).detail || fallback;
-    } catch {
-      return fallback;
-    }
-  }
-  return data?.detail || fallback;
-}
-
 export default function RequestForPurchasePage() {
   const [lowStock, setLowStock] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [workingDocument, setWorkingDocument] = useState('');
 
   const pendingRequests = useMemo(() => (
     documents.filter((document) => document.document_type === 'PURCHASE_REQUEST' && document.status !== 'APPROVED')
@@ -86,39 +68,6 @@ export default function RequestForPurchasePage() {
   useEffect(() => {
     fetchData();
   }, []);
-
-  const runDocumentAction = async (document, action, successMessage) => {
-    try {
-      setWorkingDocument(`${action}-${document.id}`);
-      await api.post(`/api/inventory/documents/${document.id}/${action}/`);
-      await fetchData();
-      toast.success(successMessage);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to update document');
-    } finally {
-      setWorkingDocument('');
-    }
-  };
-
-  const downloadDocument = async (inventoryDocument) => {
-    try {
-      setWorkingDocument(`pdf-${inventoryDocument.id}`);
-      const response = await api.get(`/api/inventory/documents/${inventoryDocument.id}/pdf/`, { responseType: 'arraybuffer' });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${inventoryDocument.document_number}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      toast.error(errorDetail(err, 'Could not download PDF. Refresh the page and try again.'));
-    } finally {
-      setWorkingDocument('');
-    }
-  };
 
   if (loading) {
     return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-brand-500" /></div>;
@@ -191,68 +140,18 @@ export default function RequestForPurchasePage() {
         )}
       </section>
 
-      <DataTable
-        rows={documents}
-        columns={[
-          {
-            key: 'document',
-            header: 'Document',
-            render: (document) => (
-              <>
-                <p className="font-black text-app-text">{document.document_number}</p>
-                <p className="mt-1 text-xs font-bold uppercase text-brand-500">{document.document_type_display}</p>
-              </>
-            ),
-          },
-          { key: 'supplier', header: 'Supplier', render: (document) => document.supplier_name || document.purchase_pricelist_supplier || '-' },
-          {
-            key: 'status',
-            header: 'Status',
-            render: (document) => (
-              <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ${statusStyles[document.status] || statusStyles.DRAFT}`}>
-                {document.status_display || document.status}
-              </span>
-            ),
-          },
-          { key: 'items', header: 'Items', render: (document) => `${document.lines?.length || 0} items` },
-          { key: 'total', header: 'Total', render: (document) => <span className="font-black text-app-text">KES {money(documentTotal(document))}</span> },
-          {
-            key: 'actions',
-            header: 'Actions',
-            headerClassName: 'text-right',
-            cellClassName: 'text-right',
-            render: (document) => (
-              <div className="flex flex-wrap justify-end gap-2">
-                <Link to={`/inventory/request-for-purchase/${document.id}`} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase tracking-widest text-app-text transition hover:bg-app-card">
-                  <Eye className="h-4 w-4" />
-                  View
-                </Link>
-                <button type="button" onClick={() => downloadDocument(document)} disabled={Boolean(workingDocument)} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase tracking-widest text-app-text transition hover:bg-app-card disabled:opacity-50">
-                  {workingDocument === `pdf-${document.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  PDF
-                </button>
-                {document.document_type === 'PURCHASE_REQUEST' && document.status !== 'APPROVED' ? (
-                  <button type="button" onClick={() => runDocumentAction(document, 'approve', 'Purchase request approved')} disabled={Boolean(workingDocument)} className="inline-flex items-center justify-center gap-2 rounded-md border border-app-border px-3 py-2 text-xs font-black uppercase tracking-widest text-app-text transition hover:bg-app-card disabled:opacity-50">
-                    {workingDocument === `approve-${document.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    Approve
-                  </button>
-                ) : null}
-                {document.document_type === 'PURCHASE_REQUEST' && document.status === 'APPROVED' ? (
-                  <button type="button" onClick={() => runDocumentAction(document, 'requisition', 'Requisition generated')} disabled={Boolean(workingDocument)} className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-600 px-3 py-2 text-xs font-black uppercase tracking-widest text-white transition hover:bg-brand-700 disabled:opacity-50">
-                    {workingDocument === `requisition-${document.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
-                    Requisition
-                  </button>
-                ) : null}
-              </div>
-            ),
-          },
-        ]}
-        getRowKey={(document) => document.id}
-        title={`${documents.length} exact documents`}
-        description="Each RFP and requisition is handled as its own independent document."
-        emptyMessage="No RFP or requisition documents have been generated yet."
-        minWidth="980px"
-      />
+      <section className="grid gap-4 md:grid-cols-2">
+        <Link to="/inventory/request-for-purchase/requests" className="rounded-lg border border-app-border bg-app-card p-5 transition hover:border-brand-500 hover:bg-app-elevated">
+          <FilePlus2 className="h-5 w-5 text-brand-500" />
+          <h3 className="mt-4 font-black text-app-text">View Request Table</h3>
+          <p className="mt-2 text-sm text-app-muted">Open all request-for-purchase documents in one focused table.</p>
+        </Link>
+        <Link to="/inventory/request-for-purchase/requisitions" className="rounded-lg border border-app-border bg-app-card p-5 transition hover:border-brand-500 hover:bg-app-elevated">
+          <ClipboardCheck className="h-5 w-5 text-brand-500" />
+          <h3 className="mt-4 font-black text-app-text">View Requisition Table</h3>
+          <p className="mt-2 text-sm text-app-muted">Open all requisitions in one focused table.</p>
+        </Link>
+      </section>
     </div>
   );
 }
