@@ -45,13 +45,30 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL}
-        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL}
-        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM}
-        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID}
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-https://identy.getotech.co.ke}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-g8-yacht}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-pos-terminal}
         VITE_WINDOWS_OFFLINE_BUNDLE_URL: ${VITE_WINDOWS_OFFLINE_BUNDLE_URL:-/downloads/G8-Yacht-Villa-Offline-Windows.zip}
     restart: unless-stopped
     depends_on:
       - backend
+    networks:
+      - g8net
+
+  landing_frontend:
+    build:
+      context: .
+      dockerfile: g8_landing_frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_USE_MOCK_DATA: ${VITE_USE_MOCK_DATA:-true}
+        VITE_CRM_LEADS_ENDPOINT: ${VITE_CRM_LEADS_ENDPOINT}
+        VITE_CABRO_ORDERS_ENDPOINT: ${VITE_CABRO_ORDERS_ENDPOINT}
+        VITE_HOTEL_ENQUIRIES_ENDPOINT: ${VITE_HOTEL_ENQUIRIES_ENDPOINT}
+        VITE_WAITER_ALERT_ENDPOINT: ${VITE_WAITER_ALERT_ENDPOINT}
+        VITE_CONTACT_PHONE: ${VITE_CONTACT_PHONE}
+        VITE_CONTACT_EMAIL: ${VITE_CONTACT_EMAIL}
+    restart: unless-stopped
     networks:
       - g8net
 
@@ -93,6 +110,7 @@ services:
     depends_on:
       - backend
       - frontend
+      - landing_frontend
       - keycloak
     networks:
       - g8net
