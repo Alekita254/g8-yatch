@@ -182,7 +182,7 @@ export default function FrontdeskDashboard() {
       </Panel>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <OperationalLink to="/frontdesk/service-points" icon={MapPin} label="Active service visits" value={activeVisits.length} text="Start or manage restaurant, bar, marina and front-desk sales." />
+        <OperationalLink to="/frontdesk/service-points" icon={MapPin} label="Active service visits" value={activeVisits.length} text="Start or manage restaurant, bar, event, cabro and front-desk sales." />
         <OperationalLink to="/frontdesk/reservations" icon={CalendarDays} label="Reservations" value={data.reservations.length} text="Review upcoming arrivals, departures, and room movements." />
       </section>
     </div>

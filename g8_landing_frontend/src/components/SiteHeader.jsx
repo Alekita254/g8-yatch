@@ -1,4 +1,4 @@
-import { Anchor, ClipboardList, Menu, Moon, Sun, X } from 'lucide-react'
+import { Building2, ClipboardList, Menu, Moon, Sun, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { usePlan } from '../context/planContext'
@@ -22,11 +22,11 @@ export default function SiteHeader() {
       <div className="page-shell flex h-16 items-center justify-between lg:h-20">
         <Link to="/" className="flex min-h-11 items-center gap-3" onClick={() => setOpen(false)}>
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sun text-ink">
-            <Anchor className="h-5 w-5" />
+            <Building2 className="h-5 w-5" />
           </span>
           <span>
             <strong className="block font-display text-sm font-extrabold uppercase tracking-[0.14em]">G8 Yatch</strong>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/55">Stay. Gather. Build.</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/55">Embu. Eat. Stay. Build.</span>
           </span>
         </Link>
 

@@ -13,32 +13,20 @@ def seed_organisation(apps, schema_editor):
             "taxpayer_pin": "P000000000X",
             "business_email": "admin@g8-yacht.local",
             "business_phone": "+254700000000",
-            "physical_address": "Nairobi, Kenya",
+            "physical_address": "Embu, Kenya",
             "is_active": True,
         },
     )
 
     Branch.objects.update_or_create(
-        code="nairobi",
+        code="embu",
         defaults={
             "organization": org,
-            "name": "Nairobi City Hotel",
-            "branch_type": "CITY_HOTEL",
-            "location": "Nairobi CBD",
+            "name": "G8 Yacht Villa Embu",
+            "branch_type": "HOSPITALITY_AND_CABRO",
+            "location": "Embu, Kenya",
             "kra_pin": "P000000000X",
             "is_headquarters": True,
-            "is_active": True,
-        },
-    )
-    Branch.objects.update_or_create(
-        code="naivasha",
-        defaults={
-            "organization": org,
-            "name": "Naivasha Lake Resort",
-            "branch_type": "RESORT",
-            "location": "Naivasha",
-            "kra_pin": "P000000001Y",
-            "is_headquarters": False,
             "is_active": True,
         },
     )

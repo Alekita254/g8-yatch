@@ -18,7 +18,9 @@ npm run dev
 - `VITE_USE_MOCK_DATA`: Keep `true` until public API authentication is ready.
 - `VITE_CRM_LEADS_ENDPOINT`: Future ERP CRM lead endpoint.
 - `VITE_CABRO_ORDERS_ENDPOINT`: ERP inventory or sales order endpoint.
-- `VITE_GOOGLE_MAP_QUERY`: Exact Google Maps place name or Embu address.
+- `VITE_GOOGLE_MAP_QUERY`: Exact Google Maps place name or Embu address for the embedded preview.
+- `VITE_GOOGLE_MAP_EMBED_URL`: Exact Google Maps iframe `src` for the G8 place preview.
+- `VITE_GOOGLE_MAP_URL`: Exact Google Maps share link used by location and directions buttons.
 - `VITE_MENU_PRICELIST_CODE`: Public menu pricelist code.
 - `VITE_HOTEL_ENQUIRIES_ENDPOINT`: ERP/CRM endpoint for room enquiries.
 - `VITE_WAITER_ALERT_ENDPOINT`: Optional waiter-arrival notification endpoint.

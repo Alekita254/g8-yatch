@@ -52,10 +52,10 @@ def seed_roles_and_service_points(apps, schema_editor):
             "location": "Reception lobby",
         },
         {
-            "name": "Pool Bar POS",
-            "code": "pool-bar-pos",
+            "name": "G8 Bar POS",
+            "code": "bar-pos",
             "kind": "BAR",
-            "location": "Pool bar",
+            "location": "Bar counter",
         },
         {
             "name": "Restaurant POS",

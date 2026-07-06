@@ -25,7 +25,7 @@ class ServicePoint(models.Model):
         BAR = "BAR", "Bar"
         RESTAURANT = "RESTAURANT", "Restaurant"
         WORKSHOP = "WORKSHOP", "Workshop"
-        MARINA = "MARINA", "Marina"
+        MARINA = "MARINA", "Events"
 
     name = models.CharField(max_length=120)
     code = models.SlugField(max_length=80, unique=True)

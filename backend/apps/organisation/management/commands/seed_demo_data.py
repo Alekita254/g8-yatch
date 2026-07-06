@@ -45,20 +45,20 @@ class Command(BaseCommand):
                 "taxpayer_pin": "P051234567Q",
                 "business_email": "reservations@g8yachtvilla.co.ke",
                 "business_phone": "+254 709 888 000",
-                "physical_address": "Lake Naivasha, Moi South Lake Road, Kenya",
+                "physical_address": "Embu, Kenya",
                 "is_active": True,
             },
         )
-        naivasha, _ = Branch.objects.update_or_create(
-            code="naivasha",
+        embu, _ = Branch.objects.update_or_create(
+            code="embu",
             defaults={
                 "organization": organization,
-                "name": "G8 Yacht Villa Naivasha",
-                "branch_type": "LAKESIDE_RESORT",
-                "location": "Moi South Lake Road, Naivasha",
+                "name": "G8 Yacht Villa Embu",
+                "branch_type": "HOSPITALITY_AND_CABRO",
+                "location": "Embu, Kenya",
                 "kra_pin": "P051234567Q",
                 "phone": "+254 709 888 001",
-                "email": "naivasha@g8yachtvilla.co.ke",
+                "email": "embu@g8yachtvilla.co.ke",
                 "is_headquarters": True,
                 "is_active": True,
             },
@@ -66,10 +66,10 @@ class Command(BaseCommand):
 
         service_points = {}
         for code, name, kind, location in [
-            ("main-frontdesk", "Main Frontdesk", "FRONTDESK", "Villa reception"),
-            ("restaurant-pos", "Lakeside Restaurant", "RESTAURANT", "Main dining terrace"),
-            ("pool-bar-pos", "Infinity Pool Bar", "BAR", "Pool deck"),
-            ("marina-desk", "Marina Experiences", "MARINA", "Private jetty"),
+            ("main-frontdesk", "Main Frontdesk", "FRONTDESK", "Main reception"),
+            ("restaurant-pos", "G8 Restaurant", "RESTAURANT", "Main dining area"),
+            ("bar-pos", "G8 Bar", "BAR", "Bar counter"),
+            ("events-desk", "Events Desk", "MARINA", "Events and activity desk"),
         ]:
             service_points[code], _ = ServicePoint.objects.update_or_create(
                 code=code,
@@ -84,10 +84,10 @@ class Command(BaseCommand):
 
         room_types = {}
         for code, name, base, maximum, description in [
-            ("garden-suite", "Garden Suite", 2, 3, "Quiet suite opening onto tropical gardens."),
-            ("lake-suite", "Lake View Suite", 2, 3, "Upper-floor suite with uninterrupted lake views."),
-            ("family-villa", "Family Villa", 4, 6, "Two-bedroom villa with a private lounge."),
-            ("marina-penthouse", "Marina Penthouse", 2, 4, "Signature penthouse overlooking the jetty."),
+            ("garden-suite", "Garden Suite", 2, 3, "Quiet room near the garden area."),
+            ("executive-room", "Executive Room", 2, 3, "Comfortable room for business or leisure stays in Embu."),
+            ("family-room", "Family Room", 4, 6, "Room setup for family stays and group visits."),
+            ("deluxe-room", "Deluxe Room", 2, 4, "Spacious room with a practical lounge area."),
         ]:
             room_types[code], _ = RoomType.objects.update_or_create(
                 code=code,
@@ -104,20 +104,20 @@ class Command(BaseCommand):
         room_rows = [
             ("G01", "garden-suite", "Ground", "AVAILABLE"),
             ("G02", "garden-suite", "Ground", "DIRTY"),
-            ("L11", "lake-suite", "First", "OCCUPIED"),
-            ("L12", "lake-suite", "First", "AVAILABLE"),
-            ("L21", "lake-suite", "Second", "OCCUPIED"),
-            ("L22", "lake-suite", "Second", "MAINTENANCE_BLOCK"),
-            ("V01", "family-villa", "Garden Wing", "OCCUPIED"),
-            ("V02", "family-villa", "Garden Wing", "AVAILABLE"),
-            ("P01", "marina-penthouse", "Penthouse", "OCCUPIED"),
-            ("P02", "marina-penthouse", "Penthouse", "AVAILABLE"),
+            ("E11", "executive-room", "First", "OCCUPIED"),
+            ("E12", "executive-room", "First", "AVAILABLE"),
+            ("E21", "executive-room", "Second", "OCCUPIED"),
+            ("E22", "executive-room", "Second", "MAINTENANCE_BLOCK"),
+            ("F01", "family-room", "Garden Wing", "OCCUPIED"),
+            ("F02", "family-room", "Garden Wing", "AVAILABLE"),
+            ("D01", "deluxe-room", "Second", "OCCUPIED"),
+            ("D02", "deluxe-room", "Second", "AVAILABLE"),
         ]
         for number, room_type, floor, status in room_rows:
             rooms[number], _ = Room.objects.update_or_create(
                 number=number,
                 defaults={
-                    "branch": naivasha,
+                    "branch": embu,
                     "room_type": room_types[room_type],
                     "floor": floor,
                     "status": status,
@@ -183,18 +183,18 @@ class Command(BaseCommand):
 
         folio_specs = [
             ("DEMO-FOL-001", "DEMO-RES-001", "OPEN", [
-                ("ROOM_CHARGE", "Lake View Suite - nightly rate", "18500", "ROOM-1"),
-                ("POS_CHARGE", "Lakeside restaurant dinner", "6200", "POS-1001"),
+                ("ROOM_CHARGE", "Executive Room - nightly rate", "18500", "ROOM-1"),
+                ("POS_CHARGE", "G8 restaurant dinner", "6200", "POS-1001"),
                 ("PAYMENT", "M-Pesa deposit", "15000", "QH71DEMO01"),
             ]),
             ("DEMO-FOL-002", "DEMO-RES-002", "OPEN", [
-                ("ROOM_CHARGE", "Lake View Suite - nightly rate", "18500", "ROOM-2"),
-                ("POS_CHARGE", "Pool bar refreshments", "3400", "POS-1002"),
+                ("ROOM_CHARGE", "Executive Room - nightly rate", "18500", "ROOM-2"),
+                ("POS_CHARGE", "G8 bar refreshments", "3400", "POS-1002"),
                 ("PAYMENT", "Visa card payment", "10000", "CARD-8821"),
             ]),
             ("DEMO-FOL-003", "DEMO-RES-003", "OPEN", [
-                ("ROOM_CHARGE", "Marina Penthouse - nightly rate", "32000", "ROOM-3"),
-                ("POS_CHARGE", "Sunset yacht cruise", "24000", "MARINA-73"),
+                ("ROOM_CHARGE", "Deluxe Room - nightly rate", "32000", "ROOM-3"),
+                ("POS_CHARGE", "Team building package", "24000", "EVT-73"),
                 ("PAYMENT", "Advance card payment", "40000", "CARD-9014"),
             ]),
             ("DEMO-FOL-004", "DEMO-RES-007", "CLOSED", [
@@ -265,8 +265,8 @@ class Command(BaseCommand):
         for code, name, tab, station, tax_rate in [
             ("breakfast", "Breakfast", "Breakfast", "Main Kitchen", "16.00"),
             ("beverages", "Beverages", "Drinks", "Service Bar", "16.00"),
-            ("cocktails", "Cocktails", "Pool Bar", "Pool Bar", "16.00"),
-            ("experiences", "Experiences", "Marina", "Marina Desk", "16.00"),
+            ("cocktails", "Cocktails", "Bar", "Bar Counter", "16.00"),
+            ("experiences", "Experiences", "Events", "Events Desk", "16.00"),
         ]:
             categories[code], _ = ProductCategory.objects.update_or_create(
                 code=code,
@@ -288,8 +288,8 @@ class Command(BaseCommand):
             ("DRINK-FRESH-JUICE", "Fresh Passion Juice", "beverages", "BILLABLE", "EACH", "550", "Fresh passion fruit juice served chilled."),
             ("BAR-DAWA", "Classic Dawa", "cocktails", "BILLABLE", "EACH", "950", "Vodka, lime, honey, and crushed ice."),
             ("BAR-SPARKLING-WATER", "Sparkling Water 750ml", "beverages", "BILLABLE", "EACH", "480", "Chilled sparkling mineral water."),
-            ("EXP-SUNSET-CRUISE", "Sunset Yacht Cruise", "experiences", "SERVICE", "EACH", "12000", "Private two-hour cruise with refreshments."),
-            ("EXP-FISHING", "Guided Lake Fishing", "experiences", "SERVICE", "EACH", "8500", "Half-day guided fishing experience."),
+            ("EXP-TEAM-BUILDING", "Team Building Package", "experiences", "SERVICE", "EACH", "12000", "Facilitated team activities with refreshments."),
+            ("EXP-FAMILY-DAY", "Family Day Package", "experiences", "SERVICE", "EACH", "8500", "Family activity package with food and play area access."),
         ]
         for sku, name, category, product_type, unit, price, description in product_rows:
             products[sku], _ = Product.objects.update_or_create(
@@ -313,7 +313,7 @@ class Command(BaseCommand):
         standard_menu, _ = SalesPricelist.objects.update_or_create(
             code="standard-menu",
             defaults={
-                "name": "Villa Standard Menu",
+                "name": "G8 Standard Menu",
                 "description": "All-day restaurant and in-house guest pricing.",
                 "service_point_kind": "RESTAURANT",
                 "service_point": service_points["restaurant-pos"],
@@ -325,30 +325,30 @@ class Command(BaseCommand):
             service_points["main-frontdesk"],
         ])
         pool_menu, _ = SalesPricelist.objects.update_or_create(
-            code="pool-bar-menu",
+            code="bar-menu",
             defaults={
-                "name": "Infinity Pool Bar Menu",
-                "description": "Poolside drinks and light service pricing.",
+                "name": "G8 Bar Menu",
+                "description": "Drinks and light service pricing.",
                 "service_point_kind": "BAR",
-                "service_point": service_points["pool-bar-pos"],
+                "service_point": service_points["bar-pos"],
                 "is_active": True,
             },
         )
-        pool_menu.service_points.set([service_points["pool-bar-pos"]])
-        marina_menu, _ = SalesPricelist.objects.update_or_create(
-            code="marina-experiences",
+        pool_menu.service_points.set([service_points["bar-pos"]])
+        events_menu, _ = SalesPricelist.objects.update_or_create(
+            code="events-experiences",
             defaults={
-                "name": "Marina Experiences",
-                "description": "Yacht cruises and lake activities.",
+                "name": "Events and Experiences",
+                "description": "Team building, family activities and event packages.",
                 "service_point_kind": "MARINA",
-                "service_point": service_points["marina-desk"],
+                "service_point": service_points["events-desk"],
                 "is_active": True,
             },
         )
-        marina_menu.service_points.set([service_points["marina-desk"]])
+        events_menu.service_points.set([service_points["events-desk"]])
 
         for sku, product in products.items():
-            target = marina_menu if sku.startswith("EXP-") else pool_menu if sku.startswith("BAR-") else standard_menu
+            target = events_menu if sku.startswith("EXP-") else pool_menu if sku.startswith("BAR-") else standard_menu
             SalesPricelistItem.objects.update_or_create(
                 pricelist=target,
                 product=product,
@@ -357,10 +357,10 @@ class Command(BaseCommand):
 
         order_specs = [
             ("DEMO-SO-001", "restaurant-pos", "Table 4", "Amina Hassan", "INVOICED", [("FOOD-BREAKFAST-FULL", 2), ("DRINK-COFFEE", 2)]),
-            ("DEMO-SO-002", "pool-bar-pos", "Sunbed 6", "Daniel Okello", "INVOICED", [("BAR-DAWA", 2), ("BAR-SPARKLING-WATER", 1)]),
-            ("DEMO-SO-003", "marina-desk", "Jetty", "Sophia Martin", "INVOICED", [("EXP-SUNSET-CRUISE", 2)]),
+            ("DEMO-SO-002", "bar-pos", "Bar 6", "Daniel Okello", "INVOICED", [("BAR-DAWA", 2), ("BAR-SPARKLING-WATER", 1)]),
+            ("DEMO-SO-003", "events-desk", "Garden", "Sophia Martin", "INVOICED", [("EXP-TEAM-BUILDING", 2)]),
             ("DEMO-SO-004", "restaurant-pos", "Villa V01", "Neema Mwangi", "SENT", [("FOOD-AVOCADO-TOAST", 2), ("DRINK-FRESH-JUICE", 3)]),
-            ("DEMO-SO-005", "pool-bar-pos", "Terrace 2", "Walk-in Guest", "DRAFT", [("BAR-DAWA", 1), ("DRINK-FRESH-JUICE", 2)]),
+            ("DEMO-SO-005", "bar-pos", "Terrace 2", "Walk-in Guest", "DRAFT", [("BAR-DAWA", 1), ("DRINK-FRESH-JUICE", 2)]),
         ]
         orders = {}
         invoices = {}
@@ -371,7 +371,7 @@ class Command(BaseCommand):
             order, _ = SalesOrder.objects.update_or_create(
                 order_number=order_number,
                 defaults={
-                    "branch": naivasha,
+                    "branch": embu,
                     "service_point": service_points[point],
                     "table_name": table,
                     "customer_name": customer,
@@ -416,7 +416,7 @@ class Command(BaseCommand):
                     invoice_number=invoice_number,
                     defaults={
                         "order": order,
-                        "branch": naivasha,
+                        "branch": embu,
                         "customer_name": customer,
                         "subtotal": subtotal,
                         "tax_total": tax,

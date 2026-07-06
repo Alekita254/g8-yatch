@@ -1,11 +1,11 @@
 export const rooms = [
   {
     id: 1,
-    name: 'Lake View Suite',
+    name: 'Garden View Room',
     price: 18500,
     guests: 2,
     image: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=85',
-    amenities: ['King bed', 'Lake balcony', 'Breakfast'],
+    amenities: ['King bed', 'Quiet setting', 'Breakfast'],
   },
   {
     id: 2,
@@ -17,11 +17,11 @@ export const rooms = [
   },
   {
     id: 3,
-    name: 'Marina Penthouse',
+    name: 'Executive Family Room',
     price: 32000,
     guests: 4,
     image: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=85',
-    amenities: ['Jetty view', 'Private terrace', 'Butler service'],
+    amenities: ['Private terrace', 'Family lounge', 'Breakfast'],
   },
 ]
 

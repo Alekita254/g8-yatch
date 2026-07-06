@@ -3,7 +3,6 @@ import { Link, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from 'react-oidc-context';
 import {
-  Anchor,
   Building2,
   CalendarCheck,
   ConciergeBell,
@@ -15,7 +14,6 @@ import {
   Martini,
   MonitorCog,
   Warehouse,
-  Sailboat,
   ShieldCheck,
   Sparkles,
   Target,
@@ -81,8 +79,6 @@ import PaymentDetailPage from './sales/PaymentDetailPage';
 import SalesListPage from './sales/SalesListPage';
 import SalesShell from './sales/SalesShell';
 
-const heroImageUrl = 'https://images.unsplash.com/photo-1756680967419-96f0cb629566?auto=format&fit=crop&fm=jpg&q=80&w=2400';
-
 function LoginPage() {
   const auth = useAuth();
 
@@ -99,10 +95,10 @@ function LoginPage() {
   }
 
   const services = [
-    { icon: ConciergeBell, title: 'Villa Front Desk', text: 'Reservations, guest profiles, check-ins, room moves, and concierge notes in one calm workspace.' },
-    { icon: Utensils, title: 'Restaurant & POS', text: 'Pool bar, kitchen, table service, void approvals, bill splits, and end-of-shift controls.' },
-    { icon: Sailboat, title: 'Marina Experiences', text: 'Yacht bookings, dock-side service requests, transfers, excursions, and guest itineraries.' },
-    { icon: Wrench, title: 'Metal Works', text: 'Stainless railings, brass finishes, custom fabrication, maintenance requests, and workshop tracking.' },
+    { icon: ConciergeBell, title: 'Front Desk', text: 'Reservations, guest profiles, check-ins, room moves, and concierge notes in one calm workspace.' },
+    { icon: Utensils, title: 'Restaurant & POS', text: 'Kitchen orders, table service, void approvals, bill splits, and end-of-shift controls.' },
+    { icon: CalendarCheck, title: 'Events & Meetings', text: 'Conference bookings, garden events, family visits, team building, and guest itineraries.' },
+    { icon: Wrench, title: 'Cabro & Works', text: 'Cabro sales, custom jobs, maintenance requests, approvals, and workshop tracking.' },
   ];
 
   const operations = [
@@ -117,21 +113,16 @@ function LoginPage() {
   return (
     <main className="min-h-screen bg-app-bg text-app-text transition-colors duration-300">
       <section className="relative min-h-[92svh] overflow-hidden">
-        <img
-          src={heroImageUrl}
-          alt="Luxury coastal villa pool overlooking yachts in a marina"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,18,22,0.78),rgba(8,18,22,0.44)_45%,rgba(8,18,22,0.08))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(215,181,109,0.28),transparent_28%),linear-gradient(135deg,#081216_0%,#0d6b67_52%,#5b6c3e_100%)]" />
         <div className="absolute inset-x-0 top-0 z-10">
           <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-5 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 text-white">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/25 bg-white/10 backdrop-blur">
-                <Anchor className="h-5 w-5 text-[#d7b56d]" />
+                <Building2 className="h-5 w-5 text-[#d7b56d]" />
               </div>
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.22em]">G8 Yacht Villa</p>
-                <p className="hidden text-xs text-white/70 sm:block">Hotel operations system</p>
+                <p className="hidden text-xs text-white/70 sm:block">Embu operations system</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -152,13 +143,13 @@ function LoginPage() {
           <div className="max-w-3xl text-white">
             <div className="mb-5 inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] backdrop-blur">
               <Sparkles className="h-4 w-4 text-[#d7b56d]" />
-              Villa, marina, dining, workshop
+              Rooms, dining, events, cabro
             </div>
             <h1 className="max-w-3xl text-5xl font-black leading-[0.98] sm:text-6xl lg:text-7xl">
               G8 Yacht Villa
             </h1>
             <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-white/82">
-              A refined hotel management system for waterfront stays, POS service, yacht experiences, guest care, and the craft work that keeps the property shining.
+              A practical management system for G8 in Embu: guest stays, POS service, event bookings, inventory, cabro sales, and the day-to-day work behind the counter.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <button
@@ -194,13 +185,13 @@ function LoginPage() {
       <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31] dark:text-brand-300">Guest luxury, operational discipline</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31] dark:text-brand-300">Local service, operational discipline</p>
             <h2 className="mt-3 text-3xl font-black text-app-text sm:text-4xl">
-              Built for the rhythm of a villa hotel.
+              Built for the rhythm of G8 in Embu.
             </h2>
           </div>
           <p className="text-sm font-medium leading-7 text-app-muted">
-            G8 Yacht Villa connects the quiet front-of-house details with the hard operational work behind them: dining service, stock control, role approvals, maintenance, and metal fabrication requests.
+            G8 Yacht Villa connects the front-of-house details with the operational work behind them: dining service, stock control, role approvals, room activity, events, and cabro requests.
           </p>
         </div>
 
@@ -220,15 +211,15 @@ function LoginPage() {
       <section className="bg-app-elevated px-6 py-16 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-3">
           <div className="lg:col-span-1">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31] dark:text-brand-300">Signature metal works</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9d7a31] dark:text-brand-300">Cabro and works</p>
             <h2 className="mt-3 text-3xl font-black text-app-text">
-              Stainless steel, brass, and workshop requests.
+              Cabro blocks, maintenance, and workshop requests.
             </h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3 lg:col-span-2">
             {[
-              ['Brass finishes', 'Polished handles, signage, trims, and guest-facing details.'],
-              ['Marine steel', 'Railings, dock hardware, ladder repairs, and corrosion-aware maintenance.'],
+              ['Cabro sales', 'Paving block requests, estimates, approvals, and customer follow-up.'],
+              ['Maintenance', 'Room, kitchen, service point, and property repair requests.'],
               ['Custom jobs', 'Fabrication requests, estimates, approvals, and completion logs.'],
             ].map(([title, text]) => (
               <article key={title} className="rounded-lg border border-app-border bg-app-card p-5">
@@ -244,7 +235,7 @@ function LoginPage() {
       <section className="mx-auto grid max-w-7xl gap-6 px-6 py-16 lg:grid-cols-3 lg:px-8">
         {[
           [CalendarCheck, 'Reservations', 'Track arrivals, departures, experiences, and special requests without losing the human touch.'],
-          [Martini, 'Service Points', 'Know which bar, terrace, pool, or restaurant terminal performed every sensitive action.'],
+          [Martini, 'Service Points', 'Know which bar, restaurant, kitchen, or frontdesk terminal performed every sensitive action.'],
           [ShieldCheck, 'Secure Roles', 'Keycloak login, realm roles, terminal context, and clear business permissions.'],
         ].map(([Icon, title, text]) => (
           <article key={title} className="rounded-lg border border-app-border bg-app-card p-6">
@@ -323,7 +314,7 @@ function AppChooserPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#172326] text-[#d7b56d]">
-              <Anchor className="h-5 w-5" />
+              <Building2 className="h-5 w-5" />
             </div>
             <div>
               <p className="text-sm font-black uppercase tracking-[0.2em]">G8 Yacht Villa</p>

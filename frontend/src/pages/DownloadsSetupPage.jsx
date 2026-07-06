@@ -31,7 +31,7 @@ const downloadOptions = [
 
 const sampleDump = {
   rooms: [
-    { number: 'Lake View Room', capacity: 2 },
+    { number: 'Executive Room', capacity: 2 },
     { number: 'Single Garden Room', capacity: 1 },
   ],
   products: [],

@@ -19,7 +19,7 @@ export default function RoomsPage() {
       endpoint="/api/rooms/"
       emptyForm={emptyForm}
       fields={[
-        { name: 'number', label: 'Room title', required: true, placeholder: 'Lake View Room' },
+        { name: 'number', label: 'Room title', required: true, placeholder: 'Executive Room' },
         { name: 'capacity', label: 'People', type: 'number', min: '1', required: true },
       ]}
       columns={[

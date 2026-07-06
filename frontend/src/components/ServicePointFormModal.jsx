@@ -7,7 +7,7 @@ const KIND_OPTIONS = [
   ['BAR', 'Bar'],
   ['RESTAURANT', 'Restaurant'],
   ['WORKSHOP', 'Workshop'],
-  ['MARINA', 'Marina'],
+  ['MARINA', 'Events'],
 ];
 
 export default function ServicePointFormModal({
@@ -59,7 +59,7 @@ export default function ServicePointFormModal({
               value={form.code}
               onChange={(event) => onChange('code', event.target.value.toLowerCase().replace(/\s+/g, '-'))}
               required
-              placeholder="pool-bar-pos"
+              placeholder="bar-pos"
               className="w-full rounded-md border border-app-border bg-app-elevated px-3 py-2 text-sm text-app-text outline-none focus:ring-2 focus:ring-brand-500"
             />
           </label>

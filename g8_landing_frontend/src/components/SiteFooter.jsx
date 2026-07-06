@@ -1,8 +1,10 @@
-import { Anchor, Clock3, Mail, MapPin, Navigation, Phone } from 'lucide-react'
+import { Building2, Clock3, Mail, MapPin, Navigation, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-const mapQuery = encodeURIComponent(import.meta.env.VITE_GOOGLE_MAP_QUERY || 'G8 Yatch Embu Kenya')
-const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`
+const defaultMapEmbedUrl = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.572965093953!2d37.5472915762844!3d-0.6354201352638502!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182639617a98ae4f%3A0xd45d55ee4bc3c5a7!2sG8%20YATCH%20VILLA%20HOTEL!5e0!3m2!1sen!2ske!4v1783357275305!5m2!1sen!2ske'
+const mapQuery = encodeURIComponent(import.meta.env.VITE_GOOGLE_MAP_QUERY || 'G8 YATCH VILLA HOTEL')
+const mapEmbedUrl = import.meta.env.VITE_GOOGLE_MAP_EMBED_URL || defaultMapEmbedUrl
+const directionsUrl = import.meta.env.VITE_GOOGLE_MAP_URL || `https://www.google.com/maps/search/?api=1&query=${mapQuery}`
 const contactPhone = import.meta.env.VITE_CONTACT_PHONE
 const contactEmail = import.meta.env.VITE_CONTACT_EMAIL
 
@@ -13,7 +15,7 @@ export default function SiteFooter() {
         <div>
           <Link to="/" className="inline-flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sun text-ink">
-              <Anchor className="h-5 w-5" />
+              <Building2 className="h-5 w-5" />
             </span>
             <span>
               <strong className="block font-display text-base font-extrabold uppercase tracking-[0.14em]">G8 Yatch</strong>
@@ -21,7 +23,7 @@ export default function SiteFooter() {
             </span>
           </Link>
           <p className="mt-5 max-w-md leading-7 text-slate-600 dark:text-white/60">
-            Food, accommodation, conferences, garden events, team building, family activities and dependable construction materials in Embu.
+            Meals, drinks, rooms, meetings, family events and dependable cabro blocks in Embu.
           </p>
           <div className="mt-6 space-y-3 text-sm text-slate-600 dark:text-white/70">
             <a href={directionsUrl} target="_blank" rel="noreferrer" className="flex min-h-11 items-center gap-3 hover:text-lake dark:hover:text-white">
@@ -46,10 +48,10 @@ export default function SiteFooter() {
         <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-stone-50 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none">
           <iframe
             title="G8 Yatch location in Embu"
-            src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+            src={mapEmbedUrl}
             className="h-72 w-full border-0 sm:h-80"
             loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
+            referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
           />
           <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
