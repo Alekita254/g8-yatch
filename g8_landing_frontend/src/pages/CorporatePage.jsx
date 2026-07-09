@@ -5,6 +5,7 @@ import { submitProposal } from '../api/corporateService'
 import BottomSheet from '../components/BottomSheet'
 import SectionHeading from '../components/SectionHeading'
 import { corporateExperiences } from '../data/mockData'
+import { siteImages } from '../data/siteImages'
 
 export default function CorporatePage() {
   const [open, setOpen] = useState(false)
@@ -25,7 +26,7 @@ export default function CorporatePage() {
   return (
     <main>
       <section className="relative min-h-[52svh] overflow-hidden bg-ink text-white lg:min-h-[62svh]">
-        <img src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=2000&q=90" alt="Corporate team event" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={siteImages.corporateHero.src} alt="Corporate team event" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/50 to-ink/10 lg:bg-gradient-to-r lg:from-ink/95 lg:via-ink/45 lg:to-transparent" />
         <div className="page-shell relative flex min-h-[52svh] items-end pb-9 pt-20 lg:min-h-[62svh] lg:items-center lg:pb-12">
           <div className="max-w-2xl">

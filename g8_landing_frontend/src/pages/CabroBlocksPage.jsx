@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getCabroProducts, submitCabroOrder } from '../api/cabroService'
 import BottomSheet from '../components/BottomSheet'
 import SectionHeading from '../components/SectionHeading'
+import { siteImages } from '../data/siteImages'
 
 const money = (value) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(value)
 
@@ -59,7 +60,7 @@ export default function CabroBlocksPage() {
   return (
     <main>
       <section className="relative min-h-[50svh] overflow-hidden bg-[#242b2c] text-white lg:min-h-[58svh]">
-        <img src="/images/cabro-standard-60mm.png" alt="Common Kenyan interlocking cabro pavement blocks" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={siteImages.cabroHero.src} alt="Common Kenyan interlocking cabro pavement blocks" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#242b2c] via-[#242b2c]/50 to-[#242b2c]/10 lg:bg-gradient-to-r lg:from-[#242b2c]/95 lg:via-[#242b2c]/45 lg:to-transparent" />
         <div className="page-shell relative flex min-h-[50svh] items-end pb-9 pt-20 lg:min-h-[58svh] lg:items-center lg:pb-12">
           <div className="max-w-2xl">

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { getRooms, requestRoomAvailability } from '../api/hospitalityService'
 import BottomSheet from '../components/BottomSheet'
 import SectionHeading from '../components/SectionHeading'
+import { siteImages } from '../data/siteImages'
 
 const money = (value) => new Intl.NumberFormat('en-KE', {
   style: 'currency',
@@ -48,7 +49,7 @@ export default function HotelPage() {
     <main>
       <section className="relative min-h-[50svh] overflow-hidden bg-ink text-white lg:min-h-[58svh]">
         <img
-          src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=90"
+          src={siteImages.hotelHero.src}
           alt="Comfortable hotel accommodation in Embu"
           className="absolute inset-0 h-full w-full object-cover"
         />

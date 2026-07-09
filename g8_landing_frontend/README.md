@@ -29,3 +29,30 @@ npm run dev
 Hospitality orders are already shaped for `POST /api/sales/orders/`. The CRM
 and dedicated cabro contracts are configurable because those backend endpoints
 do not currently exist.
+
+## Replacing Website Photos
+
+All major landing photos are controlled from one file:
+
+```bash
+src/data/siteImages.js
+```
+
+Use this workflow:
+
+1. Add the real G8 photo to:
+
+```bash
+public/images/g8/
+```
+
+2. Open:
+
+```bash
+public/images/g8/UPLOAD-GUIDE.md
+```
+
+3. Match the photo to the section slot and recommended filename.
+4. Update the matching `src` in `src/data/siteImages.js`.
+
+Each image slot includes `usedOn` and `why` notes so it is clear which photo belongs in each section and what job that image is doing.

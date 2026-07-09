@@ -7,6 +7,7 @@ import BottomSheet from '../components/BottomSheet'
 import SectionHeading from '../components/SectionHeading'
 import { usePlan } from '../context/planContext'
 import { activities } from '../data/mockData'
+import { siteImages } from '../data/siteImages'
 
 export default function ExperiencesPage() {
   const { activities: plannedActivities, addActivity } = usePlan()
@@ -43,7 +44,7 @@ export default function ExperiencesPage() {
     <main>
       <section className="relative min-h-[50svh] overflow-hidden bg-ink text-white lg:min-h-[58svh]">
         <img
-          src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1800&q=90"
+          src={siteImages.experiencesHero.src}
           alt="Friends and families enjoying activities together"
           className="absolute inset-0 h-full w-full object-cover"
         />

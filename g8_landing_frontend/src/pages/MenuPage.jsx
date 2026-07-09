@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { getMenu, notifyWaiter, startVisit } from '../api/hospitalityService'
 import SectionHeading from '../components/SectionHeading'
 import { usePlan } from '../context/planContext'
+import { siteImages } from '../data/siteImages'
 
 const categories = ['Starters', 'Mains', 'Drinks']
 const tableOptions = Array.from({ length: 8 }, (_, index) => `Table ${index + 1}`)
@@ -72,7 +73,7 @@ export default function MenuPage() {
     <main>
       <section className="relative min-h-[50svh] overflow-hidden bg-ink text-white lg:min-h-[58svh]">
         <img
-          src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=2200&q=90"
+          src={siteImages.restaurantHero.src}
           alt="Fresh food served at G8 Yatch"
           className="absolute inset-0 h-full w-full object-cover"
         />

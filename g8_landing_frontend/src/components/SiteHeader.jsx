@@ -18,15 +18,15 @@ export default function SiteHeader() {
   const { theme, toggleTheme } = useTheme()
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 text-ink shadow-sm backdrop-blur-xl transition-colors dark:border-white/10 dark:bg-ink/95 dark:text-white dark:shadow-none">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#081216]/92 text-white shadow-xl shadow-black/10 backdrop-blur-xl transition-colors">
       <div className="page-shell flex h-16 items-center justify-between lg:h-20">
         <Link to="/" className="flex min-h-11 items-center gap-3" onClick={() => setOpen(false)}>
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sun text-ink">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-sun text-ink shadow-lg shadow-black/20">
             <Building2 className="h-5 w-5" />
           </span>
           <span>
             <strong className="block font-display text-sm font-extrabold uppercase tracking-[0.14em]">G8 Yatch</strong>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/55">Embu. Eat. Stay. Build.</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">Villa Hotel · Embu</span>
           </span>
         </Link>
 
@@ -35,7 +35,7 @@ export default function SiteHeader() {
             <NavLink
               key={path}
               to={path}
-              className={({ isActive }) => `rounded-full px-3 py-2 text-sm font-bold transition ${isActive ? 'bg-lake/10 text-lake dark:bg-white/10 dark:text-sun' : 'text-slate-600 hover:bg-slate-100 hover:text-ink dark:text-white/65 dark:hover:bg-white/10 dark:hover:text-white'}`}
+              className={({ isActive }) => `rounded-full px-3 py-2 text-sm font-bold transition ${isActive ? 'bg-white/10 text-sun' : 'text-white/62 hover:bg-white/10 hover:text-white'}`}
             >
               {label}
             </NavLink>
@@ -46,21 +46,21 @@ export default function SiteHeader() {
           <button
             type="button"
             onClick={toggleTheme}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-stone-50 text-ink transition hover:bg-slate-100 dark:border-white/15 dark:bg-transparent dark:text-white dark:hover:bg-white/10"
+            className="flex h-11 w-11 items-center justify-center rounded-md border border-white/15 bg-white/8 text-white transition hover:bg-white/12"
             aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             aria-pressed={theme === 'dark'}
             title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
-            {theme === 'dark' ? <Sun className="h-5 w-5 text-sun" /> : <Moon className="h-5 w-5" />}
+            {theme === 'dark' ? <Sun className="h-5 w-5 text-sun" /> : <Moon className="h-5 w-5 text-sun" />}
           </button>
-          <Link to="/plan" onClick={() => setOpen(false)} className="relative flex h-11 min-w-11 items-center justify-center rounded-full border border-slate-200 bg-stone-50 px-3 text-ink transition hover:bg-slate-100 dark:border-white/15 dark:bg-transparent dark:text-white dark:hover:bg-white/10" aria-label={`My G8 Plan, ${planCount} selected`}>
+          <Link to="/plan" onClick={() => setOpen(false)} className="relative flex h-11 min-w-11 items-center justify-center rounded-md border border-white/15 bg-white/8 px-3 text-white transition hover:bg-white/12" aria-label={`My G8 Plan, ${planCount} selected`}>
             <ClipboardList className="h-5 w-5" />
             <span className="ml-2 hidden text-sm font-bold sm:inline">My Visit</span>
             {planCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-sun px-1 text-[10px] font-extrabold text-ink">{planCount}</span>}
           </Link>
           <button
             type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-stone-50 text-ink lg:hidden dark:border-white/15 dark:bg-transparent dark:text-white"
+            className="flex h-11 w-11 items-center justify-center rounded-md border border-white/15 bg-white/8 text-white lg:hidden"
             onClick={() => setOpen((value) => !value)}
             aria-label="Toggle navigation"
             aria-expanded={open}
@@ -72,13 +72,13 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <nav id="mobile-navigation" className="border-t border-slate-200 bg-white px-4 pb-4 pt-2 lg:hidden dark:border-white/10 dark:bg-ink">
+        <nav id="mobile-navigation" className="border-t border-white/10 bg-[#081216] px-4 pb-4 pt-2 shadow-2xl lg:hidden">
           {links.map(([label, path]) => (
             <NavLink
               key={path}
               to={path}
               onClick={() => setOpen(false)}
-              className={({ isActive }) => `flex min-h-12 items-center rounded-xl px-4 text-sm font-bold ${isActive ? 'bg-lake/10 text-lake dark:bg-white/10 dark:text-sun' : 'text-slate-600 hover:bg-slate-100 hover:text-ink dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white'}`}
+              className={({ isActive }) => `flex min-h-12 items-center rounded-md px-4 text-sm font-bold ${isActive ? 'bg-white/10 text-sun' : 'text-white/68 hover:bg-white/10 hover:text-white'}`}
             >
               {label}
             </NavLink>
@@ -86,7 +86,7 @@ export default function SiteHeader() {
           <NavLink
             to="/plan"
             onClick={() => setOpen(false)}
-            className={({ isActive }) => `flex min-h-12 items-center rounded-xl px-4 text-sm font-bold ${isActive ? 'bg-lake/10 text-lake dark:bg-white/10 dark:text-sun' : 'text-slate-600 hover:bg-slate-100 hover:text-ink dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white'}`}
+            className={({ isActive }) => `flex min-h-12 items-center rounded-md px-4 text-sm font-bold ${isActive ? 'bg-white/10 text-sun' : 'text-white/68 hover:bg-white/10 hover:text-white'}`}
           >
             My Visit {planCount > 0 ? `(${planCount})` : ''}
           </NavLink>
