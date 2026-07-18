@@ -1,154 +1,159 @@
-import { CheckCircle2, ChevronRight, Coffee, MapPin, Users, Wifi } from 'lucide-react'
+import { Hexagon } from 'lucide-react'
 import { useEffect, useState } from 'react'
-
-import { getRooms, requestRoomAvailability } from '../api/hospitalityService'
-import BottomSheet from '../components/BottomSheet'
-import SectionHeading from '../components/SectionHeading'
 import { siteImages } from '../data/siteImages'
 
-const money = (value) => new Intl.NumberFormat('en-KE', {
-  style: 'currency',
-  currency: 'KES',
-  maximumFractionDigits: 0,
-}).format(value)
+const gallery = [
+  {
+    title: 'Multi Purpose Hall',
+    desc: 'For grand events and structured meetings.',
+    images: [
+      '/photos/20260711_181503.jpg',
+      '/photos/20260711_181506.jpg',
+      '/photos/20260711_181521.jpg'
+    ],
+  },
+  {
+    title: 'The Grounds',
+    desc: 'Lush green spaces for outdoor events and relaxation.',
+    images: [
+      '/photos/20260711_181652.jpg',
+      '/photos/20260711_181700.jpg',
+      '/photos/20260711_181729.jpg'
+    ],
+  },
+  {
+    title: 'Hidden Tables',
+    desc: 'Perfectly spaced private areas to unwind in peace.',
+    images: [
+      '/photos/20260711_181316.jpg',
+      '/photos/20260711_181331.jpg',
+      '/photos/20260711_181344.jpg'
+    ],
+  },
+  {
+    title: 'The Bar',
+    desc: 'Expertly curated drinks in a sophisticated setting.',
+    images: [
+      '/photos/20260711_181451.jpg',
+      '/photos/20260711_181551.jpg',
+      '/photos/20260711_181607.jpg'
+    ],
+  },
+  {
+    title: 'The Suites',
+    desc: 'Luxurious comfort engineered for deep rest.',
+    images: [
+      '/photos/20260711_182023.jpg',
+      '/photos/20260711_182153.jpg',
+      '/photos/20260711_182202.jpg'
+    ],
+  },
+  {
+    title: 'Our Staff',
+    desc: 'A dedicated team working like a hive to serve you.',
+    images: [
+      '/photos/20260711_182335.jpg',
+      '/photos/20260711_182337.jpg',
+      '/photos/20260711_182341.jpg'
+    ],
+  },
+]
 
-export default function HotelPage() {
-  const [rooms, setRooms] = useState([])
-  const [selectedRoom, setSelectedRoom] = useState(null)
-  const [bookingOpen, setBookingOpen] = useState(false)
-  const [loadError, setLoadError] = useState('')
-  const [status, setStatus] = useState('')
-  const [form, setForm] = useState({ check_in: '', check_out: '', name: '', phone: '', guests: '1' })
+function HoneycombSlideshow({ images, altPrefix }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
 
   useEffect(() => {
-    getRooms().then(setRooms).catch(() => setLoadError('Rooms could not be loaded. Please refresh and try again.'))
-  }, [])
-
-  const openBooking = (room) => {
-    setSelectedRoom(room)
-    setStatus('')
-    setBookingOpen(true)
-  }
-
-  const submitAvailability = async (event) => {
-    event.preventDefault()
-    setStatus('sending')
-    try {
-      await requestRoomAvailability({
-        ...form,
-        room_id: selectedRoom.id,
-        room_name: selectedRoom.name,
-      })
-      setStatus('success')
-    } catch {
-      setStatus('error')
-    }
-  }
+    // Awwwards style slow fade - cycle every 5 seconds
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [images.length])
 
   return (
-    <main>
-      <section className="relative min-h-[50svh] overflow-hidden bg-ink text-white lg:min-h-[58svh]">
+    <>
+      {images.map((img, idx) => (
         <img
-          src={siteImages.hotelHero.src}
-          alt="Comfortable hotel accommodation in Embu"
-          className="absolute inset-0 h-full w-full object-cover"
+          key={img}
+          src={img}
+          alt={`${altPrefix} view ${idx + 1}`}
+          className={`absolute inset-0 h-full w-full object-cover transition-all duration-[2500ms] ease-in-out transform group-hover:scale-110 ${
+            idx === currentIndex ? 'opacity-90 group-hover:opacity-100 z-0' : 'opacity-0 scale-105 z-[-1]'
+          }`}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/50 to-ink/10 lg:bg-gradient-to-r lg:from-ink/95 lg:via-ink/45 lg:to-transparent" />
-        <div className="page-shell relative flex min-h-[50svh] items-end pb-9 pt-20 lg:min-h-[58svh] lg:items-center lg:pb-12">
-          <div className="max-w-2xl">
-            <p className="eyebrow text-sun">Hotel in Embu</p>
-            <h1 className="mt-3 text-4xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">A comfortable place to pause and feel at home.</h1>
-            <p className="mt-4 max-w-xl leading-7 text-white/70">Choose your room, check your dates and let our accommodation team handle the rest.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="page-shell py-14 sm:py-20">
-        <SectionHeading
-          eyebrow="Choose your room"
-          title="Accommodation without the clutter."
-          text="This page is dedicated to stays only, so guests can compare rooms and request availability with confidence."
-        />
-        <div className="-mx-4 mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-3 lg:px-0 hide-scrollbar">
-          {rooms.map((room) => (
-            <article key={room.id} className="min-w-[86vw] snap-center overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#10252b] sm:min-w-[52vw] lg:min-w-0">
-              <img src={room.image} alt={room.name} className="h-56 w-full object-cover" />
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-extrabold text-ink dark:text-white">{room.name}</h2>
-                    <span className="mt-2 inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-300">
-                      <Users className="h-4 w-4" /> Up to {room.guests} guests
-                    </span>
-                  </div>
-                  <p className="text-right text-sm font-bold text-lake">
-                    {money(room.price)}
-                    <span className="block text-xs font-medium text-slate-400">per night</span>
-                  </p>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {room.amenities.map((amenity) => (
-                    <span key={amenity} className="rounded-full bg-sand px-3 py-1.5 text-xs font-semibold text-ink dark:bg-white/10 dark:text-slate-100">{amenity}</span>
-                  ))}
-                </div>
-                <button type="button" onClick={() => openBooking(room)} className="touch-button mt-5 w-full bg-ink text-white">
-                  Check availability <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-        {loadError && <p className="mt-6 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">{loadError}</p>}
-      </section>
-
-      <section className="bg-sand py-14 dark:bg-[#0a1d22]">
-        <div className="page-shell grid gap-4 sm:grid-cols-3">
-          {[
-            [Coffee, 'Breakfast available', 'Start the morning with a fresh meal from our kitchen.'],
-            [Wifi, 'Reliable Wi-Fi', 'Stay connected for work, travel planning and entertainment.'],
-            [MapPin, 'Conveniently in Embu', 'A practical base for business and leisure around Embu County.'],
-          ].map(([Icon, title, text]) => (
-            <article key={title} className="rounded-2xl bg-white p-5 dark:bg-[#10252b] dark:ring-1 dark:ring-white/10">
-              <Icon className="h-6 w-6 text-lake" />
-              <h2 className="mt-4 text-lg font-extrabold text-ink dark:text-white">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <BottomSheet open={bookingOpen} onClose={() => setBookingOpen(false)} title={`Check ${selectedRoom?.name || 'room'} availability`}>
-        {status === 'success' ? (
-          <div className="py-8 text-center">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-lake" />
-            <h3 className="mt-4 text-xl font-extrabold text-ink dark:text-white">Availability request received</h3>
-            <p className="mt-2 text-slate-600 dark:text-slate-300">Our hotel team will confirm your dates and room options.</p>
-          </div>
-        ) : (
-          <form className="space-y-4" onSubmit={submitAvailability}>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Check in" type="date" value={form.check_in} onChange={(event) => setForm({ ...form, check_in: event.target.value })} required />
-              <Field label="Check out" type="date" value={form.check_out} onChange={(event) => setForm({ ...form, check_out: event.target.value })} required />
-            </div>
-            <Field label="Your name" placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
-            <Field label="Phone number" type="tel" placeholder="+254..." value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required />
-            <Field label="Number of guests" type="number" min="1" max={selectedRoom?.guests} value={form.guests} onChange={(event) => setForm({ ...form, guests: event.target.value })} required />
-            {status === 'error' && <p className="text-sm font-bold text-red-600">We could not send your request. Please try again.</p>}
-            <button disabled={status === 'sending'} className="touch-button w-full bg-lake text-white disabled:opacity-60">
-              {status === 'sending' ? 'Sending request...' : 'Request availability'}
-            </button>
-          </form>
-        )}
-      </BottomSheet>
-    </main>
+      ))}
+    </>
   )
 }
 
-function Field({ label, ...props }) {
+export default function HotelPage() {
   return (
-    <label className="block text-sm font-bold text-ink dark:text-slate-100">
-      {label}
-      <input {...props} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 font-normal outline-none focus:border-lake" />
-    </label>
+    <main className="relative min-h-screen overflow-hidden bg-[#fafafa] text-[#10252b] selection:bg-[#e3bd6f] selection:text-white">
+      
+      {/* Background Ambience */}
+      <div className="fixed inset-0 z-0 opacity-40 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 h-2 w-2 rounded-full bg-[#e3bd6f] blur-[1px] animate-float"></div>
+        <div className="absolute top-1/3 right-1/4 h-3 w-3 rounded-full bg-[#c58452] blur-[2px] animate-float-delayed"></div>
+        <div className="absolute bottom-1/4 left-1/3 h-1.5 w-1.5 rounded-full bg-[#fcebb6] blur-[1px] animate-float" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-1/3 right-1/3 h-2 w-2 rounded-full bg-[#e3bd6f] blur-[1px] animate-float-delayed" style={{ animationDelay: '3s' }}></div>
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        
+        {/* Header Section */}
+        <div className="text-center mb-24 max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#e3bd6f]/50 bg-white px-5 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#c58452] shadow-sm mb-8">
+            <Hexagon className="h-4 w-4" />
+            The Inner Hive
+            <Hexagon className="h-4 w-4" />
+          </div>
+          <h1 className="text-5xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#c58452] via-[#d4a947] to-[#e3bd6f] sm:text-6xl lg:text-7xl mb-6 drop-shadow-sm">
+            Explore the Hotel
+          </h1>
+          <p className="mx-auto max-w-2xl text-lg font-medium text-[#10252b]/70 tracking-wide">
+            A seamless, supernatural flow mapping every corner of the G8 Hotel experience. 
+            From expansive event grounds to our dedicated staff.
+          </p>
+        </div>
+
+        {/* Honeycomb Gallery Flow */}
+        <div className="honeycomb pb-32">
+          {gallery.map((item, index) => (
+            <div key={item.title} className="honeycomb-cell group !p-0 border border-[#e3bd6f]/30 bg-white shadow-xl hover:shadow-[#e3bd6f]/20 cursor-default">
+              
+              <HoneycombSlideshow images={item.images} altPrefix={item.title} />
+              
+              {/* Light Overlay gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent opacity-95 group-hover:opacity-85 transition-opacity duration-500 z-10 pointer-events-none" />
+              
+              {/* Hover Golden Glow */}
+              <div className="absolute inset-0 bg-[#fcebb6]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 mix-blend-overlay pointer-events-none" />
+              
+              {/* Content */}
+              <div className="relative z-20 flex h-full w-full flex-col justify-end p-6 pb-12 text-center transform group-hover:-translate-y-2 transition-transform duration-500 pointer-events-none">
+                <h2 className="text-[#c58452] font-extrabold text-lg uppercase tracking-[0.15em] mb-2 drop-shadow-sm group-hover:text-[#d4a947]">
+                  {item.title}
+                </h2>
+                <p className="text-[#10252b]/80 font-medium text-xs leading-relaxed max-w-[80%] mx-auto opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+                  {item.desc}
+                </p>
+              </div>
+
+              {/* Decorative Hexagon */}
+              <Hexagon className="absolute top-6 right-6 h-6 w-6 text-[#e3bd6f] opacity-0 group-hover:opacity-60 transition-opacity duration-500 z-20" />
+            </div>
+          ))}
+          
+          {/* A few decorative structural cells to complete the flow */}
+          <div className="honeycomb-cell hidden sm:flex opacity-30 pointer-events-none !bg-white border border-[#e3bd6f]/20 shadow-sm">
+            <Hexagon className="h-16 w-16 text-[#e3bd6f]" />
+          </div>
+          <div className="honeycomb-cell hidden lg:flex opacity-20 pointer-events-none !bg-white border border-[#e3bd6f]/20 shadow-sm">
+            <Hexagon className="h-24 w-24 text-[#e3bd6f]" />
+          </div>
+        </div>
+
+      </div>
+    </main>
   )
 }

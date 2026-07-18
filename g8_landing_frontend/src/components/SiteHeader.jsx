@@ -1,32 +1,24 @@
-import { Building2, ClipboardList, Menu, Moon, Sun, X } from 'lucide-react'
+import { Hexagon, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { usePlan } from '../context/planContext'
-import { useTheme } from '../context/themeContext'
 
 const links = [
-  ['Food Menu', '/menu'],
-  ['Hotel', '/hotel'],
-  ['Experiences', '/experiences'],
-  ['Corporate', '/corporate'],
-  ['Cabro Blocks', '/cabro-blocks'],
+  ['Metal Works / Tiles / Cabro', '/cabro-blocks'],
 ]
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false)
-  const { planCount } = usePlan()
-  const { theme, toggleTheme } = useTheme()
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#081216]/92 text-white shadow-xl shadow-black/10 backdrop-blur-xl transition-colors">
-      <div className="page-shell flex h-16 items-center justify-between lg:h-20">
+    <header className="sticky top-0 z-40 border-b border-[#e3bd6f]/30 bg-white/90 text-[#10252b] shadow-lg shadow-[#e3bd6f]/5 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:h-20 lg:px-8">
         <Link to="/" className="flex min-h-11 items-center gap-3" onClick={() => setOpen(false)}>
-          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-sun text-ink shadow-lg shadow-black/20">
-            <Building2 className="h-5 w-5" />
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[#e3bd6f] text-white shadow-md shadow-[#e3bd6f]/20 transition-transform hover:rotate-12">
+            <Hexagon className="h-5 w-5 fill-current" />
           </span>
           <span>
-            <strong className="block font-display text-sm font-extrabold uppercase tracking-[0.14em]">G8 Yatch</strong>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">Villa Hotel · Embu</span>
+            <strong className="block font-display text-sm font-extrabold uppercase tracking-[0.14em] text-[#10252b]">G8 Yatch</strong>
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#c58452]">Engineered Hospitality</span>
           </span>
         </Link>
 
@@ -35,36 +27,20 @@ export default function SiteHeader() {
             <NavLink
               key={path}
               to={path}
-              className={({ isActive }) => `rounded-full px-3 py-2 text-sm font-bold transition ${isActive ? 'bg-white/10 text-sun' : 'text-white/62 hover:bg-white/10 hover:text-white'}`}
+              className={({ isActive }) => `rounded-full px-4 py-2 text-sm font-bold uppercase tracking-widest transition ${isActive ? 'bg-[#e3bd6f]/10 text-[#c58452]' : 'text-[#10252b]/60 hover:text-[#c58452]'}`}
             >
               {label}
             </NavLink>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center lg:hidden">
           <button
             type="button"
-            onClick={toggleTheme}
-            className="flex h-11 w-11 items-center justify-center rounded-md border border-white/15 bg-white/8 text-white transition hover:bg-white/12"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            aria-pressed={theme === 'dark'}
-            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          >
-            {theme === 'dark' ? <Sun className="h-5 w-5 text-sun" /> : <Moon className="h-5 w-5 text-sun" />}
-          </button>
-          <Link to="/plan" onClick={() => setOpen(false)} className="relative flex h-11 min-w-11 items-center justify-center rounded-md border border-white/15 bg-white/8 px-3 text-white transition hover:bg-white/12" aria-label={`My G8 Plan, ${planCount} selected`}>
-            <ClipboardList className="h-5 w-5" />
-            <span className="ml-2 hidden text-sm font-bold sm:inline">My Visit</span>
-            {planCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-sun px-1 text-[10px] font-extrabold text-ink">{planCount}</span>}
-          </Link>
-          <button
-            type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-md border border-white/15 bg-white/8 text-white lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-md border border-[#e3bd6f]/30 bg-[#e3bd6f]/5 text-[#10252b]"
             onClick={() => setOpen((value) => !value)}
             aria-label="Toggle navigation"
             aria-expanded={open}
-            aria-controls="mobile-navigation"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -72,24 +48,17 @@ export default function SiteHeader() {
       </div>
 
       {open && (
-        <nav id="mobile-navigation" className="border-t border-white/10 bg-[#081216] px-4 pb-4 pt-2 shadow-2xl lg:hidden">
+        <nav className="border-t border-[#e3bd6f]/20 bg-white px-4 pb-4 pt-2 shadow-2xl lg:hidden">
           {links.map(([label, path]) => (
             <NavLink
               key={path}
               to={path}
               onClick={() => setOpen(false)}
-              className={({ isActive }) => `flex min-h-12 items-center rounded-md px-4 text-sm font-bold ${isActive ? 'bg-white/10 text-sun' : 'text-white/68 hover:bg-white/10 hover:text-white'}`}
+              className={({ isActive }) => `flex min-h-12 items-center rounded-md px-4 text-sm font-bold uppercase tracking-widest ${isActive ? 'bg-[#e3bd6f]/10 text-[#c58452]' : 'text-[#10252b]/60 hover:text-[#c58452]'}`}
             >
               {label}
             </NavLink>
           ))}
-          <NavLink
-            to="/plan"
-            onClick={() => setOpen(false)}
-            className={({ isActive }) => `flex min-h-12 items-center rounded-md px-4 text-sm font-bold ${isActive ? 'bg-white/10 text-sun' : 'text-white/68 hover:bg-white/10 hover:text-white'}`}
-          >
-            My Visit {planCount > 0 ? `(${planCount})` : ''}
-          </NavLink>
         </nav>
       )}
     </header>

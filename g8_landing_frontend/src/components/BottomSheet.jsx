@@ -51,18 +51,18 @@ export default function BottomSheet({ open, onClose, title, children }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6">
-      <button type="button" className="absolute inset-0 bg-ink/70 backdrop-blur-sm" onClick={onClose} aria-label="Close" />
+      <button type="button" className="absolute inset-0 bg-[#10252b]/40 backdrop-blur-sm" onClick={onClose} aria-label="Close" />
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-[2rem] bg-white p-5 text-slate-950 shadow-2xl dark:bg-[#10252b] dark:text-slate-100 md:max-w-xl md:rounded-[2rem] md:p-7"
+        className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl border-t border-[#e3bd6f]/30 bg-[#fafafa] p-5 text-[#10252b] shadow-[0_-10px_40px_rgba(227,189,111,0.2)] md:max-w-xl md:rounded-3xl md:border md:p-8"
       >
-        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-600 md:hidden" />
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 id={titleId} className="text-xl font-extrabold text-ink dark:text-white">{title}</h2>
-          <button type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-white/10" aria-label="Close">
+        <div className="mx-auto mb-6 h-1.5 w-16 rounded-full bg-[#e3bd6f]/30 md:hidden" />
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <h2 id={titleId} className="text-2xl font-black uppercase tracking-wider text-[#c58452]">{title}</h2>
+          <button type="button" onClick={onClose} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e3bd6f]/10 hover:bg-[#e3bd6f]/20 text-[#c58452] hover:text-[#10252b] transition-colors border border-transparent hover:border-[#e3bd6f]/50" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>

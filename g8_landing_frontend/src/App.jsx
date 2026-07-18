@@ -9,12 +9,11 @@ import HomePage from './pages/HomePage'
 import HotelPage from './pages/HotelPage'
 import MenuPage from './pages/MenuPage'
 import NotFoundPage from './pages/NotFoundPage'
-import PlanPage from './pages/PlanPage'
 
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-stone-50 text-slate-950 transition-colors duration-200 dark:bg-[#07171b] dark:text-slate-100">
+      <div className="min-h-screen bg-[#fafafa] text-[#10252b] selection:bg-[#e3bd6f] selection:text-white">
         <SiteHeader />
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -24,7 +23,6 @@ export default function App() {
           <Route path="/experiences" element={<ExperiencesPage />} />
           <Route path="/corporate" element={<CorporatePage />} />
           <Route path="/cabro-blocks" element={<CabroBlocksPage />} />
-          <Route path="/plan" element={<PlanPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <SiteFooter />
