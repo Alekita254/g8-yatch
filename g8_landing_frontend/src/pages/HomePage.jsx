@@ -181,7 +181,7 @@ export default function HomePage() {
       <div className="relative z-20 bg-[#fafafa]">
         {sections.map((sec, index) => (
           <section key={sec.id} id={sec.id} className="relative w-full py-8 lg:py-0 border-b border-gray-100 lg:border-none">
-            
+
             {/* DESKTOP VIEW: Awwwards Sticky Side-by-Side Stacking */}
             <div className={`hidden lg:flex mx-auto max-w-7xl flex-row ${index % 2 !== 0 ? 'flex-row-reverse' : ''}`}>
               {/* Left Side: Sticky Text */}
@@ -265,7 +265,7 @@ export default function HomePage() {
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                    
+
                     {/* Top counter tag */}
                     <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
                       Photo {i + 1} of {sec.images.length}
