@@ -1,75 +1,49 @@
-from django.shortcuts import get_object_or_404
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
+from apps.common.views import DetailAPIView, ListCreateAPIView
 from apps.users.permissions import IsPosManagerOrReadOnly
-from apps.pagination import paginated_response
-
 from .models import BankAccount, PaymentMethod, PaymentRoutingRule
-from .serializers import BankAccountSerializer, PaymentMethodSerializer, PaymentRoutingRuleSerializer
+from .serializers import (
+    BankAccountSerializer,
+    PaymentMethodSerializer,
+    PaymentRoutingRuleSerializer,
+)
 
 
-class ListCreateMixin(APIView):
+class PaymentMethodListCreateView(ListCreateAPIView):
     permission_classes = [IsPosManagerOrReadOnly]
-    model = None
-    serializer_class = None
-
-    def get_queryset(self):
-        return self.model.objects.all()
-
-    def get(self, request):
-        queryset = self.get_queryset()
-        return paginated_response(request, queryset, self.serializer_class)
-
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        instance = serializer.save()
-        return Response(self.serializer_class(instance).data, status=status.HTTP_201_CREATED)
-
-
-class DetailMixin(APIView):
-    permission_classes = [IsPosManagerOrReadOnly]
-    model = None
-    serializer_class = None
-
-    def patch(self, request, pk):
-        instance = get_object_or_404(self.model, pk=pk)
-        serializer = self.serializer_class(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        instance = serializer.save()
-        return Response(self.serializer_class(instance).data)
-
-
-class PaymentMethodListCreateView(ListCreateMixin):
     model = PaymentMethod
     serializer_class = PaymentMethodSerializer
 
 
-class PaymentMethodDetailView(DetailMixin):
+class PaymentMethodDetailView(DetailAPIView):
+    permission_classes = [IsPosManagerOrReadOnly]
     model = PaymentMethod
     serializer_class = PaymentMethodSerializer
 
 
-class BankAccountListCreateView(ListCreateMixin):
+class BankAccountListCreateView(ListCreateAPIView):
+    permission_classes = [IsPosManagerOrReadOnly]
     model = BankAccount
     serializer_class = BankAccountSerializer
 
 
-class BankAccountDetailView(DetailMixin):
+class BankAccountDetailView(DetailAPIView):
+    permission_classes = [IsPosManagerOrReadOnly]
     model = BankAccount
     serializer_class = BankAccountSerializer
 
 
-class PaymentRoutingRuleListCreateView(ListCreateMixin):
+class PaymentRoutingRuleListCreateView(ListCreateAPIView):
+    permission_classes = [IsPosManagerOrReadOnly]
     model = PaymentRoutingRule
     serializer_class = PaymentRoutingRuleSerializer
 
     def get_queryset(self):
-        return PaymentRoutingRule.objects.select_related("payment_method", "bank_account", "service_point")
+        return PaymentRoutingRule.objects.select_related(
+            "payment_method", "bank_account", "service_point"
+        )
 
 
-class PaymentRoutingRuleDetailView(DetailMixin):
+class PaymentRoutingRuleDetailView(DetailAPIView):
+    permission_classes = [IsPosManagerOrReadOnly]
     model = PaymentRoutingRule
     serializer_class = PaymentRoutingRuleSerializer

@@ -7,11 +7,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.views import APIView
-
+from apps.common.mixins import ListModelMixin
+from apps.common.views import BaseAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from apps.pagination import paginated_response
 from apps.products.models import Product
-from apps.users.permissions import IsPosManager
 
 from .models import InventoryDocument, InventoryDocumentLine, InventoryThreshold, StockMovement
 from .serializers import (
@@ -152,83 +151,66 @@ def generate_inventory_document_pdf(document):
     return buffer
 
 
-class InventoryThresholdListCreateView(APIView):
-    permission_classes = [IsPosManager]
+class InventoryThresholdListCreateView(ListCreateAPIView):
+    model = InventoryThreshold
+    serializer_class = InventoryThresholdSerializer
 
-    def get(self, request):
-        queryset = InventoryThreshold.objects.select_related("product", "product__category")
-        return paginated_response(request, queryset, InventoryThresholdSerializer)
-
-    def post(self, request):
-        serializer = InventoryThresholdSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        threshold = serializer.save()
-        return Response(InventoryThresholdSerializer(threshold).data, status=status.HTTP_201_CREATED)
+    def get_queryset(self):
+        return InventoryThreshold.objects.select_related("product", "product__category")
 
 
-class InventoryThresholdDetailView(APIView):
-    permission_classes = [IsPosManager]
+class InventoryThresholdDetailView(RetrieveUpdateDestroyAPIView):
+    model = InventoryThreshold
+    serializer_class = InventoryThresholdSerializer
 
-    def patch(self, request, pk):
-        threshold = get_object_or_404(InventoryThreshold.objects.select_related("product"), pk=pk)
-        serializer = InventoryThresholdSerializer(threshold, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        threshold = serializer.save()
-        return Response(InventoryThresholdSerializer(threshold).data)
-
-    def delete(self, request, pk):
-        threshold = get_object_or_404(InventoryThreshold, pk=pk)
-        threshold.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def get_queryset(self):
+        return InventoryThreshold.objects.select_related("product")
 
 
-class LowStockProductListView(APIView):
-    permission_classes = [IsPosManager]
+class LowStockProductListView(ListModelMixin, BaseAPIView):
+    model = Product
+    serializer_class = LowStockProductSerializer
 
-    def get(self, request):
-        queryset = Product.objects.select_related("category", "inventory_threshold").filter(
+    def get_queryset(self):
+        return Product.objects.select_related("category", "inventory_threshold").filter(
             is_active=True,
             is_inventory_tracked=True,
             inventory_threshold__is_active=True,
             quantity__lte=F("inventory_threshold__minimum_quantity"),
         )
-        return paginated_response(request, queryset, LowStockProductSerializer)
 
 
-class InventoryDocumentListCreateView(APIView):
-    permission_classes = [IsPosManager]
+class InventoryDocumentListCreateView(ListCreateAPIView):
+    model = InventoryDocument
+    serializer_class = InventoryDocumentSerializer
 
     def get_queryset(self):
-        return InventoryDocument.objects.select_related("source_document", "purchase_pricelist").prefetch_related(
+        queryset = InventoryDocument.objects.select_related(
+            "source_document", "purchase_pricelist"
+        ).prefetch_related(
             "lines",
             "lines__product",
             "lines__product__category",
             "lines__purchase_pricelist",
         )
-
-    def get(self, request):
-        queryset = self.get_queryset()
-        document_type = request.query_params.get("document_type")
-        status_value = request.query_params.get("status")
+        document_type = self.request.query_params.get("document_type")
+        status_value = self.request.query_params.get("status")
         if document_type:
             queryset = queryset.filter(document_type=document_type)
         if status_value:
             queryset = queryset.filter(status=status_value)
-        return paginated_response(request, queryset, InventoryDocumentSerializer)
+        return queryset
 
-    def post(self, request):
-        serializer = InventoryDocumentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        identity = getattr(request.user, "identity", None)
-        document = serializer.save(created_by=identity)
-        return Response(InventoryDocumentSerializer(document).data, status=status.HTTP_201_CREATED)
+    def perform_create(self, serializer):
+        identity = getattr(self.request.user, "identity", None)
+        return serializer.save(created_by=identity)
 
 
-class InventoryDocumentDetailView(APIView):
-    permission_classes = [IsPosManager]
-
+class InventoryDocumentDetailView(BaseAPIView):
     def get_queryset(self):
-        return InventoryDocument.objects.select_related("source_document", "purchase_pricelist").prefetch_related(
+        return InventoryDocument.objects.select_related(
+            "source_document", "purchase_pricelist"
+        ).prefetch_related(
             "lines",
             "lines__product",
             "lines__product__category",
@@ -242,16 +224,17 @@ class InventoryDocumentDetailView(APIView):
     def patch(self, request, pk):
         document = get_object_or_404(self.get_queryset(), pk=pk)
         if document.status in [InventoryDocument.Status.APPROVED, InventoryDocument.Status.RECEIVED]:
-            return Response({"detail": "Approved or received documents cannot be edited."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Approved or received documents cannot be edited."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = InventoryDocumentSerializer(document, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         document = serializer.save()
         return Response(InventoryDocumentSerializer(document).data)
 
 
-class InventoryDocumentPdfView(APIView):
-    permission_classes = [IsPosManager]
-
+class InventoryDocumentPdfView(BaseAPIView):
     def get(self, request, pk):
         document = (
             InventoryDocument.objects.prefetch_related("lines", "lines__product")
@@ -291,9 +274,7 @@ def copy_lines(source, target, received=False):
         )
 
 
-class InventoryDocumentApproveView(APIView):
-    permission_classes = [IsPosManager]
-
+class InventoryDocumentApproveView(BaseAPIView):
     def post(self, request, pk):
         document = get_object_or_404(InventoryDocument, pk=pk)
         if document.document_type != InventoryDocument.DocumentType.PURCHASE_REQUEST:
@@ -306,9 +287,7 @@ class InventoryDocumentApproveView(APIView):
         return Response(InventoryDocumentSerializer(document).data)
 
 
-class InventoryDocumentRequisitionView(APIView):
-    permission_classes = [IsPosManager]
-
+class InventoryDocumentRequisitionView(BaseAPIView):
     @transaction.atomic
     def post(self, request, pk):
         source = get_object_or_404(InventoryDocument.objects.prefetch_related("lines"), pk=pk)
@@ -328,9 +307,7 @@ class InventoryDocumentRequisitionView(APIView):
         return Response(InventoryDocumentSerializer(requisition).data, status=status.HTTP_201_CREATED)
 
 
-class InventoryDocumentDeliveryNoteView(APIView):
-    permission_classes = [IsPosManager]
-
+class InventoryDocumentDeliveryNoteView(BaseAPIView):
     @transaction.atomic
     def post(self, request, pk):
         source = get_object_or_404(InventoryDocument.objects.prefetch_related("lines"), pk=pk)
@@ -349,9 +326,7 @@ class InventoryDocumentDeliveryNoteView(APIView):
         return Response(InventoryDocumentSerializer(delivery_note).data, status=status.HTTP_201_CREATED)
 
 
-class InventoryDocumentReceiveView(APIView):
-    permission_classes = [IsPosManager]
-
+class InventoryDocumentReceiveView(BaseAPIView):
     @transaction.atomic
     def post(self, request, pk):
         source = get_object_or_404(InventoryDocument.objects.prefetch_related("lines", "lines__product"), pk=pk)
@@ -394,9 +369,10 @@ class InventoryDocumentReceiveView(APIView):
         return Response(InventoryDocumentSerializer(goods_received).data, status=status.HTTP_201_CREATED)
 
 
-class StockMovementListView(APIView):
-    permission_classes = [IsPosManager]
+class StockMovementListView(ListModelMixin, BaseAPIView):
+    model = StockMovement
+    serializer_class = StockMovementSerializer
 
-    def get(self, request):
-        queryset = StockMovement.objects.select_related("product", "document")
-        return paginated_response(request, queryset, StockMovementSerializer)
+    def get_queryset(self):
+        return StockMovement.objects.select_related("product", "document")
+

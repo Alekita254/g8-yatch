@@ -1,9 +1,10 @@
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.views import DetailAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from apps.pagination import paginated_response
 
 from .keycloak_admin import KeycloakAdminClient, KeycloakAdminError
@@ -17,6 +18,14 @@ from .serializers import (
     RoleSerializer,
     ServicePointSerializer,
     UserIdentitySerializer,
+)
+from .utils import (
+    calculate_company_sales_summary,
+    calculate_user_sales_stats,
+    get_user_by_identifier,
+    get_user_sales_detail_payload,
+    get_user_sales_summary_payload,
+    get_user_sub_identifiers,
 )
 
 
@@ -189,48 +198,14 @@ class RoleDetailView(APIView):
         return Response(RoleSerializer(role).data)
 
 
-class ServicePointListCreateView(APIView):
-    permission_classes = [IsPosManager]
-
-    def get(self, request):
-        service_points = ServicePoint.objects.all()
-        return paginated_response(request, service_points, ServicePointSerializer)
-
-    def post(self, request):
-        serializer = ServicePointSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        service_point = serializer.save()
-        return Response(
-            ServicePointSerializer(service_point).data,
-            status=status.HTTP_201_CREATED,
-        )
+class ServicePointListCreateView(ListCreateAPIView):
+    model = ServicePoint
+    serializer_class = ServicePointSerializer
 
 
-class ServicePointDetailView(APIView):
-    permission_classes = [IsPosManager]
-
-    def patch(self, request, pk):
-        service_point = get_object_or_404(ServicePoint, pk=pk)
-        serializer = ServicePointSerializer(service_point, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        service_point = serializer.save()
-        return Response(ServicePointSerializer(service_point).data)
-
-    def delete(self, request, pk):
-        service_point = get_object_or_404(ServicePoint, pk=pk)
-        try:
-            service_point.delete()
-        except ProtectedError:
-            return Response(
-                {
-                    "detail": (
-                        "This service point is linked to existing records. "
-                        "Set it inactive instead of deleting it."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+class ServicePointDetailView(RetrieveUpdateDestroyAPIView):
+    model = ServicePoint
+    serializer_class = ServicePointSerializer
 
 
 class MyTokenObtainPairView(APIView):
@@ -247,3 +222,76 @@ class MyTokenObtainPairView(APIView):
             },
             status=405,
         )
+
+
+class StaffSalesSummaryView(APIView):
+    """Overview and performance summary for employees and company sales."""
+    permission_classes = [IsPosManager]
+
+    def get(self, request):
+        user_id = request.query_params.get("user_id") or request.query_params.get("keycloak_sub")
+        if user_id:
+            user = get_user_by_identifier(user_id)
+            return Response(get_user_sales_summary_payload(user))
+
+        search = request.query_params.get("search", "").strip().lower()
+        role_filter = request.query_params.get("role", "").strip()
+
+        users_qs = UserIdentity.objects.all()
+        if search:
+            users_qs = users_qs.filter(
+                Q(username__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(email__icontains=search)
+            )
+
+        if role_filter:
+            users_qs = [u for u in users_qs if role_filter in (u.realm_roles or [])]
+
+        users_list = [get_user_sales_summary_payload(user) for user in users_qs]
+
+        sort_by = request.query_params.get("sort_by", "month").lower()
+        sort_field = self._get_sort_period_key(sort_by)
+        users_list.sort(
+            key=lambda u: (
+                u.get(sort_field, {}).get("total_sales", 0),
+                u.get(sort_field, {}).get("order_count", 0),
+            ),
+            reverse=True,
+        )
+
+        return Response({
+            "results": users_list,
+            "count": len(users_list),
+            "company_summary": calculate_company_sales_summary(),
+        })
+
+    @staticmethod
+    def _get_sort_period_key(sort_by: str) -> str:
+        sort_map = {
+            "today": "today",
+            "week": "this_week",
+            "this_week": "this_week",
+            "all_time": "all_time",
+        }
+        return sort_map.get(sort_by, "this_month")
+
+
+class StaffMemberSalesDetailView(APIView):
+    """Detailed employee sales performance view with daily/weekly/monthly orders & breakdowns."""
+    permission_classes = [IsPosManager]
+
+    def get(self, request, keycloak_sub=None, user_id=None):
+        identifier = keycloak_sub or user_id or request.query_params.get("user_id")
+        user = get_user_by_identifier(identifier)
+
+        payload = get_user_sales_detail_payload(
+            user=user,
+            period=request.query_params.get("period", "today"),
+            start_str=request.query_params.get("start_date"),
+            end_str=request.query_params.get("end_date"),
+        )
+        return Response(payload)
+
+

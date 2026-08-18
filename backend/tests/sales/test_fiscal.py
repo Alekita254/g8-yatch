@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 from django.test import SimpleTestCase
 
-from .views import build_fiscal_payload
+from apps.sales.views import build_fiscal_payload
 
 
 class BuildFiscalPayloadTests(SimpleTestCase):

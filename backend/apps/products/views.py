@@ -1,13 +1,13 @@
-from django.db.models import Prefetch, ProtectedError
-from django.shortcuts import get_object_or_404
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from django.db.models import Prefetch
 
-from apps.users.permissions import IsPosManager
-from apps.pagination import paginated_response
-
-from .models import Product, ProductCategory, PurchasePricelist, SalesPricelist, SalesPricelistItem
+from apps.common.views import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from .models import (
+    Product,
+    ProductCategory,
+    PurchasePricelist,
+    SalesPricelist,
+    SalesPricelistItem,
+)
 from .serializers import (
     ProductCategorySerializer,
     ProductSerializer,
@@ -16,69 +16,17 @@ from .serializers import (
 )
 
 
-class ListCreateMixin(APIView):
-    permission_classes = [IsPosManager]
-    model = None
-    serializer_class = None
-
-    def get_queryset(self):
-        return self.model.objects.all()
-
-    def get(self, request):
-        queryset = self.get_queryset()
-        return paginated_response(request, queryset, self.serializer_class)
-
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        instance = serializer.save()
-        return Response(self.serializer_class(instance).data, status=status.HTTP_201_CREATED)
-
-
-class DetailMixin(APIView):
-    permission_classes = [IsPosManager]
-    model = None
-    serializer_class = None
-
-    def get(self, request, pk):
-        instance = get_object_or_404(self.model, pk=pk)
-        return Response(self.serializer_class(instance).data)
-
-    def patch(self, request, pk):
-        instance = get_object_or_404(self.model, pk=pk)
-        serializer = self.serializer_class(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        instance = serializer.save()
-        return Response(self.serializer_class(instance).data)
-
-    def delete(self, request, pk):
-        instance = get_object_or_404(self.model, pk=pk)
-        try:
-            instance.delete()
-        except ProtectedError:
-            return Response(
-                {
-                    "detail": (
-                        "This record is linked to existing transactions or setup data. "
-                        "Set it inactive instead of deleting it."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class ProductCategoryListCreateView(ListCreateMixin):
+class ProductCategoryListCreateView(ListCreateAPIView):
     model = ProductCategory
     serializer_class = ProductCategorySerializer
 
 
-class ProductCategoryDetailView(DetailMixin):
+class ProductCategoryDetailView(RetrieveUpdateDestroyAPIView):
     model = ProductCategory
     serializer_class = ProductCategorySerializer
 
 
-class ProductListCreateView(ListCreateMixin):
+class ProductListCreateView(ListCreateAPIView):
     model = Product
     serializer_class = ProductSerializer
 
@@ -86,12 +34,12 @@ class ProductListCreateView(ListCreateMixin):
         return Product.objects.select_related("category", "inventory_threshold")
 
 
-class ProductDetailView(DetailMixin):
+class ProductDetailView(RetrieveUpdateDestroyAPIView):
     model = Product
     serializer_class = ProductSerializer
 
 
-class SalesPricelistListCreateView(ListCreateMixin):
+class SalesPricelistListCreateView(ListCreateAPIView):
     model = SalesPricelist
     serializer_class = SalesPricelistSerializer
 
@@ -102,16 +50,16 @@ class SalesPricelistListCreateView(ListCreateMixin):
         )
 
 
-class SalesPricelistDetailView(DetailMixin):
+class SalesPricelistDetailView(RetrieveUpdateDestroyAPIView):
     model = SalesPricelist
     serializer_class = SalesPricelistSerializer
 
 
-class PurchasePricelistListCreateView(ListCreateMixin):
+class PurchasePricelistListCreateView(ListCreateAPIView):
     model = PurchasePricelist
     serializer_class = PurchasePricelistSerializer
 
 
-class PurchasePricelistDetailView(DetailMixin):
+class PurchasePricelistDetailView(RetrieveUpdateDestroyAPIView):
     model = PurchasePricelist
     serializer_class = PurchasePricelistSerializer

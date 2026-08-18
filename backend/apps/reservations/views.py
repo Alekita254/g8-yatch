@@ -1,12 +1,6 @@
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from apps.users.permissions import IsPosManager
-from apps.pagination import paginated_response
-
+from apps.common.views import DetailAPIView, ListCreateAPIView
 from .models import Reservation
 from .serializers import ReservationSerializer
 
@@ -15,28 +9,17 @@ def next_reservation_number():
     return f"RES-{timezone.now():%Y%m%d}-{Reservation.objects.count() + 1:05d}"
 
 
-class ReservationListCreateView(APIView):
-    permission_classes = [IsPosManager]
+class ReservationListCreateView(ListCreateAPIView):
+    model = Reservation
+    serializer_class = ReservationSerializer
 
-    def get(self, request):
-        queryset = Reservation.objects.select_related("business_partner", "room")
-        return paginated_response(request, queryset, ReservationSerializer)
+    def get_queryset(self):
+        return Reservation.objects.select_related("business_partner", "room")
 
-    def post(self, request):
-        data = request.data.copy()
-        data["reservation_number"] = next_reservation_number()
-        serializer = ReservationSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        reservation = serializer.save(reservation_number=data["reservation_number"])
-        return Response(ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
+    def perform_create(self, serializer):
+        return serializer.save(reservation_number=next_reservation_number())
 
 
-class ReservationDetailView(APIView):
-    permission_classes = [IsPosManager]
-
-    def patch(self, request, pk):
-        reservation = get_object_or_404(Reservation, pk=pk)
-        serializer = ReservationSerializer(reservation, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        reservation = serializer.save()
-        return Response(ReservationSerializer(reservation).data)
+class ReservationDetailView(DetailAPIView):
+    model = Reservation
+    serializer_class = ReservationSerializer

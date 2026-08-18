@@ -10,10 +10,13 @@ from .views import (
     RoleListCreateView,
     ServicePointDetailView,
     ServicePointListCreateView,
+    StaffMemberSalesDetailView,
+    StaffSalesSummaryView,
 )
 
 urlpatterns = [
     path("me/", MeView.as_view(), name="users-me"),
+    path("sales-performance/", StaffSalesSummaryView.as_view(), name="users-sales-performance"),
     path("roles/", RoleListCreateView.as_view(), name="roles-list-create"),
     path("roles/<int:pk>/", RoleDetailView.as_view(), name="roles-detail"),
     path(
@@ -28,6 +31,16 @@ urlpatterns = [
     ),
     path("", AdminUserListCreateView.as_view(), name="users-admin-list-create"),
     path("<str:keycloak_sub>/", AdminUserDetailView.as_view(), name="users-admin-detail"),
+    path(
+        "<str:keycloak_sub>/sales-performance/",
+        StaffMemberSalesDetailView.as_view(),
+        name="users-admin-sales-performance",
+    ),
+    path(
+        "<str:keycloak_sub>/sales/",
+        StaffMemberSalesDetailView.as_view(),
+        name="users-admin-sales-alias",
+    ),
     path("<str:keycloak_sub>/roles/", AdminUserRoleView.as_view(), name="users-admin-roles"),
     path(
         "<str:keycloak_sub>/password/",
