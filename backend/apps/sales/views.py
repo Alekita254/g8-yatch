@@ -217,7 +217,6 @@ def generate_payment_receipt_pdf(invoice):
     c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "BILL SUMMARY")
     y -= line_height
-    pair("Taxable subtotal", f"KES {invoice.subtotal:,.2f}")
     for tax in tax_lines_from_payload(invoice.fiscal_payload):
         pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
     pair("Tax total", f"KES {invoice.tax_total:,.2f}")
@@ -329,7 +328,6 @@ def generate_sales_invoice_pdf(invoice):
     c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "BILL SUMMARY")
     y -= line_height
-    pair("Taxable subtotal", f"KES {invoice.subtotal:,.2f}")
     for tax in tax_lines_from_payload(invoice.fiscal_payload):
         pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
     pair("Tax total", f"KES {invoice.tax_total:,.2f}")
@@ -441,7 +439,6 @@ def generate_visit_invoice_pdf(visit, *, receipt=False):
     c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "BILL SUMMARY")
     y -= line_height
-    pair("Taxable subtotal", f"KES {subtotal:,.2f}")
     for (_, name, rate), amount in tax_totals.items():
         pair(f"{name} {rate}%", f"KES {amount:,.2f}")
     pair("Tax total", f"KES {tax_total:,.2f}")
@@ -590,7 +587,6 @@ def generate_order_receipts_pdf(order):
             c.setFont("Helvetica-Bold", 8)
             c.drawString(margin, y, "BILL SUMMARY")
             y -= line_height
-            pair("Taxable subtotal", f"KES {order.subtotal:,.2f}")
             for tax in build_fiscal_payload(order).get("tax_lines", []):
                 pair(f"{tax.get('name', 'Tax')} {tax.get('rate', '')}%", f"KES {Decimal(str(tax.get('amount', '0'))):,.2f}")
             pair("Tax total", f"KES {order.tax_total:,.2f}")

@@ -181,7 +181,6 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
             "customer_name",
             "issued_by",
             "issued_by_name",
-            "subtotal",
             "tax_total",
             "tax_lines",
             "discount_total",
