@@ -24,6 +24,7 @@ services:
       - g8net
 
   backend:
+    container_name: g8-backend
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -38,8 +39,10 @@ services:
       - backend_media:/app/media
     networks:
       - g8net
+      - shared-proxy-net
 
   frontend:
+    container_name: g8-frontend
     build:
       context: .
       dockerfile: frontend/Dockerfile
@@ -54,8 +57,10 @@ services:
       - backend
     networks:
       - g8net
+      - shared-proxy-net
 
   landing_frontend:
+    container_name: g8-landing-frontend
     build:
       context: .
       dockerfile: g8_landing_frontend/Dockerfile
@@ -74,8 +79,10 @@ services:
     restart: unless-stopped
     networks:
       - g8net
+      - shared-proxy-net
 
   keycloak:
+    container_name: g8-keycloak
     image: quay.io/keycloak/keycloak:26.6.1
     restart: unless-stopped
     environment:
@@ -96,36 +103,16 @@ services:
       - keycloak-postgres
     networks:
       - g8net
-
-  caddy:
-    image: caddy:latest
-    restart: unless-stopped
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-    depends_on:
-      - backend
-      - frontend
-      - landing_frontend
-      - keycloak
-    networks:
-      - g8net
+      - shared-proxy-net
 
 volumes:
   g8_app_postgres_data:
   g8_keycloak_postgres_data:
   backend_staticfiles:
   backend_media:
-  caddy_data:
-  caddy_config:
 
 networks:
   g8net:
     driver: bridge
+  shared-proxy-net:
+    external: true
