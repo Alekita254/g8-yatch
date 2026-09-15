@@ -9,14 +9,22 @@
     "react-native": "0.86.3"
   },
   "devDependencies": {
+    "@react-native/eslint-config": "^0.86.0",
     "@types/react": "~19.2.2",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "start": "expo start --port 8081 --host lan",
+    "android": "expo start --port 8081 --host lan --android",
+    "ios": "expo start --port 8081 --host lan --ios",
+    "web": "expo start --port 8081 --host lan --web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "private": true
 }

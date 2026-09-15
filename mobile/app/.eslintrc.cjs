@@ -1,0 +1,7 @@
+module.exports = {
+  root: true,
+  extends: ['@react-native', 'plugin:prettier/recommended'],
+  rules: {
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
+  },
+};
