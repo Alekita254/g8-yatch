@@ -2,7 +2,7 @@ import os
 from decimal import Decimal
 
 from django.core.files.base import ContentFile
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -122,6 +122,20 @@ def staff_display_name(keycloak_sub):
 
 
 MPESA_TILL_NUMBER = "5869651"
+
+
+def request_idempotency_key(request):
+    key = request.headers.get("Idempotency-Key") or request.data.get("client_operation_key")
+    if not key:
+        return None
+    normalized = str(key).strip()
+    return normalized[:120] if normalized else None
+
+
+def idempotent_replay_response(payload):
+    response = Response(payload, status=status.HTTP_200_OK)
+    response["X-Idempotent-Replay"] = "true"
+    return response
 
 
 def draw_till_block(c, *, y, margin, right, center, line_height, mm):
@@ -701,6 +715,17 @@ class SalesOrderListCreateView(ListCreateMixin):
 
     @transaction.atomic
     def post(self, request):
+        idempotency_key = request_idempotency_key(request)
+        if idempotency_key:
+            existing_order = (
+                SalesOrder.objects.select_related("branch", "service_point")
+                .prefetch_related("items")
+                .filter(client_operation_key=idempotency_key)
+                .first()
+            )
+            if existing_order:
+                return idempotent_replay_response(self.serializer_class(existing_order).data)
+
         data = request.data.copy()
         data["order_number"] = next_number("SO", SalesOrder, "order_number")
         if data.get("visit"):
@@ -720,10 +745,18 @@ class SalesOrderListCreateView(ListCreateMixin):
         data = apply_sales_taxes_to_order_data(data)
         serializer = self.serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
-        order = serializer.save(
-            order_number=data["order_number"],
-            waiter_keycloak_sub=getattr(request.user, "keycloak_sub", "") or "",
-        )
+        try:
+            order = serializer.save(
+                order_number=data["order_number"],
+                waiter_keycloak_sub=getattr(request.user, "keycloak_sub", "") or "",
+                client_operation_key=idempotency_key,
+            )
+        except IntegrityError:
+            if idempotency_key:
+                existing_order = SalesOrder.objects.filter(client_operation_key=idempotency_key).first()
+                if existing_order:
+                    return idempotent_replay_response(self.serializer_class(existing_order).data)
+            raise
         return Response(self.serializer_class(order).data, status=status.HTTP_201_CREATED)
 
 
@@ -972,9 +1005,29 @@ class SalesPaymentListCreateView(ListCreateMixin):
 
     @transaction.atomic
     def post(self, request):
+        idempotency_key = request_idempotency_key(request)
+        if idempotency_key:
+            existing_payment = (
+                SalesPayment.objects.select_related("invoice", "payment_method")
+                .filter(client_operation_key=idempotency_key)
+                .first()
+            )
+            if existing_payment:
+                return idempotent_replay_response(self.serializer_class(existing_payment).data)
+
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        payment = serializer.save(received_by=getattr(request.user, "keycloak_sub", "") or "")
+        try:
+            payment = serializer.save(
+                received_by=getattr(request.user, "keycloak_sub", "") or "",
+                client_operation_key=idempotency_key,
+            )
+        except IntegrityError:
+            if idempotency_key:
+                existing_payment = SalesPayment.objects.filter(client_operation_key=idempotency_key).first()
+                if existing_payment:
+                    return idempotent_replay_response(self.serializer_class(existing_payment).data)
+            raise
         invoice = payment.invoice
         cleared_total = invoice.payments.filter(status=SalesPayment.Status.CLEARED).aggregate(models.Sum("amount"))["amount__sum"] or Decimal("0")
         invoice.paid_total = cleared_total
