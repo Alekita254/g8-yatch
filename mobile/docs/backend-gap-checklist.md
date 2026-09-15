@@ -1,37 +1,40 @@
-# Backend Gap Checklist for Android POS V1
+# Backend Gap Backlog for Android POS V1
 
-This checklist is mapped to current Django files and classes in this repository.
+This is the backend execution backlog for the strict V1 pilot.
+
+Pilot success definition:
+
+A hotel employee can take an order on an Android tablet, submit it, receive payment, print receipt, and recover safely after temporary network failure.
 
 ## Priority Legend
 
 - P0: Required before pilot
-- P1: Strongly recommended before pilot expansion
-- P2: Nice-to-have after initial pilot
+- Deferred: Move to V1.1+
 
-## P0-1: Idempotency for Order Creation
+## BE-P0-01: Idempotency for Order Creation
 
 Why:
 
-- Prevent duplicate orders during retries/offline replay.
+- Prevent duplicate orders during retries and offline replay.
 
 Current implementation references:
 
-- Order create endpoint route: backend/apps/sales/urls.py:34
+- Order create route: backend/apps/sales/urls.py:34
 - Order create logic: backend/apps/sales/views.py:695
-- Order model (no client operation key field): backend/apps/sales/models.py:43
+- SalesOrder model: backend/apps/sales/models.py:43
 
 Actions:
 
 1. Add idempotency key support for POST /api/sales/orders/.
-2. Persist client operation key on SalesOrder (or dedicated idempotency table).
-3. Return existing order when same key is replayed.
-4. Add unique constraint for idempotency scope.
+2. Persist operation key and enforce uniqueness at DB level.
+3. Return same order on replay with same key.
 
-Acceptance:
+Definition of done:
 
-- Same key + same payload returns same order, does not create duplicates.
+- Replay with same key does not create a second order.
+- Tests cover first request and replay.
 
-## P0-2: Idempotency for Payment Creation
+## BE-P0-02: Idempotency for Payment Creation
 
 Why:
 
@@ -41,166 +44,99 @@ Current implementation references:
 
 - Payment create route: backend/apps/sales/urls.py:45
 - Payment create logic: backend/apps/sales/views.py:966
-- Payment model (no client operation key field): backend/apps/sales/models.py:167
+- SalesPayment model: backend/apps/sales/models.py:167
 
 Actions:
 
 1. Add idempotency key support for POST /api/sales/payments/.
-2. Store operation key for each payment submission.
-3. Replay-safe responses for duplicate retries.
-4. Add tests for payment retry storms.
+2. Persist operation key and enforce uniqueness.
+3. Ensure replay-safe invoice total updates.
 
-Acceptance:
+Definition of done:
 
-- Repeated submission with same key never creates a second payment.
+- Duplicate key does not create second payment.
+- Invoice paid_total and balance_due remain correct under retries.
+- Tests cover retry storms and replay.
 
-## P0-3: Service-Point Access Filtering by User Permissions
+## BE-P0-03: Service-Point Access Filtering
 
 Why:
 
-- Device should only show authorized service points.
+- Tablet user must only select authorized service points.
 
 Current implementation references:
 
 - Service point routes: backend/apps/users/urls.py:23
-- Service point model: backend/apps/users/models.py:21
+- ServicePoint model: backend/apps/users/models.py:21
 
 Actions:
 
-1. Confirm GET /api/users/service-points/ filters by user authorization.
-2. If currently unfiltered, add queryset restriction by roles/permissions.
-3. Expose clear response for unauthorized service point usage.
+1. Enforce authorization filtering on GET /api/users/service-points/.
+2. Return 403 for unauthorized service point usage in order/payment flows.
 
-Acceptance:
+Definition of done:
 
-- User only receives service points they are allowed to use.
+- Unauthorized service points are not listed.
+- Unauthorized usage attempts are blocked.
 
-## P0-4: Offline Replay Result Semantics
+## BE-P0-04: Replay Semantics for Sync Worker
 
 Why:
 
-- Mobile sync queue needs deterministic handling for duplicates/conflicts.
+- Mobile queue requires deterministic server responses.
 
 Current implementation references:
 
 - Order create flow: backend/apps/sales/views.py:695
 - Payment create flow: backend/apps/sales/views.py:966
-- Visit checkout flow: backend/apps/sales/views.py:1013
 
 Actions:
 
-1. Standardize API responses for replayed requests (existing, conflict, accepted).
-2. Return machine-readable error codes for queue conflict handling.
-3. Document retry-safe statuses for mobile sync worker.
+1. Standardize replay responses for accepted, duplicate, and conflict outcomes.
+2. Provide machine-readable error codes for non-retryable failures.
+3. Document status mapping for mobile sync decisions.
 
-Acceptance:
+Definition of done:
 
-- Mobile can classify server responses into synced, retry, or manual-resolution.
+- Mobile can classify response as synced, retryable, or manual-action.
+- Tests validate replay behavior.
 
-## P0-5: Explicit Permission Coverage for Sensitive Actions
+## BE-P0-05: Explicit Permission Coverage for V1 Actions
 
 Why:
 
-- Some transactional endpoints currently use generic authenticated access only.
+- V1 needs hard backend enforcement beyond hidden UI.
 
 Current implementation references:
 
-- Current role helper: backend/apps/users/permissions.py:1
-- Void item endpoint class: backend/apps/sales/views.py:803
-- Order status transition endpoint class: backend/apps/sales/views.py:944
-- Payment create endpoint class: backend/apps/sales/views.py:966
+- Permission helper: backend/apps/users/permissions.py:1
+- Order create/send views: backend/apps/sales/views.py:695
+- Payment create view: backend/apps/sales/views.py:966
+- Receipt view: backend/apps/sales/views.py:1030
 
 Actions:
 
-1. Define action-level permission rules for mobile-sensitive operations:
-   - void line
-   - status override/cancel
-   - payment receive
-   - receipt reprint
-2. Apply explicit permission classes/checks in views.
-3. Add tests for forbidden actions per role.
+1. Define permission checks for create order, submit order, receive payment, and receipt retrieval.
+2. Apply permission checks in views.
+3. Add deny-path tests for unauthorized roles.
 
-Acceptance:
+Definition of done:
 
-- Unauthorized users receive 403 on sensitive operations even if UI is bypassed.
+- Unauthorized user receives 403 for disallowed V1 actions.
+- Tests verify allowed and denied roles.
 
-## P1-1: Receipt Reprint Audit Marker
+## Suggested Delivery Order
 
-Why:
+1. BE-P0-01
+2. BE-P0-02
+3. BE-P0-03
+4. BE-P0-05
+5. BE-P0-04
 
-- Supervisory and audit traceability.
+## Deferred Backlog (V1.1+)
 
-Current implementation references:
-
-- Receipt regeneration endpoint: backend/apps/sales/views.py:1030
-
-Actions:
-
-1. Add optional reprint metadata (who, when, why) on reprint operations.
-2. Optionally include reprint label in generated output where policy requires.
-
-Acceptance:
-
-- Reprints are distinguishable from original print events in audit trail.
-
-## P1-2: Mobile-Focused Error Code Catalog
-
-Why:
-
-- Improve operational UX and sync handling.
-
-Current implementation references:
-
-- Sales and folio operations:
-  - backend/apps/sales/views.py
-  - backend/apps/folios/views.py:28
-  - backend/apps/folios/views.py:42
-
-Actions:
-
-1. Add consistent error payload format with code + message.
-2. Keep user-friendly messages while preserving technical diagnostics server-side.
-
-Acceptance:
-
-- Mobile can map backend errors to actionable user messages.
-
-## P1-3: Folio-Charge Contract Hardening for POS
-
-Why:
-
-- Front desk charging must remain safe and permissioned.
-
-Current implementation references:
-
-- Folio lines endpoint: backend/apps/folios/urls.py:7
-- Folio line creation logic: backend/apps/folios/views.py:42
-
-Actions:
-
-1. Confirm POS-specific authorization policy for folio charges and payments.
-2. Add idempotency support to folio line create if mobile retries are expected.
-3. Add tests for closed folio and duplicate charge submissions.
-
-Acceptance:
-
-- Folio charges are retry-safe and role-safe.
-
-## P2-1: API Versioning Strategy for Mobile Longevity
-
-Why:
-
-- Mobile clients live longer in the field than web deployments.
-
-Current implementation references:
-
-- API root routing: backend/core/urls.py
-
-Actions:
-
-1. Document compatibility guarantees for /api routes.
-2. Introduce versioning path/header policy before any breaking changes.
-
-Acceptance:
-
-- Backend changes do not unexpectedly break deployed mobile versions.
+- Receipt reprint audit metadata
+- Expanded non-V1 error code catalog
+- Folio charging hardening for mobile flows
+- API versioning policy hardening
+- Order status override and void-role matrix expansion

@@ -1,65 +1,130 @@
-# Android POS V1 Sprint Plan
+# Android POS V1 Execution Backlog
 
-## Sprint 0: Foundation and Contracts
+This is the frozen execution backlog for V1 delivery.
 
-- Confirm endpoint contracts from mobile/docs/api-contract-map.md.
-- Close P0 backend gaps for idempotency and permissions.
-- Define auth and environment configuration strategy.
-- Decide first pilot devices and printer models.
+Rules:
 
-Deliverables:
+1. No feature outside the V1 Scope Freeze in mobile/README.md.
+2. Any exception requires explicit scope approval and pilot impact statement.
+3. Work is pulled in this order only after previous gate is passed.
 
-- Backend gap tickets approved and prioritized.
-- Mobile project scaffold ready.
+V1 pilot definition:
 
-## Sprint 1: Auth and Session Bootstrap
+Login -> Select service point -> Products -> Cart -> Order -> Payment -> Receipt -> Print -> Sync
 
-- OIDC login/logout flow.
-- Token persistence and refresh.
-- Fetch /api/users/me and resolve permission-gated app actions.
-- Service-point selection and local persistence.
+## Gate 0: Backend Safety for Core Flow
 
-Deliverables:
+Backlog items:
 
-- Authenticated shell with role-aware navigation.
+1. BE-P0-01: Order idempotency
+2. BE-P0-02: Payment idempotency
+3. BE-P0-05: Sensitive action permission hardening
+4. BE-P0-03: Service-point access filtering
+5. BE-P0-04: Replay semantics and error codes
 
-## Sprint 2: Products and Cart
+Entry criteria:
 
-- Category/product browse + search.
-- Cart state with quantity updates and line remove.
-- Local calculations for UX only (backend remains source of truth).
+- API routes confirmed in mobile/docs/api-contract-map.md.
 
-Deliverables:
+Exit criteria:
 
-- Working order draft flow with touch-first UI.
+- All P0 backend items completed and test-covered.
 
-## Sprint 3: Orders, Payments, Receipts
+## Gate 1: Mobile Foundation
 
-- Create/hold/submit order via /api/sales/orders and related actions.
-- Payment flow via /api/sales/payments.
-- Receipt retrieval + print dispatch abstraction.
-- Reprint from transaction history.
+Backlog items:
 
-Deliverables:
+1. MB-P0-01: React Native TypeScript app scaffold
+2. MB-P0-02: Environment config (API base URL, Keycloak realm/client)
+3. MB-P0-03: OIDC login/logout + token refresh
+4. MB-P0-04: Secure token storage and logout cleanup
+5. MB-P0-05: Profile and permission bootstrap via /api/users/me/
 
-- End-to-end POS transaction on Android.
+Entry criteria:
 
-## Sprint 4: Offline and Sync
+- Gate 0 complete.
 
-- SQLite cache for products/categories/service points.
-- Mutation queue for order/payment operations.
-- Sync worker with retries, backoff, and visible failure state.
+Exit criteria:
 
-Deliverables:
+- Authenticated user reaches role-aware POS entry screen.
 
-- Offline-safe order capture and eventual sync.
+## Gate 2: POS Core Workflow
 
-## Sprint 5: Pilot Hardening
+Backlog items:
 
-- Device and printer real-world testing.
-- Crash/error telemetry with redaction.
-- UX improvements for cashier speed.
+1. MB-P0-06: Service-point selection and persistence
+2. MB-P0-07: Product categories and product list with search
+3. MB-P0-08: Cart and local line editing UX
+4. MB-P0-09: Order create and update draft
+5. MB-P0-10: Order submit and server confirmation state
 
-Deliverables:
+Entry criteria:
 
-- Pilot APK for controlled hotel rollout.
+- Gate 1 complete.
+
+Exit criteria:
+
+- User can create and submit a valid order on tablet in a live test.
+
+## Gate 3: Payments, Receipt, and Print
+
+Backlog items:
+
+1. MB-P0-11: Payment methods fetch and selection
+2. MB-P0-12: Payment create with idempotency key
+3. MB-P0-13: Receipt retrieval and view state
+4. MB-P0-14: Receipt print dispatch through PrinterManager
+
+Entry criteria:
+
+- Gate 2 complete.
+
+Exit criteria:
+
+- Completed payment is visible in backend and printed receipt matches transaction.
+
+## Gate 4: Offline Recovery and Synchronization
+
+Backlog items:
+
+1. MB-P0-19: SQLite cache for products, categories, service points
+2. MB-P0-20: Mutation queue for order/payment writes
+3. MB-P0-21: Sync worker with retry/backoff
+4. MB-P0-22: Sync conflict and failure UX
+5. MB-P0-23: Connectivity and sync indicators
+
+Entry criteria:
+
+- Gate 3 complete.
+
+Exit criteria:
+
+- Offline order/payment flow syncs safely without duplicate financial entries.
+
+## Gate 5: Pilot Readiness
+
+Backlog items:
+
+1. MB-P0-24: Crash/error logging with redaction
+2. MB-P0-25: Tablet layout polish for live cashier use
+3. MB-P0-26: Device and printer test matrix sign-off
+4. MB-P0-27: Side-by-side runbook versus existing web POS
+5. MB-P0-28: Pilot APK build and deployment checklist
+
+Entry criteria:
+
+- Gate 4 complete.
+
+Exit criteria:
+
+- Pilot acceptance criteria met on a real hotel tablet and real 80mm printer.
+
+## Deferred Backlog (Locked for V1.1+)
+
+- Receipt reprint history UI
+- Table management extensions
+- Kitchen display system
+- Split payments
+- Barcode/camera scanning
+- Shift open/close and reconciliation
+- Device fleet management

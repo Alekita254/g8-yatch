@@ -26,17 +26,38 @@ project/
 |- app/ # React Native application source (to be created)
 |- tests/ # mobile tests (to be created)
 
-## Scope Reminder
+## V1 Scope Freeze
 
-V1 mobile focuses on operational POS workflows:
+Pilot definition for V1:
 
-- Login and permission-aware access
-- Service-point selection
-- Product browsing and search
-- Order create/edit/submit
-- Payments and receipts
-- Receipt reprint
-- Offline queue and synchronization
-- Connectivity and sync status
+A hotel employee can take an order on an Android tablet, submit it, receive a payment, print a receipt, and recover safely from a temporary network failure.
 
-Admin-heavy setup remains in the existing web app.
+The only in-scope user flow is:
+
+Login -> Select service point -> Products -> Cart -> Order -> Payment -> Receipt -> Print -> Sync
+
+The following items are locked as V1 in-scope:
+
+- Keycloak login and logout
+- Profile/permission bootstrap via /api/users/me/
+- Service-point selection and persistence on device
+- Product/category loading and search
+- Create draft order and submit order
+- Record payment
+- Fetch receipt and print to 80mm ESC/POS printer (LAN and Bluetooth)
+- Offline queue for order/payment when network drops
+- Safe sync and duplicate prevention when network returns
+- Connectivity and sync state visibility
+
+Everything else is locked out-of-scope for V1.
+
+## Scope Guardrails
+
+Any new feature request is deferred to V1.1 unless all are true:
+
+1. It is required to complete an in-scope V1 workflow.
+2. It does not add a new backend domain.
+3. It can be delivered within current sprint capacity without moving pilot date.
+4. It is approved as a scope exception by product and engineering.
+
+If any condition fails, add it to post-V1 backlog only.
