@@ -1,0 +1,126 @@
+import { StyleSheet } from 'react-native';
+
+import { Colors, Radius, Shadows, Spacing, Typography } from '../theme/tokens';
+
+export const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F6FAF8',
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+    justifyContent: 'space-between',
+    gap: Spacing.lg,
+  },
+  heroSection: {
+    gap: Spacing.md,
+    paddingTop: Spacing.md,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  brandMark: {
+    width: 46,
+    height: 46,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EAF4EE',
+    ...Shadows.soft,
+  },
+  brandRing: {
+    width: 30,
+    height: 30,
+    borderRadius: Radius.pill,
+    borderWidth: 4,
+    borderColor: Colors.success,
+  },
+  brandName: {
+    color: '#10263A',
+    fontSize: 44,
+    fontWeight: Typography.weightExtraBold,
+    lineHeight: 48,
+  },
+  brandSubline: {
+    color: '#6B8092',
+    fontSize: 24,
+    lineHeight: 31,
+    fontWeight: Typography.weightMedium,
+  },
+  headline: {
+    color: '#4C6272',
+    fontSize: 18,
+    lineHeight: 25,
+    fontWeight: Typography.weightBold,
+    marginTop: Spacing.sm,
+  },
+  body: {
+    color: '#708495',
+    fontSize: 17,
+    lineHeight: 25,
+  },
+  imageShowcase: {
+    minHeight: 290,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xl,
+    backgroundColor: '#F4F9F6',
+    position: 'relative',
+  },
+  showcaseGlowLarge: {
+    position: 'absolute',
+    right: -50,
+    top: 8,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(116, 173, 147, 0.16)',
+    transform: [{ rotate: '-24deg' }],
+  },
+  showcaseGlowSmall: {
+    position: 'absolute',
+    left: 28,
+    bottom: 30,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(116, 173, 147, 0.12)',
+    transform: [{ rotate: '15deg' }],
+  },
+  imagePlaceholder: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#E4EEE8',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.xs,
+    ...Shadows.soft,
+  },
+  imagePlaceholderTitle: {
+    color: '#2F4D43',
+    fontSize: Typography.body,
+    fontWeight: Typography.weightSemiBold,
+  },
+  imagePlaceholderBody: {
+    color: '#60786F',
+    fontSize: Typography.label,
+    lineHeight: 20,
+  },
+  ctaGroup: {
+    gap: Spacing.sm,
+    paddingTop: Spacing.sm,
+  },
+  errorText: {
+    color: Colors.danger,
+    fontSize: Typography.label,
+    fontWeight: Typography.weightSemiBold,
+  },
+});

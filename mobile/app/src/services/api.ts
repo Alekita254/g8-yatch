@@ -1,10 +1,12 @@
+import { authConfig } from './authConfig';
+
 export interface ApiConfig {
   baseUrl: string;
   timeoutMs: number;
 }
 
 export const apiConfig: ApiConfig = {
-  baseUrl: 'http://localhost:8000',
+  baseUrl: authConfig.apiBaseUrl,
   timeoutMs: 15000,
 };
 

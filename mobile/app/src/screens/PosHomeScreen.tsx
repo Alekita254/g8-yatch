@@ -1,23 +1,28 @@
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StatusBar as NativeStatusBar, Text, View } from 'react-native';
 
 import { AppHeader } from '../components/AppHeader';
 import { InfoCard } from '../components/InfoCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { usePilotStatus } from '../hooks/usePilotStatus';
-import { Colors, Radius, Spacing, Typography } from '../theme/tokens';
+import { styles } from './PosHomeScreen.styles';
 
-export function PosHomeScreen() {
+interface PosHomeScreenProps {
+  onSignOut?: () => Promise<void>;
+}
+
+export function PosHomeScreen({ onSignOut }: PosHomeScreenProps) {
   const status = usePilotStatus();
   const currentState = status.isOnline ? 'Live service session' : 'Offline recovery mode';
+  const statusBarOffset = Platform.OS === 'android' ? (NativeStatusBar.currentHeight ?? 0) : 0;
 
   return (
-    <View style={styles.safeArea}>
-      <StatusBar style="light" />
+    <View style={[styles.safeArea, { paddingTop: statusBarOffset }]}>
+      <StatusBar style="light" translucent={false} backgroundColor="#0B5347" />
       <AppHeader
-        brandLabel="G8 YACHT VILLA"
+        brandLabel="OVAL"
         rightLabel="Tablet POS"
-        title="Frontline Operations"
+        title="Oval POS"
         subtitle="Order to payment flow with reliable receipt printing"
       />
       <ScrollView contentContainerStyle={styles.container}>
@@ -52,6 +57,7 @@ export function PosHomeScreen() {
             </View>
           </View>
           <PrimaryButton label="Begin Service" />
+          <PrimaryButton label="Sign Out" onPress={onSignOut} />
         </InfoCard>
 
         <InfoCard title="Service Queue Snapshot">
@@ -81,98 +87,3 @@ export function PosHomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.appBackground,
-  },
-  container: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl,
-    gap: Spacing.md,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  onlineBadge: {
-    backgroundColor: Colors.success,
-    color: Colors.textPrimary,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.pill,
-    fontSize: Typography.caption,
-    fontWeight: Typography.weightBold,
-  },
-  syncBadge: {
-    backgroundColor: Colors.warning,
-    color: Colors.textPrimary,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.pill,
-    fontSize: Typography.caption,
-    fontWeight: Typography.weightBold,
-  },
-  sectionLead: {
-    color: Colors.brandSoft,
-    fontSize: Typography.label,
-    fontWeight: Typography.weightSemiBold,
-  },
-  actionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  actionTile: {
-    width: '48%',
-    backgroundColor: Colors.surfaceStrong,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.borderStrong,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  actionTitle: {
-    color: Colors.textPrimary,
-    fontSize: Typography.body,
-    fontWeight: Typography.weightBold,
-  },
-  actionBody: {
-    color: Colors.textSecondary,
-    fontSize: Typography.label,
-    lineHeight: 18,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: Colors.surfaceStrong,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.borderStrong,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    alignItems: 'center',
-    gap: Spacing.xxs,
-  },
-  metricValue: {
-    color: Colors.brandHighlight,
-    fontSize: 24,
-    fontWeight: Typography.weightExtraBold,
-  },
-  metricLabel: {
-    color: Colors.textSecondary,
-    fontSize: Typography.caption,
-    fontWeight: Typography.weightMedium,
-  },
-  body: {
-    color: Colors.textSecondary,
-    fontSize: Typography.body,
-    lineHeight: Typography.bodyLineHeight,
-  },
-});

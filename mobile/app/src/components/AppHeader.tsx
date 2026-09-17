@@ -12,7 +12,7 @@ export interface AppHeaderProps {
 export function AppHeader({
   title,
   subtitle,
-  brandLabel = 'G8 YACHT VILLA',
+  brandLabel = 'OVAL',
   rightLabel = 'Cashier',
 }: AppHeaderProps) {
   return (
