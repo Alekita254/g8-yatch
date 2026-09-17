@@ -6,52 +6,92 @@ export interface AppHeaderProps {
   title: string;
   subtitle: string;
   brandLabel?: string;
+  rightLabel?: string;
 }
 
-export function AppHeader({ title, subtitle, brandLabel = 'G8 YACHT VILLA' }: AppHeaderProps) {
+export function AppHeader({
+  title,
+  subtitle,
+  brandLabel = 'G8 YACHT VILLA',
+  rightLabel = 'Cashier',
+}: AppHeaderProps) {
   return (
-    <View style={styles.container}>
-      <View style={styles.brandChip}>
-        <Text style={styles.brandLabel}>{brandLabel}</Text>
+    <View style={styles.shell}>
+      <View style={styles.topRow}>
+        <View style={styles.brandChip}>
+          <Text style={styles.brandLabel}>{brandLabel}</Text>
+        </View>
+        <View style={styles.rightChip}>
+          <Text style={styles.rightLabel}>{rightLabel}</Text>
+        </View>
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <View style={styles.bottomRow}>
+        <View style={styles.titleWrap}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: Colors.borderStrong,
-    borderRadius: Radius.lg,
+  shell: {
+    backgroundColor: '#0B5347',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A7A67',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
     gap: Spacing.sm,
     ...Shadows.soft,
   },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   brandChip: {
     alignSelf: 'flex-start',
-    backgroundColor: Colors.brandHighlight,
+    backgroundColor: Colors.brandSoft,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.xxs,
+  },
+  rightChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#156A5A',
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xxs,
   },
   brandLabel: {
     color: Colors.brandText,
     fontSize: Typography.caption,
     fontWeight: Typography.weightBold,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
+  },
+  rightLabel: {
+    color: Colors.textPrimary,
+    fontSize: Typography.caption,
+    fontWeight: Typography.weightSemiBold,
+  },
+  titleWrap: {
+    flex: 1,
   },
   title: {
     color: Colors.textPrimary,
-    fontSize: Typography.h1,
-    fontWeight: Typography.weightExtraBold,
+    fontSize: 24,
+    fontWeight: Typography.weightBold,
   },
   subtitle: {
-    color: Colors.textSecondary,
-    fontSize: Typography.body,
-    lineHeight: Typography.bodyLineHeight,
+    color: '#D6EFE6',
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

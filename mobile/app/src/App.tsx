@@ -1,5 +1,5 @@
-import { PilotHomeScreen } from './screens/PilotHomeScreen';
+import { PosHomeScreen } from './screens/PosHomeScreen';
 
 export default function App() {
-  return <PilotHomeScreen />;
+  return <PosHomeScreen />;
 }
