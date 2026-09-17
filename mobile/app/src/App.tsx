@@ -21,5 +21,11 @@ export default function App() {
     );
   }
 
-  return <PosHomeScreen onSignOut={auth.signOut} />;
+  return (
+    <PosHomeScreen
+      firstName={auth.profile?.identity.first_name}
+      roles={auth.profile?.roles ?? []}
+      onSignOut={auth.signOut}
+    />
+  );
 }

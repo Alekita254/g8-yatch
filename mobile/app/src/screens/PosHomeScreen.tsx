@@ -1,89 +1,180 @@
 import { StatusBar } from 'expo-status-bar';
-import { Platform, ScrollView, StatusBar as NativeStatusBar, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StatusBar as NativeStatusBar,
+  Text,
+  View,
+  useColorScheme,
+} from 'react-native';
 
-import { AppHeader } from '../components/AppHeader';
-import { InfoCard } from '../components/InfoCard';
+import { resolveRoles, roleWorkspaces } from '../config/roleAccess';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { usePilotStatus } from '../hooks/usePilotStatus';
-import { styles } from './PosHomeScreen.styles';
+import { getPalette } from '../theme/palette';
+import { createStyles } from './PosHomeScreen.styles';
 
 interface PosHomeScreenProps {
+  firstName?: string;
+  roles?: string[];
   onSignOut?: () => Promise<void>;
 }
 
-export function PosHomeScreen({ onSignOut }: PosHomeScreenProps) {
+export function PosHomeScreen({ firstName, roles = [], onSignOut }: PosHomeScreenProps) {
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const colorScheme = useColorScheme();
+  const mode = colorScheme === 'dark' ? 'dark' : 'light';
+  const palette = useMemo(() => getPalette(mode), [mode]);
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const status = usePilotStatus();
-  const currentState = status.isOnline ? 'Live service session' : 'Offline recovery mode';
   const statusBarOffset = Platform.OS === 'android' ? (NativeStatusBar.currentHeight ?? 0) : 0;
+  const allowedRoles = resolveRoles(roles);
+  const visibleWorkspaces = roleWorkspaces.filter((workspace) =>
+    allowedRoles.includes(workspace.role),
+  );
+  const firstRowWorkspaces = visibleWorkspaces.slice(0, 2);
+  const secondRowWorkspaces = visibleWorkspaces.slice(2, 5);
+
+  const greetingName = firstName?.trim() ? firstName.trim() : 'Operator';
 
   return (
     <View style={[styles.safeArea, { paddingTop: statusBarOffset }]}>
-      <StatusBar style="light" translucent={false} backgroundColor="#0B5347" />
-      <AppHeader
-        brandLabel="OVAL"
-        rightLabel="Tablet POS"
-        title="Oval POS"
-        subtitle="Order to payment flow with reliable receipt printing"
+      <StatusBar
+        style={mode === 'dark' ? 'light' : 'dark'}
+        translucent={false}
+        backgroundColor={palette.background}
       />
-      <ScrollView contentContainerStyle={styles.container}>
-        <InfoCard title="Session Status">
-          <View style={styles.statusRow}>
-            <Text style={styles.onlineBadge}>{status.isOnline ? 'ONLINE' : 'OFFLINE'}</Text>
-            <Text style={styles.syncBadge}>
-              {status.isSyncReady ? 'SYNC READY' : 'SYNC BLOCKED'}
-            </Text>
-          </View>
-          <Text style={styles.sectionLead}>{currentState}</Text>
-          <Text style={styles.body}>{status.message}</Text>
-        </InfoCard>
+      <View style={styles.screenShell}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <View style={styles.topSection}>
+            <View style={styles.brandRow}>
+              <View style={styles.brandMark}>
+                <View style={styles.brandRing} />
+              </View>
+              <View style={styles.brandTextWrap}>
+                <Text style={styles.brandName}>The Oval</Text>
+                <Text style={styles.brandSubline}>Where Hospitality Begins.</Text>
+              </View>
+              <Pressable onPress={() => setSidebarOpen(true)} style={styles.menuChip}>
+                <Text style={styles.menuChipText}>Menu</Text>
+              </Pressable>
+            </View>
 
-        <InfoCard title="Quick Actions">
-          <View style={styles.actionGrid}>
-            <View style={styles.actionTile}>
-              <Text style={styles.actionTitle}>New Order</Text>
-              <Text style={styles.actionBody}>Start a fresh customer ticket fast.</Text>
-            </View>
-            <View style={styles.actionTile}>
-              <Text style={styles.actionTitle}>Resume Cart</Text>
-              <Text style={styles.actionBody}>Continue a held cart without losing pace.</Text>
-            </View>
-            <View style={styles.actionTile}>
-              <Text style={styles.actionTitle}>Take Payment</Text>
-              <Text style={styles.actionBody}>Receive payment and close invoice safely.</Text>
-            </View>
-            <View style={styles.actionTile}>
-              <Text style={styles.actionTitle}>Print Receipt</Text>
-              <Text style={styles.actionBody}>Send 80mm receipt to LAN or Bluetooth.</Text>
-            </View>
+            <Text style={styles.greetingTitle}>Welcome, {greetingName}</Text>
+            <Text style={styles.greetingBody}>Choose your workspace to jump in quickly.</Text>
           </View>
-          <PrimaryButton label="Begin Service" />
-          <PrimaryButton label="Sign Out" onPress={onSignOut} />
-        </InfoCard>
 
-        <InfoCard title="Service Queue Snapshot">
-          <View style={styles.metricsRow}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>04</Text>
-              <Text style={styles.metricLabel}>Open Orders</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>02</Text>
-              <Text style={styles.metricLabel}>Pending Print</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricValue}>{status.isSyncReady ? '00' : '03'}</Text>
-              <Text style={styles.metricLabel}>Pending Sync</Text>
-            </View>
+          <View style={styles.rolesWrap}>
+            {allowedRoles.map((role) => (
+              <View key={role} style={styles.roleChip}>
+                <Text style={styles.roleChipText}>{role}</Text>
+              </View>
+            ))}
           </View>
-        </InfoCard>
 
-        <InfoCard title="Today Focus">
-          <Text style={styles.body}>
-            Keep the queue moving from New Order to Payment to Print, then confirm sync state before
-            handoff.
-          </Text>
-        </InfoCard>
-      </ScrollView>
+          <View style={styles.workspaceGridWrap}>
+            {visibleWorkspaces.length > 0 ? (
+              <>
+                <View style={styles.workspaceRowTwo}>
+                  {firstRowWorkspaces.map((workspace) => (
+                    <Pressable key={workspace.key} style={styles.workspaceCardTwo}>
+                      <Text style={styles.workspaceTitle}>{workspace.title}</Text>
+                      <Text style={styles.workspaceSummary}>{workspace.summary}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={styles.workspaceRowThree}>
+                  {secondRowWorkspaces.map((workspace) => (
+                    <Pressable key={workspace.key} style={styles.workspaceCardThree}>
+                      <Text style={styles.workspaceTitle}>{workspace.title}</Text>
+                      <Text style={styles.workspaceSummary}>{workspace.summary}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <View style={styles.workspaceCardTwo}>
+                <Text style={styles.workspaceTitle}>No workspace assigned</Text>
+                <Text style={styles.workspaceSummary}>
+                  Contact admin to grant one of these roles: Admin, Front-desk, Accounting, Sales,
+                  Inventory.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.stateBanner}>
+            <View style={styles.stateBadgeWrap}>
+              <Text style={styles.stateBadge}>{status.isOnline ? 'ONLINE' : 'OFFLINE'}</Text>
+              <Text style={styles.stateBadgeAlt}>
+                {status.isSyncReady ? 'SYNC READY' : 'SYNC BLOCKED'}
+              </Text>
+            </View>
+            <Text style={styles.stateBody}>{status.message}</Text>
+          </View>
+
+          <View style={styles.footerActions}>
+            <PrimaryButton label="Continue" />
+            <PrimaryButton label="Sign Out" onPress={onSignOut} />
+          </View>
+        </ScrollView>
+
+        <View style={styles.bottomNav}>
+          <Pressable style={styles.bottomNavItem}>
+            <Text style={styles.bottomNavIcon}>H</Text>
+            <Text style={styles.bottomNavTextActive}>Home</Text>
+          </Pressable>
+          <Pressable style={styles.bottomNavItem}>
+            <Text style={styles.bottomNavIcon}>S</Text>
+            <Text style={styles.bottomNavText}>Sales</Text>
+          </Pressable>
+          <Pressable style={styles.bottomNavItem}>
+            <Text style={styles.bottomNavIcon}>I</Text>
+            <Text style={styles.bottomNavText}>Inventory</Text>
+          </Pressable>
+          <Pressable style={styles.bottomNavItem}>
+            <Text style={styles.bottomNavIcon}>R</Text>
+            <Text style={styles.bottomNavText}>Reports</Text>
+          </Pressable>
+          <Pressable style={styles.bottomNavItem} onPress={() => setSidebarOpen(true)}>
+            <Text style={styles.bottomNavIcon}>M</Text>
+            <Text style={styles.bottomNavText}>More</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {isSidebarOpen ? (
+        <View style={styles.sidebarLayer}>
+          <Pressable style={styles.sidebarBackdrop} onPress={() => setSidebarOpen(false)} />
+          <View style={styles.sidebarPanel}>
+            <Text style={styles.sidebarTitle}>Workspace Menu</Text>
+            <Text style={styles.sidebarSubtitle}>The Oval</Text>
+
+            {visibleWorkspaces.length > 0 ? (
+              visibleWorkspaces.map((workspace) => (
+                <Pressable key={workspace.key} style={styles.sidebarItem}>
+                  <Text style={styles.sidebarItemTitle}>{workspace.title}</Text>
+                  <Text style={styles.sidebarItemBody}>{workspace.role}</Text>
+                </Pressable>
+              ))
+            ) : (
+              <View style={styles.sidebarItem}>
+                <Text style={styles.sidebarItemTitle}>No role access yet</Text>
+                <Text style={styles.sidebarItemBody}>Please contact an administrator.</Text>
+              </View>
+            )}
+
+            <PrimaryButton
+              label="Close Menu"
+              onPress={() => setSidebarOpen(false)}
+              variant="outline"
+            />
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }

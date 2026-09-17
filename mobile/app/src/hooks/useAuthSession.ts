@@ -40,7 +40,7 @@ function buildMockProfile(): AuthProfile {
       first_name: 'Oval',
       last_name: 'Operator',
     },
-    roles: ['POS_MANAGER'],
+    roles: ['Admin', 'Front-desk', 'Accounting', 'Sales', 'Inventory'],
     permissions: ['app.sales', 'app.frontdesk', 'app.inventory'],
   };
 }
