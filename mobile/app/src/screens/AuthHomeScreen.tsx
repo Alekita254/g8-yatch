@@ -1,4 +1,3 @@
-import { StatusBar } from 'expo-status-bar';
 import {
   Platform,
   SafeAreaView,
@@ -28,7 +27,7 @@ export function AuthHomeScreen({
 
   return (
     <SafeAreaView style={[styles.safeArea, { paddingTop: statusBarOffset }]}>
-      <StatusBar style="dark" translucent={false} backgroundColor="#EEF4F0" />
+      <NativeStatusBar barStyle="dark-content" translucent={false} backgroundColor="#EEF4F0" />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroSection}>
           <View style={styles.brandRow}>

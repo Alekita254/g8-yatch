@@ -3,7 +3,6 @@ export type AppRole = 'Admin' | 'Front-desk' | 'Accounting' | 'Sales' | 'Invento
 export interface RoleWorkspace {
   key: string;
   title: string;
-  summary: string;
   role: AppRole;
 }
 
@@ -21,31 +20,26 @@ export const roleWorkspaces: RoleWorkspace[] = [
   {
     key: 'admin-overview',
     title: 'Admin Overview',
-    summary: 'Control branches, users, permissions, and platform settings.',
     role: 'Admin',
   },
   {
     key: 'frontdesk-flow',
     title: 'Front-desk',
-    summary: 'Handle arrivals, reservations, and customer handoffs quickly.',
     role: 'Front-desk',
   },
   {
     key: 'accounting-workspace',
     title: 'Accounting',
-    summary: 'Post entries, reconcile invoices, and manage payable balances.',
     role: 'Accounting',
   },
   {
     key: 'sales-workspace',
     title: 'Sales',
-    summary: 'Create orders, collect payments, and issue receipts smoothly.',
     role: 'Sales',
   },
   {
     key: 'inventory-workspace',
     title: 'Inventory',
-    summary: 'Track stock levels, adjustments, and low-stock restock actions.',
     role: 'Inventory',
   },
 ];
