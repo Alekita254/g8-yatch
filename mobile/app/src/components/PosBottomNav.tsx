@@ -7,11 +7,9 @@ import { Radius, Shadows, Spacing, Typography } from '../theme/tokens';
 
 interface PosBottomNavProps {
   palette: AppPalette;
-  onSettingsPress: () => void;
-  onProfilePress: () => void;
 }
 
-export function PosBottomNav({ palette, onSettingsPress, onProfilePress }: PosBottomNavProps) {
+export function PosBottomNav({ palette }: PosBottomNavProps) {
   const styles = useMemo(() => createStyles(palette), [palette]);
 
   return (
@@ -20,11 +18,11 @@ export function PosBottomNav({ palette, onSettingsPress, onProfilePress }: PosBo
         <Ionicons name="home" size={18} color={palette.brand} />
         <Text style={styles.bottomNavTextActive}>Home</Text>
       </Pressable>
-      <Pressable style={styles.bottomNavItem} onPress={onSettingsPress}>
+      <Pressable style={styles.bottomNavItem}>
         <Ionicons name="settings-outline" size={18} color={palette.textMuted} />
         <Text style={styles.bottomNavText}>Settings</Text>
       </Pressable>
-      <Pressable style={styles.bottomNavItem} onPress={onProfilePress}>
+      <Pressable style={styles.bottomNavItem}>
         <Ionicons name="person-outline" size={18} color={palette.textMuted} />
         <Text style={styles.bottomNavText}>Profile</Text>
       </Pressable>

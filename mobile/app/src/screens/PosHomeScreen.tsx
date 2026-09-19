@@ -122,11 +122,7 @@ export function PosHomeScreen({ firstName, roles = [], onSignOut }: PosHomeScree
 
         </ScrollView>
 
-        <PosBottomNav
-          palette={palette}
-          onSettingsPress={() => setSidebarOpen(true)}
-          onProfilePress={() => setSidebarOpen(true)}
-        />
+        <PosBottomNav palette={palette} />
       </View>
 
       <PosWorkspaceSidebar
