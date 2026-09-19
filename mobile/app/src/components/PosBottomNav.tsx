@@ -16,9 +16,13 @@ export function PosBottomNav({ palette, onSettingsPress, onProfilePress }: PosBo
 
   return (
     <View style={styles.bottomNav}>
+      <Pressable style={styles.bottomNavItem}>
+        <Ionicons name="home" size={18} color={palette.brand} />
+        <Text style={styles.bottomNavTextActive}>Home</Text>
+      </Pressable>
       <Pressable style={styles.bottomNavItem} onPress={onSettingsPress}>
-        <Ionicons name="settings-outline" size={18} color={palette.brand} />
-        <Text style={styles.bottomNavTextActive}>Settings</Text>
+        <Ionicons name="settings-outline" size={18} color={palette.textMuted} />
+        <Text style={styles.bottomNavText}>Settings</Text>
       </Pressable>
       <Pressable style={styles.bottomNavItem} onPress={onProfilePress}>
         <Ionicons name="person-outline" size={18} color={palette.textMuted} />

@@ -1,11 +1,10 @@
 import {
-  Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar as NativeStatusBar,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '../components/PrimaryButton';
 import { styles } from './AuthHomeScreen.styles';
@@ -23,10 +22,8 @@ export function AuthHomeScreen({
   onSignIn,
   onSignUp,
 }: AuthHomeScreenProps) {
-  const statusBarOffset = Platform.OS === 'android' ? (NativeStatusBar.currentHeight ?? 0) : 0;
-
   return (
-    <SafeAreaView style={[styles.safeArea, { paddingTop: statusBarOffset }]}>
+    <SafeAreaView style={styles.safeArea}>
       <NativeStatusBar barStyle="dark-content" translucent={false} backgroundColor="#EEF4F0" />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroSection}>
