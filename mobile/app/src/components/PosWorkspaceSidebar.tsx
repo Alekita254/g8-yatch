@@ -6,15 +6,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppPalette } from '../theme/palette';
 import { Radius, Spacing, Typography } from '../theme/tokens';
 
+interface SidebarItem {
+  key: string;
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
 interface PosWorkspaceSidebarProps {
   isOpen: boolean;
   palette: AppPalette;
+  workspace: 'home' | 'admin';
+  items: SidebarItem[];
   onClose: () => void;
 }
 
 export function PosWorkspaceSidebar({
   isOpen,
   palette,
+  workspace,
+  items,
   onClose,
 }: PosWorkspaceSidebarProps) {
   const insets = useSafeAreaInsets();
@@ -29,7 +39,9 @@ export function PosWorkspaceSidebar({
       <View style={[styles.sidebarPanel, { paddingTop: Spacing.lg + insets.top }]}>
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.sidebarTitle}>Quick Menu</Text>
+            <Text style={styles.sidebarTitle}>
+              {workspace === 'admin' ? 'Admin Shortcuts' : 'Quick Menu'}
+            </Text>
           </View>
           <Pressable style={styles.closeChip} onPress={onClose}>
             <Ionicons name="close" size={16} color={palette.textPrimary} />
@@ -38,17 +50,13 @@ export function PosWorkspaceSidebar({
 
         <View style={styles.sectionRule} />
 
-        <Pressable style={styles.sidebarItem}>
-          <Ionicons name="settings-outline" size={16} color={palette.brand} />
-          <Text style={styles.sidebarItemTitle}>Settings</Text>
-          <Ionicons name="chevron-forward" size={16} color={palette.textMuted} />
-        </Pressable>
-
-        <Pressable style={styles.sidebarItem}>
-          <Ionicons name="person-outline" size={16} color={palette.brand} />
-          <Text style={styles.sidebarItemTitle}>Profile</Text>
-          <Ionicons name="chevron-forward" size={16} color={palette.textMuted} />
-        </Pressable>
+        {items.map((item) => (
+          <Pressable key={item.key} style={styles.sidebarItem}>
+            <Ionicons name={item.icon} size={16} color={palette.brand} />
+            <Text style={styles.sidebarItemTitle}>{item.title}</Text>
+            <Ionicons name="chevron-forward" size={16} color={palette.textMuted} />
+          </Pressable>
+        ))}
       </View>
       <Pressable style={styles.sidebarBackdrop} onPress={onClose} />
     </View>

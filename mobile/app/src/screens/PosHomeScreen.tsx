@@ -13,6 +13,7 @@ import { resolveRoles, roleWorkspaces } from '../config/roleAccess';
 import { PosBottomNav } from '../components/PosBottomNav';
 import { PosHomeTopSection } from '../components/PosHomeTopSection';
 import { PosWorkspaceSidebar } from '../components/PosWorkspaceSidebar';
+import { AdminOverviewScreen } from './AdminOverviewScreen';
 import { getPalette } from '../theme/palette';
 import { createStyles } from './PosHomeScreen.styles';
 
@@ -24,6 +25,7 @@ interface PosHomeScreenProps {
 
 export function PosHomeScreen({ firstName, roles = [], onSignOut }: PosHomeScreenProps) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [activeWorkspace, setActiveWorkspace] = useState<'home' | 'admin'>('home');
   const palette = useMemo(() => getPalette('light'), []);
   const styles = useMemo(() => createStyles(palette), [palette]);
   const statusBarOffset = Platform.OS === 'android' ? (NativeStatusBar.currentHeight ?? 0) : 0;
@@ -33,9 +35,24 @@ export function PosHomeScreen({ firstName, roles = [], onSignOut }: PosHomeScree
   );
   const firstRowWorkspaces = visibleWorkspaces.slice(0, 2);
   const secondRowWorkspaces = visibleWorkspaces.slice(2, 5);
+  const homeMenuItems = [
+    { key: 'settings', title: 'Settings', icon: 'settings-outline' as const },
+    { key: 'notifications', title: 'Notifications', icon: 'notifications-outline' as const },
+    { key: 'profile', title: 'Profile', icon: 'person-outline' as const },
+  ];
 
   const greetingName = firstName?.trim() ? firstName.trim() : 'Operator';
   void onSignOut;
+
+  const handleWorkspacePress = (role: string) => {
+    if (role === 'Admin') {
+      setActiveWorkspace('admin');
+    }
+  };
+
+  if (activeWorkspace === 'admin') {
+    return <AdminOverviewScreen onBack={() => setActiveWorkspace('home')} />;
+  }
 
   return (
     <View style={[styles.safeArea, { paddingTop: statusBarOffset }]}> 
@@ -65,7 +82,11 @@ export function PosHomeScreen({ firstName, roles = [], onSignOut }: PosHomeScree
               <>
                 <View style={styles.workspaceRowTwo}>
                   {firstRowWorkspaces.map((workspace) => (
-                    <Pressable key={workspace.key} style={styles.workspaceCardTwo}>
+                    <Pressable
+                      key={workspace.key}
+                      style={styles.workspaceCardTwo}
+                      onPress={() => handleWorkspacePress(workspace.role)}
+                    >
                       <View style={styles.workspaceIconWrap}>
                         <Ionicons
                           name={
@@ -90,7 +111,11 @@ export function PosHomeScreen({ firstName, roles = [], onSignOut }: PosHomeScree
 
                 <View style={styles.workspaceRowThree}>
                   {secondRowWorkspaces.map((workspace) => (
-                    <Pressable key={workspace.key} style={styles.workspaceCardThree}>
+                    <Pressable
+                      key={workspace.key}
+                      style={styles.workspaceCardThree}
+                      onPress={() => handleWorkspacePress(workspace.role)}
+                    >
                       <View style={styles.workspaceIconWrapCompact}>
                         <Ionicons
                           name={
@@ -122,12 +147,18 @@ export function PosHomeScreen({ firstName, roles = [], onSignOut }: PosHomeScree
 
         </ScrollView>
 
-        <PosBottomNav palette={palette} />
+        <PosBottomNav
+          palette={palette}
+          workspace="home"
+          onMenuPress={() => setSidebarOpen(true)}
+        />
       </View>
 
       <PosWorkspaceSidebar
         isOpen={isSidebarOpen}
         palette={palette}
+        workspace="home"
+        items={homeMenuItems}
         onClose={() => setSidebarOpen(false)}
       />
     </View>

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+ import { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -7,25 +7,55 @@ import { Radius, Shadows, Spacing, Typography } from '../theme/tokens';
 
 interface PosBottomNavProps {
   palette: AppPalette;
+  workspace: 'home' | 'admin';
+  onMenuPress: () => void;
+  onHomePress?: () => void;
 }
 
-export function PosBottomNav({ palette }: PosBottomNavProps) {
+export function PosBottomNav({
+  palette,
+  workspace,
+  onMenuPress,
+  onHomePress,
+}: PosBottomNavProps) {
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const homeItems = [
+    { key: 'home', icon: 'home' as const, label: 'Home', onPress: onHomePress, active: true },
+    { key: 'settings', icon: 'settings-outline' as const, label: 'Settings', active: false },
+    {
+      key: 'notifications',
+      icon: 'notifications-outline' as const,
+      label: 'Notifications',
+      active: false,
+    },
+    { key: 'more', icon: 'menu' as const, label: 'More', onPress: onMenuPress, active: false },
+  ];
+
+  const adminItems = [
+    { key: 'home', icon: 'home' as const, label: 'Home', onPress: onHomePress, active: false },
+    { key: 'users', icon: 'people-outline' as const, label: 'Users', active: false },
+    { key: 'products', icon: 'cube-outline' as const, label: 'Products', active: false },
+    { key: 'rooms', icon: 'bed-outline' as const, label: 'Rooms', active: false },
+    { key: 'inventory', icon: 'layers-outline' as const, label: 'Inventory', active: false },
+    { key: 'more', icon: 'menu' as const, label: 'More', onPress: onMenuPress, active: false },
+  ];
+
+  const items = workspace === 'home' ? homeItems : adminItems;
 
   return (
     <View style={styles.bottomNav}>
-      <Pressable style={styles.bottomNavItem}>
-        <Ionicons name="home" size={18} color={palette.brand} />
-        <Text style={styles.bottomNavTextActive}>Home</Text>
-      </Pressable>
-      <Pressable style={styles.bottomNavItem}>
-        <Ionicons name="settings-outline" size={18} color={palette.textMuted} />
-        <Text style={styles.bottomNavText}>Settings</Text>
-      </Pressable>
-      <Pressable style={styles.bottomNavItem}>
-        <Ionicons name="person-outline" size={18} color={palette.textMuted} />
-        <Text style={styles.bottomNavText}>Profile</Text>
-      </Pressable>
+      {items.map((item) => (
+        <Pressable key={item.key} style={styles.bottomNavItem} onPress={item.onPress}>
+          <Ionicons
+            name={item.icon}
+            size={workspace === 'admin' ? 16 : 18}
+            color={item.active ? palette.brand : palette.textMuted}
+          />
+          <Text style={item.active ? styles.bottomNavTextActive : styles.bottomNavText}>
+            {item.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -54,13 +84,15 @@ function createStyles(palette: AppPalette) {
     },
     bottomNavText: {
       color: palette.textMuted,
-      fontSize: Typography.caption,
+      fontSize: 10,
       fontWeight: Typography.weightMedium,
+      textAlign: 'center',
     },
     bottomNavTextActive: {
       color: palette.brand,
-      fontSize: Typography.caption,
+      fontSize: 10,
       fontWeight: Typography.weightBold,
+      textAlign: 'center',
     },
   });
 }
