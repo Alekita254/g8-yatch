@@ -1,9 +1,13 @@
+"""Serializer definitions for concierge service request resources."""
+
 from rest_framework import serializers
 
 from .models import ServiceRequest
 
 
 class ServiceRequestSerializer(serializers.ModelSerializer):
+    """Serialize concierge service requests and their guest/room context."""
+
     room_number = serializers.CharField(source="room.number", read_only=True)
     guest_name = serializers.CharField(source="business_partner.display_name", read_only=True)
 

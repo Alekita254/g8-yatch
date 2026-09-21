@@ -1,3 +1,5 @@
+"""Inventory control API views including documents, approvals, and stock movement flows."""
+
 from decimal import Decimal
 
 from django.http import FileResponse
@@ -22,11 +24,15 @@ from .serializers import (
 
 
 def pdf_filename(document):
+    """Build a filesystem-safe PDF filename from inventory document number."""
+
     safe_number = "".join(char if char.isalnum() or char in "-_" else "-" for char in document.document_number)
     return f"{safe_number}.pdf"
 
 
 def generate_inventory_document_pdf(document):
+    """Render a printable PDF representation of an inventory document."""
+
     from io import BytesIO
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
@@ -152,26 +158,35 @@ def generate_inventory_document_pdf(document):
 
 
 class InventoryThresholdListCreateView(ListCreateAPIView):
+    """List and create minimum stock thresholds per product."""
+
     model = InventoryThreshold
     serializer_class = InventoryThresholdSerializer
 
     def get_queryset(self):
+        """Return thresholds with product and category context."""
         return InventoryThreshold.objects.select_related("product", "product__category")
 
 
 class InventoryThresholdDetailView(RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete a product inventory threshold."""
+
     model = InventoryThreshold
     serializer_class = InventoryThresholdSerializer
 
     def get_queryset(self):
+        """Load threshold with linked product for detail operations."""
         return InventoryThreshold.objects.select_related("product")
 
 
 class LowStockProductListView(ListModelMixin, BaseAPIView):
+    """List active tracked products currently at or below threshold."""
+
     model = Product
     serializer_class = LowStockProductSerializer
 
     def get_queryset(self):
+        """Filter products to low-stock inventory-tracked items only."""
         return Product.objects.select_related("category", "inventory_threshold").filter(
             is_active=True,
             is_inventory_tracked=True,
@@ -181,10 +196,13 @@ class LowStockProductListView(ListModelMixin, BaseAPIView):
 
 
 class InventoryDocumentListCreateView(ListCreateAPIView):
+    """List and create inventory workflow documents."""
+
     model = InventoryDocument
     serializer_class = InventoryDocumentSerializer
 
     def get_queryset(self):
+        """Apply optional document-type/status filters to document listings."""
         queryset = InventoryDocument.objects.select_related(
             "source_document", "purchase_pricelist"
         ).prefetch_related(
@@ -202,12 +220,16 @@ class InventoryDocumentListCreateView(ListCreateAPIView):
         return queryset
 
     def perform_create(self, serializer):
+        """Attach the authenticated identity as creator when present."""
         identity = getattr(self.request.user, "identity", None)
         return serializer.save(created_by=identity)
 
 
 class InventoryDocumentDetailView(BaseAPIView):
+    """Retrieve or partially update an inventory document."""
+
     def get_queryset(self):
+        """Return inventory documents with related lines and pricing references."""
         return InventoryDocument.objects.select_related(
             "source_document", "purchase_pricelist"
         ).prefetch_related(
@@ -218,10 +240,12 @@ class InventoryDocumentDetailView(BaseAPIView):
         )
 
     def get(self, request, pk):
+        """Fetch a single inventory document by primary key."""
         document = get_object_or_404(self.get_queryset(), pk=pk)
         return Response(InventoryDocumentSerializer(document).data)
 
     def patch(self, request, pk):
+        """Apply partial updates unless the document is already approved/received."""
         document = get_object_or_404(self.get_queryset(), pk=pk)
         if document.status in [InventoryDocument.Status.APPROVED, InventoryDocument.Status.RECEIVED]:
             return Response(
@@ -235,7 +259,10 @@ class InventoryDocumentDetailView(BaseAPIView):
 
 
 class InventoryDocumentPdfView(BaseAPIView):
+    """Export supported inventory document types as generated PDFs."""
+
     def get(self, request, pk):
+        """Return PDF file response for the requested inventory document."""
         document = (
             InventoryDocument.objects.prefetch_related("lines", "lines__product")
             .filter(pk=pk)
@@ -262,6 +289,8 @@ class InventoryDocumentPdfView(BaseAPIView):
 
 
 def copy_lines(source, target, received=False):
+    """Clone document lines from one inventory document to another."""
+
     for line in source.lines.select_related("product", "purchase_pricelist").all():
         InventoryDocumentLine.objects.create(
             document=target,
@@ -275,7 +304,10 @@ def copy_lines(source, target, received=False):
 
 
 class InventoryDocumentApproveView(BaseAPIView):
+    """Approve a purchase request inventory document."""
+
     def post(self, request, pk):
+        """Set purchase request status to approved when eligible."""
         document = get_object_or_404(InventoryDocument, pk=pk)
         if document.document_type != InventoryDocument.DocumentType.PURCHASE_REQUEST:
             return Response({"detail": "Only purchase requests can be approved."}, status=status.HTTP_400_BAD_REQUEST)
@@ -288,8 +320,11 @@ class InventoryDocumentApproveView(BaseAPIView):
 
 
 class InventoryDocumentRequisitionView(BaseAPIView):
+    """Create requisition documents from approved purchase requests."""
+
     @transaction.atomic
     def post(self, request, pk):
+        """Create requisition and copy lines atomically from source request."""
         source = get_object_or_404(InventoryDocument.objects.prefetch_related("lines"), pk=pk)
         if source.document_type != InventoryDocument.DocumentType.PURCHASE_REQUEST or source.status != InventoryDocument.Status.APPROVED:
             return Response({"detail": "Approve the purchase request before creating a requisition."}, status=status.HTTP_400_BAD_REQUEST)
@@ -308,8 +343,11 @@ class InventoryDocumentRequisitionView(BaseAPIView):
 
 
 class InventoryDocumentDeliveryNoteView(BaseAPIView):
+    """Create goods delivery notes from requisition documents."""
+
     @transaction.atomic
     def post(self, request, pk):
+        """Build delivery note document and clone requisition lines."""
         source = get_object_or_404(InventoryDocument.objects.prefetch_related("lines"), pk=pk)
         if source.document_type != InventoryDocument.DocumentType.REQUISITION:
             return Response({"detail": "Create delivery notes from requisitions only."}, status=status.HTTP_400_BAD_REQUEST)
@@ -327,8 +365,11 @@ class InventoryDocumentDeliveryNoteView(BaseAPIView):
 
 
 class InventoryDocumentReceiveView(BaseAPIView):
+    """Receive goods, create GRN document, and post stock movements."""
+
     @transaction.atomic
     def post(self, request, pk):
+        """Finalize receipt workflow and update product stock quantities."""
         source = get_object_or_404(InventoryDocument.objects.prefetch_related("lines", "lines__product"), pk=pk)
         if source.document_type not in [
             InventoryDocument.DocumentType.GOODS_DELIVERY_NOTE,
@@ -370,9 +411,12 @@ class InventoryDocumentReceiveView(BaseAPIView):
 
 
 class StockMovementListView(ListModelMixin, BaseAPIView):
+    """List stock movement transactions for inventory auditing."""
+
     model = StockMovement
     serializer_class = StockMovementSerializer
 
     def get_queryset(self):
+        """Load stock movements with associated product and source document."""
         return StockMovement.objects.select_related("product", "document")
 

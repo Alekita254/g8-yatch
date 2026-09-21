@@ -1,3 +1,5 @@
+"""Reservation CRUD views and reservation number generation helpers."""
+
 from django.utils import timezone
 
 from apps.common.views import DetailAPIView, ListCreateAPIView
@@ -6,20 +8,28 @@ from .serializers import ReservationSerializer
 
 
 def next_reservation_number():
+    """Generate the next reservation number using date and record count."""
+
     return f"RES-{timezone.now():%Y%m%d}-{Reservation.objects.count() + 1:05d}"
 
 
 class ReservationListCreateView(ListCreateAPIView):
+    """List reservations and create new bookings."""
+
     model = Reservation
     serializer_class = ReservationSerializer
 
     def get_queryset(self):
+        """Load reservation relations commonly displayed in reservation lists."""
         return Reservation.objects.select_related("business_partner", "room")
 
     def perform_create(self, serializer):
+        """Persist new reservation with an auto-generated reservation number."""
         return serializer.save(reservation_number=next_reservation_number())
 
 
 class ReservationDetailView(DetailAPIView):
+    """Retrieve, update, or delete a reservation."""
+
     model = Reservation
     serializer_class = ReservationSerializer

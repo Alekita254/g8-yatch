@@ -1,9 +1,13 @@
+"""Serializer definitions for payment setup and routing configuration."""
+
 from rest_framework import serializers
 
 from .models import BankAccount, PaymentMethod, PaymentRoutingRule
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
+    """Serialize payment method configuration and operational flags."""
+
     method_type_display = serializers.CharField(source="get_method_type_display", read_only=True)
 
     class Meta:
@@ -24,6 +28,8 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
 
 
 class BankAccountSerializer(serializers.ModelSerializer):
+    """Serialize settlement bank account metadata and identifiers."""
+
     account_type_display = serializers.CharField(source="get_account_type_display", read_only=True)
 
     class Meta:
@@ -44,6 +50,8 @@ class BankAccountSerializer(serializers.ModelSerializer):
 
 
 class PaymentRoutingRuleSerializer(serializers.ModelSerializer):
+    """Serialize rules mapping payment methods to settlement destinations."""
+
     payment_method_name = serializers.CharField(source="payment_method.name", read_only=True)
     bank_account_name = serializers.CharField(source="bank_account.name", read_only=True)
     service_point_name = serializers.CharField(source="service_point.name", read_only=True)

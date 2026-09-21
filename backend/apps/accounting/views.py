@@ -1,3 +1,5 @@
+"""Read-only accounting summary endpoints and month-based aggregation helpers."""
+
 from calendar import monthrange
 from datetime import datetime, time
 from decimal import Decimal
@@ -17,10 +19,14 @@ MONEY_OUTPUT = DecimalField(max_digits=14, decimal_places=2)
 
 
 def zero_value():
+    """Return a Decimal zero value expression for ORM aggregation fallbacks."""
+
     return Value(MONEY_ZERO, output_field=MONEY_OUTPUT)
 
 
 def parse_month(value):
+    """Parse a YYYY-MM string into first day of month, defaulting to current month."""
+
     if value:
         return datetime.strptime(value, "%Y-%m").date().replace(day=1)
     today = timezone.localdate()
@@ -28,6 +34,8 @@ def parse_month(value):
 
 
 def month_bounds(month_start):
+    """Build timezone-aware month start and end datetimes for filtering."""
+
     month_end = month_start.replace(day=monthrange(month_start.year, month_start.month)[1])
     active_timezone = timezone.get_current_timezone()
     start = timezone.make_aware(datetime.combine(month_start, time.min), active_timezone)
@@ -36,10 +44,14 @@ def month_bounds(month_start):
 
 
 def money(value):
+    """Format Decimal-like amounts as fixed two-decimal strings."""
+
     return str((value or MONEY_ZERO).quantize(MONEY_ZERO))
 
 
 def invoice_queryset_for_month(month_start):
+    """Return invoices and date bounds for the selected accounting month."""
+
     start, end, month_end = month_bounds(month_start)
     return (
         SalesInvoice.objects.filter(created_at__range=(start, end))
@@ -49,10 +61,14 @@ def invoice_queryset_for_month(month_start):
 
 
 def bucket_sum(queryset, field):
+    """Aggregate a numeric queryset field with a zero fallback."""
+
     return queryset.aggregate(total=Coalesce(Sum(field), zero_value(), output_field=MONEY_OUTPUT))["total"]
 
 
 def build_monthly_summary(month_start):
+    """Assemble month-level sales, tax, receivable, and payment summary payload."""
+
     invoices, start, end, month_end = invoice_queryset_for_month(month_start)
     payments = SalesPayment.objects.filter(
         created_at__range=(start, end),
@@ -158,9 +174,12 @@ def build_monthly_summary(month_start):
 
 
 class MonthlyAccountingSummaryView(APIView):
+    """Expose read-only monthly accounting aggregates for dashboard consumption."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """Return accounting summary for a requested month in YYYY-MM format."""
         try:
             month_start = parse_month(request.query_params.get("month"))
         except ValueError:

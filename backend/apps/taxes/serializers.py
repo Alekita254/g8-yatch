@@ -1,9 +1,13 @@
+"""Serializer definitions for tax configuration, categories, and discount rules."""
+
 from rest_framework import serializers
 
 from .models import DiscountRule, TaxCategory, TaxConfiguration, TaxOffice
 
 
 class TaxConfigurationSerializer(serializers.ModelSerializer):
+    """Serialize tax configuration records and effective-window metadata."""
+
     class Meta:
         model = TaxConfiguration
         fields = [
@@ -22,6 +26,8 @@ class TaxConfigurationSerializer(serializers.ModelSerializer):
 
 
 class TaxCategorySerializer(serializers.ModelSerializer):
+    """Serialize tax categories and their linked tax configuration names."""
+
     tax_names = serializers.SerializerMethodField()
 
     class Meta:
@@ -39,10 +45,13 @@ class TaxCategorySerializer(serializers.ModelSerializer):
         ]
 
     def get_tax_names(self, obj):
+        """Return display names of taxes linked to a category."""
         return [tax.name for tax in obj.taxes.all()]
 
 
 class TaxOfficeSerializer(serializers.ModelSerializer):
+    """Serialize tax office setup used for fiscal integrations."""
+
     integration_mode_display = serializers.CharField(source="get_integration_mode_display", read_only=True)
 
     class Meta:
@@ -62,6 +71,8 @@ class TaxOfficeSerializer(serializers.ModelSerializer):
 
 
 class DiscountRuleSerializer(serializers.ModelSerializer):
+    """Serialize discount policy rules and applicability constraints."""
+
     discount_type_display = serializers.CharField(source="get_discount_type_display", read_only=True)
 
     class Meta:
@@ -84,6 +95,7 @@ class DiscountRuleSerializer(serializers.ModelSerializer):
         ]
 
     def to_internal_value(self, data):
+        """Normalize comma-separated role/kind fields into string lists."""
         mutable = data.copy()
         for field in ("allowed_roles", "service_point_kinds"):
             value = mutable.get(field)

@@ -1,15 +1,21 @@
+"""Serializer definitions for folios and folio line items."""
+
 from rest_framework import serializers
 
 from .models import Folio, FolioLine
 
 
 class FolioLineSerializer(serializers.ModelSerializer):
+    """Serialize individual folio charge and payment lines."""
+
     class Meta:
         model = FolioLine
         fields = ["id", "line_type", "description", "amount", "reference", "created_at"]
 
 
 class FolioSerializer(serializers.ModelSerializer):
+    """Serialize folio header details, totals, and nested folio lines."""
+
     guest_name = serializers.CharField(source="business_partner.display_name", read_only=True)
     room_number = serializers.CharField(source="room.number", read_only=True)
     reservation_number = serializers.CharField(source="reservation.reservation_number", read_only=True)

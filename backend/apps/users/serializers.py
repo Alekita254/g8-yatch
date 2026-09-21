@@ -1,9 +1,13 @@
+"""Serializer definitions for identities, roles, service points, and admin user actions."""
+
 from rest_framework import serializers
 
 from .models import Role, ServicePoint, UserIdentity
 
 
 class RoleSerializer(serializers.ModelSerializer):
+    """Serialize role definitions and permission mappings."""
+
     class Meta:
         model = Role
         fields = [
@@ -21,6 +25,8 @@ class RoleSerializer(serializers.ModelSerializer):
 
 
 class ServicePointSerializer(serializers.ModelSerializer):
+    """Serialize service point records used by operational workspaces."""
+
     kind_display = serializers.CharField(source="get_kind_display", read_only=True)
 
     class Meta:
@@ -42,6 +48,8 @@ class ServicePointSerializer(serializers.ModelSerializer):
 
 
 class UserIdentitySerializer(serializers.ModelSerializer):
+    """Read-only serializer for synchronized Keycloak user identity data."""
+
     class Meta:
         model = UserIdentity
         fields = [
@@ -58,6 +66,8 @@ class UserIdentitySerializer(serializers.ModelSerializer):
 
 
 class AdminUserCreateSerializer(serializers.Serializer):
+    """Validate payload for creating a new user in Keycloak."""
+
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
@@ -71,6 +81,8 @@ class AdminUserCreateSerializer(serializers.Serializer):
 
 
 class AdminUserRoleSerializer(serializers.Serializer):
+    """Validate role replacement payload for an existing user."""
+
     realm_roles = serializers.ListField(
         child=serializers.CharField(max_length=80),
         allow_empty=True,
@@ -78,6 +90,8 @@ class AdminUserRoleSerializer(serializers.Serializer):
 
 
 class AdminUserUpdateSerializer(serializers.Serializer):
+    """Validate optional profile updates for a managed user."""
+
     email = serializers.EmailField(required=False)
     first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
@@ -85,5 +99,7 @@ class AdminUserUpdateSerializer(serializers.Serializer):
 
 
 class AdminUserPasswordResetSerializer(serializers.Serializer):
+    """Validate admin-initiated password reset requests."""
+
     password = serializers.CharField(max_length=128, min_length=8, write_only=True)
     temporary = serializers.BooleanField(default=True)

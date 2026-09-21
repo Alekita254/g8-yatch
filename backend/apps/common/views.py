@@ -1,3 +1,5 @@
+"""Reusable DRF API view base classes with shared queryset and permission handling."""
+
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsPosManager

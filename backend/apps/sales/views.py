@@ -1,3 +1,5 @@
+"""Sales order, invoicing, payment, and receipt-generation API endpoints."""
+
 import os
 from decimal import Decimal
 
@@ -694,6 +696,8 @@ def find_or_create_visit(*, service_point, table_name, customer_name=""):
 
 
 class ListCreateMixin(APIView):
+    """Shared authenticated list/create behavior for sales resources."""
+
     permission_classes = [IsAuthenticated]
     model = None
     serializer_class = None
@@ -707,6 +711,8 @@ class ListCreateMixin(APIView):
 
 
 class SalesOrderListCreateView(ListCreateMixin):
+    """List sales orders and create new orders with idempotency support."""
+
     model = SalesOrder
     serializer_class = SalesOrderSerializer
 
@@ -761,6 +767,8 @@ class SalesOrderListCreateView(ListCreateMixin):
 
 
 class SalesOrderDetailView(APIView):
+    """Retrieve or partially update a single sales order."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -789,6 +797,8 @@ class SalesOrderDetailView(APIView):
 
 
 class SalesOrderSendView(APIView):
+    """Send pending order items to production and issue invoice."""
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -808,6 +818,8 @@ class SalesOrderSendView(APIView):
 
 
 class SalesOrderReceiptsView(APIView):
+    """Generate and return combined receipts for an order as PDF."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -834,6 +846,8 @@ class SalesOrderReceiptsView(APIView):
 
 
 class SalesOrderItemVoidView(APIView):
+    """Void an order item and capture audit details for the action."""
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk, item_id):
@@ -847,6 +861,8 @@ class SalesOrderItemVoidView(APIView):
 
 
 class SalesInvoiceListView(ListCreateMixin):
+    """List sales invoices with related order and payment context."""
+
     model = SalesInvoice
     serializer_class = SalesInvoiceSerializer
 
@@ -864,6 +880,8 @@ class SalesInvoiceListView(ListCreateMixin):
 
 
 class SalesInvoiceDetailView(APIView):
+    """Retrieve detailed invoice data with nested order/payment context."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -884,6 +902,8 @@ class SalesInvoiceDetailView(APIView):
 
 
 class SalesInvoiceCreateFromOrderView(APIView):
+    """Create an invoice from an existing sales order."""
+
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic
@@ -897,6 +917,8 @@ class SalesInvoiceCreateFromOrderView(APIView):
 
 
 class GuestVisitListView(ListCreateMixin):
+    """List guest visits with related orders and invoices."""
+
     model = GuestVisit
     serializer_class = GuestVisitSerializer
 
@@ -908,6 +930,8 @@ class GuestVisitListView(ListCreateMixin):
 
 
 class GuestVisitWaiterAcknowledgeView(APIView):
+    """Record waiter acknowledgement for a guest visit request."""
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -919,6 +943,8 @@ class GuestVisitWaiterAcknowledgeView(APIView):
 
 
 class GuestVisitDetailView(APIView):
+    """Retrieve a single guest visit resource."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -927,6 +953,8 @@ class GuestVisitDetailView(APIView):
 
 
 class GuestVisitInvoiceDocumentView(APIView):
+    """Generate combined invoice PDF for all eligible visit orders."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -951,6 +979,8 @@ class GuestVisitInvoiceDocumentView(APIView):
 
 
 class GuestVisitReceiptDocumentView(APIView):
+    """Generate combined payment receipt PDF for a guest visit."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -975,6 +1005,8 @@ class GuestVisitReceiptDocumentView(APIView):
 
 
 class SalesOrderStatusView(APIView):
+    """Transition order status according to allowed state changes."""
+
     permission_classes = [IsAuthenticated]
     transitions = {
         SalesOrder.Status.SENT: {SalesOrder.Status.SERVED, SalesOrder.Status.CANCELLED},
@@ -997,6 +1029,8 @@ class SalesOrderStatusView(APIView):
 
 
 class SalesPaymentListCreateView(ListCreateMixin):
+    """List invoice payments and record new payments idempotently."""
+
     model = SalesPayment
     serializer_class = SalesPaymentSerializer
 
@@ -1047,6 +1081,8 @@ class SalesPaymentListCreateView(ListCreateMixin):
 
 
 class SalesPaymentDetailView(APIView):
+    """Retrieve an individual payment with invoice context."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -1064,6 +1100,8 @@ class SalesPaymentDetailView(APIView):
 
 
 class GuestVisitCheckoutAuthView(APIView):
+    """Initiate checkout authorization by invoicing open visit orders."""
+
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic
@@ -1081,6 +1119,8 @@ class GuestVisitCheckoutAuthView(APIView):
 
 
 class SalesInvoiceReceiptView(APIView):
+    """Regenerate and return receipt PDF for a paid invoice."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -1102,6 +1142,8 @@ class SalesInvoiceReceiptView(APIView):
 
 
 class SalesInvoiceDocumentView(APIView):
+    """Generate and return invoice PDF documents."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
@@ -1127,6 +1169,8 @@ class SalesInvoiceDocumentView(APIView):
 
 
 class CustomerPaymentRunListCreateView(ListCreateMixin):
+    """List customer payment runs and create new bulk payment runs."""
+
     model = CustomerPaymentRun
     serializer_class = CustomerPaymentRunSerializer
 
@@ -1140,6 +1184,8 @@ class CustomerPaymentRunListCreateView(ListCreateMixin):
 
 
 class CustomerPaymentRunApplyView(APIView):
+    """Apply a customer payment run against outstanding invoices."""
+
     permission_classes = [IsAuthenticated]
 
     @transaction.atomic

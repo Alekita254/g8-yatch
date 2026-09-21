@@ -1,3 +1,5 @@
+"""User identity, role, service-point, and staff-sales API endpoints."""
+
 from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -30,6 +32,8 @@ from .utils import (
 
 
 class MeView(APIView):
+    """Return the authenticated principal identity, roles, and mapped permissions."""
+
     def get(self, request):
         serializer = UserIdentitySerializer(request.user.identity)
         roles = request.user.realm_roles
@@ -52,6 +56,8 @@ class MeView(APIView):
 
 
 class AdminUserListCreateView(APIView):
+    """List all user identities or create a new user in Keycloak and locally."""
+
     permission_classes = [IsPosManager]
 
     def get(self, request):
@@ -92,6 +98,8 @@ class AdminUserListCreateView(APIView):
 
 
 class AdminUserRoleView(APIView):
+    """Replace a user's Keycloak realm roles and mirror them to local identity."""
+
     permission_classes = [IsPosManager]
 
     def patch(self, request, keycloak_sub):
@@ -111,6 +119,8 @@ class AdminUserRoleView(APIView):
 
 
 class AdminUserDetailView(APIView):
+    """Update profile fields and activation status for an existing user."""
+
     permission_classes = [IsPosManager]
 
     def patch(self, request, keycloak_sub):
@@ -140,6 +150,8 @@ class AdminUserDetailView(APIView):
 
 
 class AdminUserPasswordResetView(APIView):
+    """Reset a user's password through Keycloak admin APIs."""
+
     permission_classes = [IsPosManager]
 
     def post(self, request, keycloak_sub):
@@ -160,6 +172,8 @@ class AdminUserPasswordResetView(APIView):
 
 
 class RoleListCreateView(APIView):
+    """List role definitions or create new application roles."""
+
     permission_classes = [IsPosManager]
 
     def get(self, request):
@@ -181,6 +195,8 @@ class RoleListCreateView(APIView):
 
 
 class RoleDetailView(APIView):
+    """Partially update an existing role and sync to Keycloak when configured."""
+
     permission_classes = [IsPosManager]
 
     def patch(self, request, pk):
@@ -199,16 +215,22 @@ class RoleDetailView(APIView):
 
 
 class ServicePointListCreateView(ListCreateAPIView):
+    """List and create service points used by POS and operational modules."""
+
     model = ServicePoint
     serializer_class = ServicePointSerializer
 
 
 class ServicePointDetailView(RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete an individual service point."""
+
     model = ServicePoint
     serializer_class = ServicePointSerializer
 
 
 class MyTokenObtainPairView(APIView):
+    """Disable password grant and instruct clients to use Keycloak bearer tokens."""
+
     authentication_classes = []
     permission_classes = []
 

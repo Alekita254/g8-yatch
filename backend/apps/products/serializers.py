@@ -1,3 +1,5 @@
+"""Serializer definitions for product catalog and pricing structures."""
+
 from rest_framework import serializers
 
 from .models import (
@@ -12,6 +14,8 @@ from .models import (
 
 
 class ProductCategorySerializer(serializers.ModelSerializer):
+    """Serialize product categories with optional parent category display name."""
+
     parent_name = serializers.CharField(source="parent.name", read_only=True)
 
     class Meta:
@@ -32,6 +36,8 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
 
 class BillOfMaterialsItemSerializer(serializers.ModelSerializer):
+    """Serialize bill-of-materials component lines for composite products."""
+
     component_name = serializers.CharField(source="component.name", read_only=True)
     component_sku = serializers.CharField(source="component.sku", read_only=True)
 
@@ -41,6 +47,8 @@ class BillOfMaterialsItemSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    """Serialize products and nested BOM/inventory threshold metadata."""
+
     category_name = serializers.CharField(source="category.name", read_only=True)
     product_type_display = serializers.CharField(source="get_product_type_display", read_only=True)
     bom_items = BillOfMaterialsItemSerializer(many=True, required=False)
@@ -69,6 +77,7 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
 
     def get_inventory_threshold(self, obj):
+        """Return normalized inventory threshold payload for the product."""
         threshold = getattr(obj, "inventory_threshold", None)
         if not threshold:
             return None
@@ -80,6 +89,7 @@ class ProductSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
+        """Create product and any nested BOM component rows."""
         bom_items = validated_data.pop("bom_items", [])
         product = Product.objects.create(**validated_data)
         for item in bom_items:
@@ -87,6 +97,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return product
 
     def update(self, instance, validated_data):
+        """Update product fields and replace BOM lines when supplied."""
         bom_items = validated_data.pop("bom_items", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -101,6 +112,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class SalesPricelistItemSerializer(serializers.ModelSerializer):
+    """Serialize a sell-side price list line for a single product."""
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_category = serializers.IntegerField(source="product.category_id", read_only=True)
@@ -125,6 +138,8 @@ class SalesPricelistItemSerializer(serializers.ModelSerializer):
 
 
 class SalesPricelistSerializer(serializers.ModelSerializer):
+    """Serialize sales price lists with nested item lines and service-point links."""
+
     items = SalesPricelistItemSerializer(many=True, required=False)
     service_point_name = serializers.CharField(source="service_point.name", read_only=True)
     service_point_code = serializers.CharField(source="service_point.code", read_only=True)
@@ -152,6 +167,7 @@ class SalesPricelistSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        """Create a sales price list with service-point mapping and item rows."""
         items = validated_data.pop("items", [])
         service_points = validated_data.pop("service_points", [])
         pricelist = SalesPricelist.objects.create(**validated_data)
@@ -161,6 +177,7 @@ class SalesPricelistSerializer(serializers.ModelSerializer):
         return pricelist
 
     def update(self, instance, validated_data):
+        """Update sales price list metadata and optionally replace nested items."""
         items = validated_data.pop("items", None)
         service_points = validated_data.pop("service_points", None)
         for attr, value in validated_data.items():
@@ -177,10 +194,13 @@ class SalesPricelistSerializer(serializers.ModelSerializer):
         return instance
 
     def get_service_point_names(self, obj):
+        """Return associated service point names for response display."""
         return [point.name for point in obj.service_points.all()]
 
 
 class PurchasePricelistItemSerializer(serializers.ModelSerializer):
+    """Serialize a buy-side supplier price entry for a product."""
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
 
@@ -191,6 +211,8 @@ class PurchasePricelistItemSerializer(serializers.ModelSerializer):
 
 
 class PurchasePricelistSerializer(serializers.ModelSerializer):
+    """Serialize supplier purchase price lists and nested line items."""
+
     items = PurchasePricelistItemSerializer(many=True, required=False)
 
     class Meta:
@@ -207,6 +229,7 @@ class PurchasePricelistSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        """Create purchase price list and its nested item records."""
         items = validated_data.pop("items", [])
         pricelist = PurchasePricelist.objects.create(**validated_data)
         for item in items:
@@ -214,6 +237,7 @@ class PurchasePricelistSerializer(serializers.ModelSerializer):
         return pricelist
 
     def update(self, instance, validated_data):
+        """Update purchase price list and replace nested items when provided."""
         items = validated_data.pop("items", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

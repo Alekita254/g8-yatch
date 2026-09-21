@@ -1,9 +1,13 @@
+"""Serializer definitions for business partner API payloads."""
+
 from rest_framework import serializers
 
 from .models import BusinessPartner
 
 
 class BusinessPartnerSerializer(serializers.ModelSerializer):
+    """Serialize guest, supplier, and other business partner records."""
+
     partner_type_display = serializers.CharField(source="get_partner_type_display", read_only=True)
 
     class Meta:

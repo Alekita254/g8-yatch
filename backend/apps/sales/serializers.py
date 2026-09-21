@@ -1,3 +1,5 @@
+"""Serializer definitions for sales orders, payments, invoices, and guest visits."""
+
 from decimal import Decimal
 
 from rest_framework import serializers
@@ -8,6 +10,8 @@ from .models import CustomerPaymentRun, GuestVisit, SalesInvoice, SalesOrder, Sa
 
 
 def identity_display_name(keycloak_sub):
+    """Resolve a readable staff display name from a Keycloak subject id."""
+
     if not keycloak_sub:
         return ""
     identity = UserIdentity.objects.filter(keycloak_sub=keycloak_sub).first()
@@ -20,6 +24,8 @@ def identity_display_name(keycloak_sub):
 
 
 class SalesOrderItemSerializer(serializers.ModelSerializer):
+    """Serialize line items for sales orders."""
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     service_point_name = serializers.CharField(source="service_point.name", read_only=True)
 
@@ -47,6 +53,8 @@ class SalesOrderItemSerializer(serializers.ModelSerializer):
 
 
 class SalesOrderSerializer(serializers.ModelSerializer):
+    """Serialize sales orders with nested item lines and invoice snapshot."""
+
     items = SalesOrderItemSerializer(many=True, required=False)
     branch_name = serializers.CharField(source="branch.name", read_only=True)
     service_point_name = serializers.CharField(source="service_point.name", read_only=True)
@@ -81,6 +89,7 @@ class SalesOrderSerializer(serializers.ModelSerializer):
         read_only_fields = ["order_number", "status", "waiter_keycloak_sub", "created_at", "updated_at"]
 
     def create(self, validated_data):
+        """Create sales order and persist nested order items."""
         items = validated_data.pop("items", [])
         order = SalesOrder.objects.create(**validated_data)
         for item in items:
@@ -88,6 +97,7 @@ class SalesOrderSerializer(serializers.ModelSerializer):
         return order
 
     def get_invoice(self, obj):
+        """Return compact invoice details associated with the sales order."""
         if not hasattr(obj, "invoice"):
             return None
         return {
@@ -102,10 +112,13 @@ class SalesOrderSerializer(serializers.ModelSerializer):
         }
 
     def get_waiter_name(self, obj):
+        """Return display name of waiter linked to the order."""
         return identity_display_name(obj.waiter_keycloak_sub)
 
 
 class SalesPaymentSerializer(serializers.ModelSerializer):
+    """Serialize payment transactions applied to invoices."""
+
     payment_method_name = serializers.CharField(source="payment_method.name", read_only=True)
     received_by_name = serializers.SerializerMethodField()
 
@@ -127,10 +140,13 @@ class SalesPaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ["received_by", "created_at"]
 
     def get_received_by_name(self, obj):
+        """Return display name for staff member who received payment."""
         return identity_display_name(obj.received_by)
 
 
 class SalesPaymentDetailSerializer(SalesPaymentSerializer):
+    """Extend payment serialization with invoice/order/visit context fields."""
+
     invoice_number = serializers.CharField(source="invoice.invoice_number", read_only=True)
     invoice_status = serializers.CharField(source="invoice.status", read_only=True)
     invoice_total = serializers.DecimalField(source="invoice.grand_total", max_digits=12, decimal_places=2, read_only=True)
@@ -161,6 +177,8 @@ class SalesPaymentDetailSerializer(SalesPaymentSerializer):
 
 
 class SalesInvoiceSerializer(serializers.ModelSerializer):
+    """Serialize invoice financial totals, fiscal metadata, and payments."""
+
     payments = SalesPaymentSerializer(many=True, read_only=True)
     branch_name = serializers.CharField(source="branch.name", read_only=True)
     order_number = serializers.CharField(source="order.order_number", read_only=True)
@@ -198,6 +216,7 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
         read_only_fields = ["invoice_number", "paid_total", "balance_due", "status", "created_at"]
 
     def get_receipt_url(self, obj):
+        """Build absolute receipt URL when request context is available."""
         if not obj.receipt_file:
             return None
         request = self.context.get("request")
@@ -205,15 +224,19 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(url) if request else url
 
     def get_issued_by_name(self, obj):
+        """Return display name for the issuer captured on invoice."""
         return identity_display_name(obj.issued_by)
 
     def get_tax_lines(self, obj):
+        """Return normalized tax-line payload from fiscal metadata."""
         if not isinstance(obj.fiscal_payload, dict):
             return []
         return obj.fiscal_payload.get("tax_lines", [])
 
 
 class SalesInvoiceDetailSerializer(SalesInvoiceSerializer):
+    """Include nested order details in invoice responses."""
+
     order_details = SalesOrderSerializer(source="order", read_only=True)
 
     class Meta(SalesInvoiceSerializer.Meta):
@@ -221,6 +244,8 @@ class SalesInvoiceDetailSerializer(SalesInvoiceSerializer):
 
 
 class GuestVisitSerializer(serializers.ModelSerializer):
+    """Serialize in-house guest visit records with linked sales orders."""
+
     orders = SalesOrderSerializer(many=True, read_only=True)
     service_point_name = serializers.CharField(source="service_point.name", read_only=True)
     total_due = serializers.SerializerMethodField()
@@ -253,6 +278,7 @@ class GuestVisitSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_total_due(self, obj):
+        """Compute outstanding balance across invoices tied to the visit."""
         return sum(
             (order.invoice.balance_due for order in obj.orders.all() if hasattr(order, "invoice")),
             Decimal("0"),
@@ -260,6 +286,8 @@ class GuestVisitSerializer(serializers.ModelSerializer):
 
 
 class CustomerPaymentRunSerializer(serializers.ModelSerializer):
+    """Serialize bulk customer payment runs and allocation counts."""
+
     allocation_count = serializers.IntegerField(source="allocations.count", read_only=True)
 
     class Meta:

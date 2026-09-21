@@ -3,17 +3,23 @@ from django.conf import settings
 
 
 class KeycloakAdminError(RuntimeError):
+    """Raised when Keycloak admin API operations fail."""
+
     pass
 
 
 class KeycloakAdminClient:
+    """Minimal wrapper around Keycloak Admin REST API for user/role operations."""
+
     def __init__(self):
+        """Initialize Keycloak admin connection settings from Django config."""
         self.base_url = settings.KEYCLOAK_SERVER_URL.rstrip("/")
         self.realm = settings.KEYCLOAK_REALM
         self.admin_username = settings.KEYCLOAK_ADMIN_USERNAME
         self.admin_password = settings.KEYCLOAK_ADMIN_PASSWORD
 
     def _request(self, method, url, **kwargs):
+        """Execute an HTTP request and normalize non-2xx responses as exceptions."""
         response = requests.request(method, url, timeout=20, **kwargs)
         if response.status_code >= 400:
             raise KeycloakAdminError(
@@ -22,6 +28,7 @@ class KeycloakAdminClient:
         return response
 
     def _token(self):
+        """Obtain an admin access token via the master realm admin-cli client."""
         response = self._request(
             "POST",
             f"{self.base_url}/realms/master/protocol/openid-connect/token",
@@ -35,12 +42,14 @@ class KeycloakAdminClient:
         return response.json()["access_token"]
 
     def _headers(self):
+        """Build authorization headers for admin API calls."""
         return {
             "Authorization": f"Bearer {self._token()}",
             "Content-Type": "application/json",
         }
 
     def create_user(self, *, username, email, first_name="", last_name="", password=None):
+        """Create a Keycloak user and optionally set an initial temporary password."""
         headers = self._headers()
         payload = {
             "username": username,
@@ -64,6 +73,7 @@ class KeycloakAdminClient:
         return user
 
     def get_user_by_username(self, username):
+        """Find one Keycloak user by exact username or raise if not found."""
         response = self._request(
             "GET",
             f"{self.base_url}/admin/realms/{self.realm}/users",
@@ -76,6 +86,7 @@ class KeycloakAdminClient:
         return users[0]
 
     def set_password(self, keycloak_user_id, password, temporary=True):
+        """Reset a Keycloak user's password."""
         self._request(
             "PUT",
             f"{self.base_url}/admin/realms/{self.realm}/users/{keycloak_user_id}/reset-password",
@@ -84,6 +95,7 @@ class KeycloakAdminClient:
         )
 
     def update_user(self, keycloak_user_id, *, email=None, first_name=None, last_name=None, enabled=None):
+        """Update selected user profile fields in Keycloak."""
         payload = {}
         if email is not None:
             payload["email"] = email
@@ -103,6 +115,7 @@ class KeycloakAdminClient:
         )
 
     def get_realm_role(self, role_name):
+        """Return a realm role payload by name."""
         response = self._request(
             "GET",
             f"{self.base_url}/admin/realms/{self.realm}/roles/{role_name}",
@@ -111,6 +124,7 @@ class KeycloakAdminClient:
         return response.json()
 
     def create_realm_role(self, role_name, description=""):
+        """Create a realm role when missing; return existing role otherwise."""
         response = requests.get(
             f"{self.base_url}/admin/realms/{self.realm}/roles/{role_name}",
             headers=self._headers(),
@@ -132,6 +146,7 @@ class KeycloakAdminClient:
         return self.get_realm_role(role_name)
 
     def replace_realm_roles(self, keycloak_user_id, role_names):
+        """Replace non-default realm roles for a user with the provided role names."""
         headers = self._headers()
         current = self._request(
             "GET",

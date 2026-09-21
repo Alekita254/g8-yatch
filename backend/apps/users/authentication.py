@@ -1,3 +1,5 @@
+"""Keycloak JWT authentication backend for DRF requests."""
+
 from dataclasses import dataclass
 from urllib.parse import urlparse, urlunparse
 
@@ -12,6 +14,8 @@ from .models import UserIdentity
 
 @dataclass
 class KeycloakPrincipal:
+    """Lightweight authenticated principal derived from Keycloak token claims."""
+
     keycloak_sub: str
     email: str
     username: str
@@ -23,17 +27,22 @@ class KeycloakPrincipal:
 
     @property
     def is_authenticated(self):
+        """Expose DRF/Django-compatible authenticated flag."""
         return True
 
     @property
     def id(self):
+        """Expose a stable principal id based on Keycloak subject."""
         return self.keycloak_sub
 
 
 class KeycloakJWTAuthentication(authentication.BaseAuthentication):
+    """Validate Keycloak Bearer tokens and map them to local user identities."""
+
     keyword = "Bearer"
 
     def authenticate(self, request):
+        """Authenticate request using Authorization Bearer token."""
         header = authentication.get_authorization_header(request).decode("utf-8")
         if not header:
             return None
@@ -49,6 +58,7 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
         return principal, claims
 
     def _decode_token(self, token):
+        """Verify token signature, issuer, required claims, and audience."""
         try:
             claims = jwt.decode(token, options={"verify_signature": False})
             issuer = claims.get("iss", settings.KEYCLOAK_ISSUER)
@@ -74,6 +84,7 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed("Invalid Keycloak token.") from exc
 
     def _validate_audience(self, claims):
+        """Accept tokens whose aud/azp intersects configured Keycloak audiences."""
         accepted_audiences = set(
             getattr(settings, "KEYCLOAK_AUDIENCES", [settings.KEYCLOAK_AUDIENCE])
         )
@@ -100,6 +111,7 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
             )
 
     def _get_signing_key(self, token, issuer):
+        """Fetch the matching JWKS signing key for the incoming token."""
         jwks_urls = [
             settings.KEYCLOAK_JWKS_URL,
             f"{issuer.rstrip('/')}/protocol/openid-connect/certs",
@@ -121,6 +133,7 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
         raise jwt.PyJWTError(f"Unable to fetch Keycloak JWKS: {last_error}")
 
     def _principal_from_claims(self, claims):
+        """Build a KeycloakPrincipal object from verified JWT claims."""
         roles = claims.get("realm_access", {}).get("roles", [])
         return KeycloakPrincipal(
             keycloak_sub=claims["sub"],
@@ -133,6 +146,7 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
         )
 
     def _sync_identity(self, principal):
+        """Create or update local UserIdentity record from authenticated principal."""
         identity, created = UserIdentity.objects.get_or_create(
             keycloak_sub=principal.keycloak_sub,
             defaults={

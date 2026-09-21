@@ -1,9 +1,13 @@
+"""Serializer definitions for organizations and branch entities."""
+
 from rest_framework import serializers
 
 from .models import Branch, Organization
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
+    """Serialize organization profiles and summary branch counts."""
+
     branch_count = serializers.IntegerField(source="branches.count", read_only=True)
 
     class Meta:
@@ -23,6 +27,8 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 
 class BranchSerializer(serializers.ModelSerializer):
+    """Serialize branch records with parent organization display metadata."""
+
     organization_name = serializers.CharField(source="organization.name", read_only=True)
 
     class Meta:

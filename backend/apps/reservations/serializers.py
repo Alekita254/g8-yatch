@@ -1,9 +1,13 @@
+"""Serializer definitions for reservation API resources."""
+
 from rest_framework import serializers
 
 from .models import Reservation
 
 
 class ReservationSerializer(serializers.ModelSerializer):
+    """Serialize reservation details with guest and room display fields."""
+
     guest_name = serializers.CharField(source="business_partner.display_name", read_only=True)
     room_number = serializers.CharField(source="room.number", read_only=True)
 

@@ -1,3 +1,5 @@
+"""Serializer definitions for inventory thresholds, documents, and stock movement."""
+
 from django.db import transaction
 from rest_framework import serializers
 
@@ -8,6 +10,8 @@ from .models import InventoryDocument, InventoryDocumentLine, InventoryThreshold
 
 
 class InventoryThresholdSerializer(serializers.ModelSerializer):
+    """Serialize per-product inventory threshold and current stock signals."""
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_unit = serializers.CharField(source="product.unit", read_only=True)
@@ -30,9 +34,11 @@ class InventoryThresholdSerializer(serializers.ModelSerializer):
         ]
 
     def get_is_low_stock(self, obj):
+        """Return whether the product is currently below configured threshold."""
         return obj.is_active and obj.product.quantity <= obj.minimum_quantity
 
     def create(self, validated_data):
+        """Upsert threshold per product to avoid duplicate threshold records."""
         return InventoryThreshold.objects.update_or_create(
             product=validated_data["product"],
             defaults={
@@ -44,6 +50,8 @@ class InventoryThresholdSerializer(serializers.ModelSerializer):
 
 
 class InventoryDocumentLineSerializer(serializers.ModelSerializer):
+    """Serialize one line item within an inventory document."""
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_unit = serializers.CharField(source="product.unit", read_only=True)
@@ -71,6 +79,8 @@ class InventoryDocumentLineSerializer(serializers.ModelSerializer):
 
 
 class InventoryDocumentSerializer(serializers.ModelSerializer):
+    """Serialize inventory documents and nested item lines."""
+
     lines = InventoryDocumentLineSerializer(many=True)
     document_type_display = serializers.CharField(source="get_document_type_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
@@ -103,6 +113,7 @@ class InventoryDocumentSerializer(serializers.ModelSerializer):
         read_only_fields = ["document_number", "approved_at", "received_at", "created_at", "updated_at"]
 
     def validate_lines(self, lines):
+        """Ensure at least one line exists and quantities are positive."""
         if not lines:
             raise serializers.ValidationError("Add at least one inventory item.")
         for line in lines:
@@ -112,6 +123,7 @@ class InventoryDocumentSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
+        """Create inventory document with nested line items transactionally."""
         lines = validated_data.pop("lines", [])
         document = InventoryDocument.objects.create(**validated_data)
         for line in lines:
@@ -120,6 +132,7 @@ class InventoryDocumentSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        """Update header fields and replace lines when provided."""
         lines = validated_data.pop("lines", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -132,6 +145,8 @@ class InventoryDocumentSerializer(serializers.ModelSerializer):
 
 
 class LowStockProductSerializer(ProductSerializer):
+    """Extend product serialization with nested inventory threshold details."""
+
     inventory_threshold = InventoryThresholdSerializer(read_only=True)
 
     class Meta(ProductSerializer.Meta):
@@ -139,6 +154,8 @@ class LowStockProductSerializer(ProductSerializer):
 
 
 class StockMovementSerializer(serializers.ModelSerializer):
+    """Serialize inventory stock movement events for audit trails."""
+
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     document_number = serializers.CharField(source="document.document_number", read_only=True)
