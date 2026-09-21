@@ -25,10 +25,10 @@ export const authConfig = {
   keycloakAuthority:
     extra.keycloakAuthority ??
     fallbackAuthority ??
-    'https://identy.getotech.co.ke/realms/tendersafi',
-  keycloakClientId: extra.keycloakClientId ?? 'oval-frontend',
-  authScheme: extra.authScheme ?? 'ovalpos',
-  authBypass: extra.authBypass ?? true,
+    'https://identy.getotech.co.ke/realms/oval',
+  keycloakClientId: extra.keycloakClientId ?? 'oval-mobile',
+  authScheme: extra.authScheme ?? 'ovalapp',
+  authBypass: extra.authBypass ?? false,
   apiBaseUrl: extra.apiBaseUrl ?? 'http://localhost:8000',
 };
 

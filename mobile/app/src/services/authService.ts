@@ -10,7 +10,7 @@ WebBrowser.maybeCompleteAuthSession();
 function buildRedirectUri(): string {
   return AuthSession.makeRedirectUri({
     scheme: authConfig.authScheme,
-    path: 'auth/callback',
+    path: 'callback',
   });
 }
 

@@ -24,16 +24,18 @@ function envBool(name: string, fallback: boolean): boolean {
 }
 
 const appName = env('EXPO_PUBLIC_APP_NAME', 'Oval');
-const appSlug = env('EXPO_PUBLIC_APP_SLUG', 'oval-pos');
-const appScheme = env('EXPO_PUBLIC_APP_SCHEME', 'ovalpos');
-const apiBaseUrl = env('EXPO_PUBLIC_API_BASE_URL', 'http://localhost:8000');
+const appSlug = env('EXPO_PUBLIC_APP_SLUG', 'oval');
+const appScheme = env('EXPO_PUBLIC_APP_SCHEME', 'ovalapp');
+const apiBaseUrl = envAny(['EXPO_PUBLIC_API_BASE_URL', 'EXPO_PUBLIC_API_URL'], 'http://localhost:8000');
+const keycloakUrl = env('EXPO_PUBLIC_KEYCLOAK_URL', 'https://identy.getotech.co.ke');
+const keycloakRealm = env('EXPO_PUBLIC_KEYCLOAK_REALM', 'oval');
 const keycloakAuthority = envAny(
-  ['KEYCLOAK_AUTHORITY', 'EXPO_PUBLIC_KEYCLOAK_AUTHORITY'],
-  'https://identy.getotech.co.ke/realms/tendersafi',
+  ['EXPO_PUBLIC_KEYCLOAK_AUTHORITY', 'KEYCLOAK_AUTHORITY'],
+  `${keycloakUrl}/realms/${keycloakRealm}`,
 );
 const keycloakClientId = envAny(
-  ['KEYCLOAK_CLIENT_ID', 'EXPO_PUBLIC_KEYCLOAK_CLIENT_ID'],
-  'oval-frontend',
+  ['EXPO_PUBLIC_KEYCLOAK_CLIENT_ID', 'KEYCLOAK_CLIENT_ID'],
+  'oval-mobile',
 );
 const authBypass = envBool('EXPO_PUBLIC_AUTH_BYPASS', true);
 
@@ -62,6 +64,8 @@ const config: ExpoConfig = {
   },
   extra: {
     keycloakAuthority,
+    keycloakUrl,
+    keycloakRealm,
     keycloakClientId,
     apiBaseUrl,
     authScheme: appScheme,

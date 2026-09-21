@@ -55,13 +55,13 @@ export function AuthHomeScreen({
         <View style={styles.ctaGroup}>
           <PrimaryButton
             label={isAuthenticating ? 'Opening Oval...' : 'Get Started'}
-            onPress={onSignUp}
+            onPress={onSignIn}
             disabled={isAuthenticating}
             variant="primary"
           />
           <PrimaryButton
-            label={isAuthenticating ? 'Please wait...' : 'I already have an account'}
-            onPress={onSignIn}
+            label={isAuthenticating ? 'Please wait...' : 'Create an account'}
+            onPress={onSignUp}
             disabled={isAuthenticating}
             variant="outline"
           />

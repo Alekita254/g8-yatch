@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "Oval",
-    "slug": "oval-pos",
-    "scheme": "ovalpos",
+    "slug": "oval",
+    "scheme": "ovalapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,10 +23,12 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "keycloakAuthority": "https://identy.getotech.co.ke/realms/tendersafi",
-      "keycloakClientId": "oval-frontend",
-      "apiBaseUrl": "http://localhost:8000",
-      "authScheme": "ovalpos"
+      "keycloakAuthority": "https://identy.getotech.co.ke/realms/oval",
+      "keycloakUrl": "https://identy.getotech.co.ke",
+      "keycloakRealm": "oval",
+      "keycloakClientId": "oval-mobile",
+      "apiBaseUrl": "http://192.168.100.2:8000",
+      "authScheme": "ovalapp"
     },
     "plugins": ["expo-secure-store", "expo-web-browser"]
   }
