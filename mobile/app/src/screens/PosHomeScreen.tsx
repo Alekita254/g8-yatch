@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 
-import { resolveRoles, roleWorkspaces } from '../config/roleAccess';
+import { resolveRoles, resolveRolesFromPermissions, roleWorkspaces } from '../config/roleAccess';
 import { PosBottomNav } from '../components/PosBottomNav';
 import { PosHomeTopSection } from '../components/PosHomeTopSection';
 import { PosWorkspaceSidebar } from '../components/PosWorkspaceSidebar';
@@ -20,16 +20,23 @@ import { createStyles } from './PosHomeScreen.styles';
 interface PosHomeScreenProps {
   firstName?: string;
   roles?: string[];
+  permissions?: string[];
   onSignOut?: () => Promise<void>;
 }
 
-export function PosHomeScreen({ firstName, roles = [], onSignOut }: PosHomeScreenProps) {
+export function PosHomeScreen({
+  firstName,
+  roles = [],
+  permissions = [],
+  onSignOut,
+}: PosHomeScreenProps) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [activeWorkspace, setActiveWorkspace] = useState<'home' | 'admin'>('home');
   const palette = useMemo(() => getPalette('light'), []);
   const styles = useMemo(() => createStyles(palette), [palette]);
   const statusBarOffset = Platform.OS === 'android' ? (NativeStatusBar.currentHeight ?? 0) : 0;
-  const allowedRoles = resolveRoles(roles);
+  const allowedRoles =
+    permissions.length > 0 ? resolveRolesFromPermissions(permissions) : resolveRoles(roles);
   const visibleWorkspaces = roleWorkspaces.filter((workspace) =>
     allowedRoles.includes(workspace.role),
   );

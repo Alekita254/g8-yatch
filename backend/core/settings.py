@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "drf_spectacular",
+    "django_extensions",
     "apps.business_partners",
     "apps.accounting",
     "apps.concierge",
@@ -41,6 +42,8 @@ INSTALLED_APPS = [
     "apps.taxes",
     "apps.users",
 ]
+
+SHELL_PLUS = "ipython"
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",

@@ -75,6 +75,7 @@ export default function App() {
       <PosHomeScreen
         firstName={auth.profile?.identity.first_name}
         roles={auth.profile?.roles ?? []}
+        permissions={auth.profile?.permissions ?? []}
         onSignOut={auth.signOut}
       />
     );

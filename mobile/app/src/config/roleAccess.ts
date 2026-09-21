@@ -7,11 +7,19 @@ export interface RoleWorkspace {
 }
 
 const roleAliases: Record<AppRole, string[]> = {
-  Admin: ['admin', 'superuser', 'manager', 'pos_manager'],
+  Admin: ['admin', 'superuser', 'manager', 'pos_manager', 'pos-manager'],
   'Front-desk': ['front-desk', 'frontdesk', 'reception', 'concierge'],
   Accounting: ['accounting', 'finance', 'bookkeeper'],
   Sales: ['sales', 'cashier', 'seller', 'pos'],
   Inventory: ['inventory', 'stock', 'storekeeper', 'warehouse'],
+};
+
+const permissionToRole: Record<string, AppRole> = {
+  'app.admin': 'Admin',
+  'app.frontdesk': 'Front-desk',
+  'app.accounting': 'Accounting',
+  'app.sales': 'Sales',
+  'app.inventory': 'Inventory',
 };
 
 export const roleOrder: AppRole[] = ['Admin', 'Front-desk', 'Accounting', 'Sales', 'Inventory'];
@@ -59,6 +67,20 @@ export function resolveRoles(rawRoles: string[]): AppRole[] {
 
   const resolved = roleOrder.filter((role) =>
     roleAliases[role].some((alias) => normalized.includes(alias)),
+  );
+
+  return resolved;
+}
+
+export function resolveRolesFromPermissions(rawPermissions: string[]): AppRole[] {
+  const normalizedPermissions = new Set(rawPermissions.map((permission) => permission.trim().toLowerCase()));
+
+  if (normalizedPermissions.has('app.admin')) {
+    return [...roleOrder];
+  }
+
+  const resolved = roleOrder.filter((role) =>
+    Array.from(normalizedPermissions).some((permission) => permissionToRole[permission] === role),
   );
 
   return resolved;
