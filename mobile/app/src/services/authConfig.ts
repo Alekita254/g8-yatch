@@ -5,6 +5,7 @@ interface AppExtra {
   keycloakUrl?: string;
   keycloakRealm?: string;
   keycloakClientId?: string;
+  keycloakRedirectUri?: string;
   apiBaseUrl?: string;
   authScheme?: string;
   authBypass?: boolean;
@@ -27,6 +28,7 @@ export const authConfig = {
     fallbackAuthority ??
     'https://identy.getotech.co.ke/realms/oval',
   keycloakClientId: extra.keycloakClientId ?? 'oval-mobile',
+  keycloakRedirectUri: extra.keycloakRedirectUri ?? 'ovalapp://callback',
   authScheme: extra.authScheme ?? 'ovalapp',
   authBypass: extra.authBypass ?? false,
   apiBaseUrl: extra.apiBaseUrl ?? 'http://localhost:8000',

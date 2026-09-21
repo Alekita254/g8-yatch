@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AdminSummaryView,
     AdminUserDetailView,
     AdminUserListCreateView,
     AdminUserPasswordResetView,
@@ -16,6 +17,7 @@ from .views import (
 
 urlpatterns = [
     path("me/", MeView.as_view(), name="users-me"),
+    path("admin-summary/", AdminSummaryView.as_view(), name="users-admin-summary"),
     path("sales-performance/", StaffSalesSummaryView.as_view(), name="users-sales-performance"),
     path("roles/", RoleListCreateView.as_view(), name="roles-list-create"),
     path("roles/<int:pk>/", RoleDetailView.as_view(), name="roles-detail"),

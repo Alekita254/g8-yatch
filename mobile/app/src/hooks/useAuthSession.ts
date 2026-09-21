@@ -87,10 +87,11 @@ export function useAuthSession(): UseAuthSessionResult {
       await saveTokens(tokens);
       const nextProfile = await hydrateProfile(tokens);
       setProfile(nextProfile);
-    } catch {
+    } catch (error) {
       await clearTokens();
       setProfile(null);
-      setErrorMessage('Sign in failed. Check network or Keycloak configuration.');
+      const message = error instanceof Error ? error.message : 'Sign in failed.';
+      setErrorMessage(`Sign in failed: ${message}`);
     } finally {
       setAuthenticating(false);
     }

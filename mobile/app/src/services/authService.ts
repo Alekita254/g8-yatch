@@ -1,4 +1,5 @@
 import * as AuthSession from 'expo-auth-session';
+import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -7,7 +8,22 @@ import type { AuthTokens } from '../types/auth';
 
 WebBrowser.maybeCompleteAuthSession();
 
+function isExpoGoRuntime(): boolean {
+  return Constants.executionEnvironment === 'storeClient';
+}
+
 function buildRedirectUri(): string {
+  // Expo Go cannot deep-link back to arbitrary custom schemes reliably.
+  if (isExpoGoRuntime()) {
+    return AuthSession.makeRedirectUri({
+      path: 'callback',
+    });
+  }
+
+  if (authConfig.keycloakRedirectUri) {
+    return authConfig.keycloakRedirectUri;
+  }
+
   return AuthSession.makeRedirectUri({
     scheme: authConfig.authScheme,
     path: 'callback',
@@ -18,9 +34,15 @@ async function buildDiscovery() {
   return AuthSession.fetchDiscoveryAsync(keycloakIssuer);
 }
 
-function requireCode(result: AuthSession.AuthSessionResult): string {
+function requireCode(result: AuthSession.AuthSessionResult, redirectUri: string): string {
+  if (result.type === 'error') {
+    const params = 'params' in result ? result.params : undefined;
+    const errorMessage = params?.error_description || params?.error || 'Authentication failed.';
+    throw new Error(errorMessage);
+  }
+
   if (result.type !== 'success' || !result.params.code) {
-    throw new Error('Authentication was cancelled or incomplete.');
+    throw new Error(`Authentication ${result.type || 'failed'} before completion. Redirect URI: ${redirectUri}`);
   }
   return result.params.code;
 }
@@ -38,7 +60,7 @@ export async function signInWithKeycloak(): Promise<AuthTokens> {
   });
 
   const authResult = await request.promptAsync(discovery);
-  const code = requireCode(authResult);
+  const code = requireCode(authResult, redirectUri);
 
   const tokenResponse = await AuthSession.exchangeCodeAsync(
     {

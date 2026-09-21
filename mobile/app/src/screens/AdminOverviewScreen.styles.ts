@@ -72,6 +72,11 @@ export function createStyles(palette: AppPalette) {
       lineHeight: Typography.bodyLineHeight,
       fontWeight: Typography.weightMedium,
     },
+    errorText: {
+      color: '#B54708',
+      fontSize: Typography.label,
+      fontWeight: Typography.weightBold,
+    },
     metricsGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',

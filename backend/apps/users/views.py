@@ -9,10 +9,12 @@ from rest_framework.views import APIView
 from apps.common.views import DetailAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from apps.pagination import paginated_response
 
+from .admin_summary import build_admin_summary_payload
 from .keycloak_admin import KeycloakAdminClient, KeycloakAdminError
 from .models import Role, ServicePoint, UserIdentity
-from .permissions import IsPosManager
+from .permissions import IsPosManager, IsPosManagerOrAdminApp
 from .serializers import (
+    AdminSummarySerializer,
     AdminUserCreateSerializer,
     AdminUserPasswordResetSerializer,
     AdminUserRoleSerializer,
@@ -53,6 +55,17 @@ class MeView(APIView):
                 "permissions": permissions,
             }
         )
+
+
+class AdminSummaryView(APIView):
+    """Return a consolidated admin dashboard summary in a single API request."""
+
+    permission_classes = [IsPosManagerOrAdminApp]
+
+    def get(self, request):
+        payload = build_admin_summary_payload()
+        serializer = AdminSummarySerializer(instance=payload)
+        return Response(serializer.data)
 
 
 class AdminUserListCreateView(APIView):

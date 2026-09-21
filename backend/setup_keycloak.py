@@ -52,6 +52,10 @@ GOOGLE_CLIENT_ID = os.environ.get("KEYCLOAK_GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("KEYCLOAK_GOOGLE_CLIENT_SECRET", "")
 
 REDIRECT_URIS = [
+    "ovalapp://callback",
+    "ovalapp://*",
+    "exp://*",
+    "https://auth.expo.io/*",
     "http://localhost:5173/*",
     "http://localhost:5174/*",
     "http://localhost:5175/*",
@@ -63,6 +67,7 @@ REDIRECT_URIS = [
     "https://g8-yatch.getotech.co.ke/*",
 ]
 WEB_ORIGINS = [
+    "ovalapp://callback",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",

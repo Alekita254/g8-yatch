@@ -37,6 +37,10 @@ const keycloakClientId = envAny(
   ['EXPO_PUBLIC_KEYCLOAK_CLIENT_ID', 'KEYCLOAK_CLIENT_ID'],
   'oval-mobile',
 );
+const keycloakRedirectUri = envAny(
+  ['EXPO_PUBLIC_KEYCLOAK_REDIRECT_URI'],
+  `${appScheme}://callback`,
+);
 const authBypass = envBool('EXPO_PUBLIC_AUTH_BYPASS', true);
 
 const config: ExpoConfig = {
@@ -67,6 +71,7 @@ const config: ExpoConfig = {
     keycloakUrl,
     keycloakRealm,
     keycloakClientId,
+    keycloakRedirectUri,
     apiBaseUrl,
     authScheme: appScheme,
     authBypass,

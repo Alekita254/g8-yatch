@@ -2,6 +2,8 @@
 
 from rest_framework import serializers
 
+from apps.inventory.models import InventoryDocument
+
 from .models import Role, ServicePoint, UserIdentity
 
 
@@ -103,3 +105,74 @@ class AdminUserPasswordResetSerializer(serializers.Serializer):
 
     password = serializers.CharField(max_length=128, min_length=8, write_only=True)
     temporary = serializers.BooleanField(default=True)
+
+
+class SummaryCountSerializer(serializers.Serializer):
+    """Serialize total and active summary counters."""
+
+    total = serializers.IntegerField()
+    active = serializers.IntegerField()
+
+
+class InventoryDocumentPreviewSerializer(serializers.ModelSerializer):
+    """Serialize compact inventory document previews for dashboard cards."""
+
+    document_type_display = serializers.CharField(source="get_document_type_display")
+    status_display = serializers.CharField(source="get_status_display")
+    purchase_pricelist_supplier = serializers.CharField(
+        source="purchase_pricelist.supplier_name",
+        default="",
+    )
+
+    class Meta:
+        model = InventoryDocument
+        fields = [
+            "id",
+            "document_number",
+            "document_type",
+            "document_type_display",
+            "status",
+            "status_display",
+            "supplier_name",
+            "purchase_pricelist_supplier",
+            "created_at",
+        ]
+
+
+class InventoryDocumentSummarySerializer(serializers.Serializer):
+    """Serialize inventory summary blocks with counts and latest documents."""
+
+    total = serializers.IntegerField()
+    results = InventoryDocumentPreviewSerializer(many=True)
+
+
+class InventoryLowStockSummarySerializer(serializers.Serializer):
+    """Serialize low-stock summary totals."""
+
+    total = serializers.IntegerField()
+
+
+class AdminSummarySerializer(serializers.Serializer):
+    """Serialize consolidated admin dashboard summary payload."""
+
+    users = SummaryCountSerializer()
+    roles = SummaryCountSerializer()
+    servicePoints = SummaryCountSerializer()
+    products = SummaryCountSerializer()
+    categories = SummaryCountSerializer()
+    salesPricelists = SummaryCountSerializer()
+    purchasePricelists = SummaryCountSerializer()
+    rooms = SummaryCountSerializer()
+    taxConfigurations = SummaryCountSerializer()
+    taxCategories = SummaryCountSerializer()
+    taxOffices = SummaryCountSerializer()
+    discounts = SummaryCountSerializer()
+    organizations = SummaryCountSerializer()
+    branches = SummaryCountSerializer()
+    paymentMethods = SummaryCountSerializer()
+    bankAccounts = SummaryCountSerializer()
+    paymentRoutingRules = SummaryCountSerializer()
+    inventoryLowStock = InventoryLowStockSummarySerializer()
+    inventoryDraftRequests = InventoryDocumentSummarySerializer()
+    inventorySubmittedRequests = InventoryDocumentSummarySerializer()
+    inventoryRequisitions = InventoryDocumentSummarySerializer()

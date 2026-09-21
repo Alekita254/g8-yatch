@@ -28,6 +28,9 @@ function total(stats, key) {
 }
 
 function activeCount(stats, key) {
+  if (typeof stats?.[key]?.active === 'number') {
+    return stats[key].active;
+  }
   return stats?.[key]?.results?.filter((item) => item.is_active !== false).length ?? 0;
 }
 
