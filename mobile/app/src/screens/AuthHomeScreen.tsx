@@ -22,6 +22,8 @@ export function AuthHomeScreen({
   onSignIn,
   onSignUp,
 }: AuthHomeScreenProps) {
+  void errorMessage;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <NativeStatusBar barStyle="dark-content" translucent={false} backgroundColor="#EEF4F0" />
@@ -65,7 +67,6 @@ export function AuthHomeScreen({
             disabled={isAuthenticating}
             variant="outline"
           />
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
         </View>
       </ScrollView>
     </SafeAreaView>

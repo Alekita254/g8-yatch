@@ -53,14 +53,19 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
             claims = jwt.decode(token, options={"verify_signature": False})
             issuer = claims.get("iss", settings.KEYCLOAK_ISSUER)
             signing_key = self._get_signing_key(token, issuer)
-            return jwt.decode(
+            verified_claims = jwt.decode(
                 token,
                 signing_key.key,
                 algorithms=["RS256"],
-                audience=settings.KEYCLOAK_AUDIENCE,
                 issuer=settings.KEYCLOAK_ISSUER,
-                options={"require": ["exp", "iat", "iss", "sub"]},
+                options={
+                    "require": ["exp", "iat", "iss", "sub"],
+                    "verify_aud": False,
+                },
             )
+
+            self._validate_audience(verified_claims)
+            return verified_claims
         except jwt.PyJWTError as exc:
             if settings.DEBUG:
                 raise exceptions.AuthenticationFailed(
@@ -68,8 +73,37 @@ class KeycloakJWTAuthentication(authentication.BaseAuthentication):
                 ) from exc
             raise exceptions.AuthenticationFailed("Invalid Keycloak token.") from exc
 
+    def _validate_audience(self, claims):
+        accepted_audiences = set(
+            getattr(settings, "KEYCLOAK_AUDIENCES", [settings.KEYCLOAK_AUDIENCE])
+        )
+        accepted_audiences.add(getattr(settings, "KEYCLOAK_AUDIENCE", ""))
+        accepted_audiences = {aud for aud in accepted_audiences if aud}
+
+        aud_claim = claims.get("aud", [])
+        if isinstance(aud_claim, str):
+            token_audiences = {aud_claim}
+        else:
+            token_audiences = {aud for aud in aud_claim if isinstance(aud, str)}
+
+        authorized_party = claims.get("azp")
+        if isinstance(authorized_party, str):
+            token_audiences.add(authorized_party)
+
+        if not token_audiences.intersection(accepted_audiences):
+            raise jwt.InvalidAudienceError(
+                (
+                    "Token audience mismatch. "
+                    f"Expected one of {sorted(accepted_audiences)}; "
+                    f"received aud={claims.get('aud')} azp={claims.get('azp')}"
+                )
+            )
+
     def _get_signing_key(self, token, issuer):
-        jwks_urls = [f"{issuer.rstrip('/')}/protocol/openid-connect/certs"]
+        jwks_urls = [
+            settings.KEYCLOAK_JWKS_URL,
+            f"{issuer.rstrip('/')}/protocol/openid-connect/certs",
+        ]
 
         parsed = urlparse(issuer)
         if parsed.hostname == "localhost":

@@ -123,14 +123,26 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
 }
 
-KEYCLOAK_SERVER_URL = env("KEYCLOAK_SERVER_URL", default="http://localhost:8080")
-KEYCLOAK_REALM = env("KEYCLOAK_REALM", default="g8-yacht")
-KEYCLOAK_AUDIENCE = env("KEYCLOAK_AUDIENCE", default="pos-terminal")
+KEYCLOAK_SERVER_URL = env(
+    "KEYCLOAK_SERVER_URL",
+    default=env("KEYCLOAK_URL", default="http://localhost:8080"),
+)
+KEYCLOAK_REALM = env("KEYCLOAK_REALM", default="oval")
+KEYCLOAK_AUDIENCE = env(
+    "KEYCLOAK_AUDIENCE",
+    default=env("KEYCLOAK_CLIENT_ID", default="oval-mobile"),
+)
+KEYCLOAK_AUDIENCES = env.list(
+    "KEYCLOAK_AUDIENCES",
+    default=[KEYCLOAK_AUDIENCE, "account"],
+)
 KEYCLOAK_ADMIN_USERNAME = env("KEYCLOAK_ADMIN_USERNAME", default="admin")
 KEYCLOAK_ADMIN_PASSWORD = env("KEYCLOAK_ADMIN_PASSWORD", default="admin")
-KEYCLOAK_ISSUER = (
-    f"{KEYCLOAK_SERVER_URL.rstrip('/')}/realms/{KEYCLOAK_REALM}"
+KEYCLOAK_ISSUER = env(
+    "KEYCLOAK_ISSUER",
+    default=f"{KEYCLOAK_SERVER_URL.rstrip('/')}/realms/{KEYCLOAK_REALM}",
 )
-KEYCLOAK_JWKS_URL = (
-    f"{KEYCLOAK_ISSUER}/protocol/openid-connect/certs"
+KEYCLOAK_JWKS_URL = env(
+    "KEYCLOAK_JWKS_URL",
+    default=f"{KEYCLOAK_ISSUER}/protocol/openid-connect/certs",
 )
